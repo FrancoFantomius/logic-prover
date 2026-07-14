@@ -74,39 +74,47 @@ def export_all_to_lean_file(db: TheoryDatabase, filename="analysis_1.lean"):
         cursor = conn.execute("SELECT name FROM theorems WHERE is_verified = 1 ORDER BY id;")
         thm_names = [row[0] for row in cursor.fetchall()]
         
+    all_axioms = db.get_all_axioms()
+    
+    # Raccoglie tutte le variabili proposizionali del sistema per dichiararle nella firma di ogni teorema
+    all_vars = {'A', 'B', 'C'}
+    for thm_name in thm_names:
+        thm = db.get_theorem(thm_name)
+        all_vars.update(parse_formula(thm['thesis_str']).free_variables())
+        for hyp in thm['hypotheses']:
+            all_vars.update(parse_formula(hyp).free_variables())
+        for step in thm['steps']:
+            all_vars.update(parse_formula(step['formula_str']).free_variables())
+            
+    for name, f_str in all_axioms.items():
+        if name not in ['ax1', 'ax2', 'ax3']:
+            all_vars.update(parse_formula(f_str).free_variables())
+            
+    sorted_all_vars = sorted(list(all_vars))
+    vars_decl = f"({ ' '.join(sorted_all_vars) } : Prop)"
+    
     lines = []
+    lines.append("namespace Analysis1")
+    lines.append("")
+    lines.append("set_option linter.unusedVariables false")
+    lines.append("")
     lines.append("-- Assiomi standard della logica proposizionale")
     lines.append("axiom ax1 (A B : Prop) : A → (B → A)")
     lines.append("axiom ax2 (A B C : Prop) : (A → (B → C)) → ((A → B) → (A → C))")
     lines.append("axiom ax3 (A B : Prop) : (¬A → ¬B) → (B → A)")
     lines.append("")
 
-    all_axioms = db.get_all_axioms()
     lines.append("-- Assiomi specifici di Analisi 1")
     for name, f_str in sorted(all_axioms.items()):
         if name not in ['ax1', 'ax2', 'ax3']:
             ax_f = parse_formula(f_str)
             ax_vars = sorted(list(ax_f.free_variables()))
-            vars_decl = f"({ ' '.join(ax_vars) } : Prop)" if ax_vars else ""
-            lines.append(f"axiom {name} {vars_decl} : {formula_to_lean(ax_f)}")
+            ax_vars_decl = f"({ ' '.join(ax_vars) } : Prop)" if ax_vars else ""
+            lines.append(f"axiom {name} {ax_vars_decl} : {formula_to_lean(ax_f)}")
     lines.append("")
 
     for thm_name in thm_names:
         thm = db.get_theorem(thm_name)
-        
-        current_vars = set()
-        current_vars.update(parse_formula(thm['thesis_str']).free_variables())
-        for hyp in thm['hypotheses']:
-            current_vars.update(parse_formula(hyp).free_variables())
-        for step in thm['steps']:
-            current_vars.update(parse_formula(step['formula_str']).free_variables())
-            if step.get('substitution_json'):
-                for sub_val_str in step['substitution_json'].values():
-                    f = parse_formula(str(sub_val_str))
-                    current_vars.update(f.free_variables())
-                    
-        sorted_current_vars = sorted(list(current_vars))
-        vars_decl = f"({ ' '.join(sorted_current_vars) } : Prop)" if sorted_current_vars else ""
         
         hyp_decls = []
         for idx, hyp_str in enumerate(thm['hypotheses']):
@@ -168,28 +176,17 @@ def export_all_to_lean_file(db: TheoryDatabase, filename="analysis_1.lean"):
                     term = f"step{arg2} step{arg1}"
                 else:
                     raise ValueError(f"MP error at step {idx}")
-                    
             elif just_type == 'Lemma':
                 lemma_name = step['ref_name']
                 lemma_thm = db.get_theorem(lemma_name)
-                dep_interface_vars = set()
-                dep_interface_vars.update(parse_formula(lemma_thm['thesis_str']).free_variables())
-                for h in lemma_thm['hypotheses']:
-                    dep_interface_vars.update(parse_formula(h).free_variables())
-                sorted_dep_vars = sorted(list(dep_interface_vars))
                 
-                sub_json = step['substitution_json']
-                args = []
-                for v in sorted_dep_vars:
-                    sub_val = parse_formula(str(sub_json[v]))
-                    args.append(f"({formula_to_lean(sub_val)})")
-                    
+                args = [f"({v})" for v in sorted_all_vars]
+                
                 lemma_args = []
                 if len(lemma_thm['hypotheses']) >= 1:
                     lemma_args.append(f"step{step['arg1']}")
                 if len(lemma_thm['hypotheses']) >= 2:
                     lemma_args.append(f"step{step['arg2']}")
-                    
                 term = f"{lemma_name} {' '.join(args)} {' '.join(lemma_args)}".strip()
                 
             lines.append(f"  let step{idx} : {f_lean} := {term}")
@@ -198,6 +195,8 @@ def export_all_to_lean_file(db: TheoryDatabase, filename="analysis_1.lean"):
         lines.append(f"  step{last_idx}")
         lines.append("")
         
+    lines.append("end Analysis1")
+    
     with open(filename, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"\nSalvato con successo in {filename}")

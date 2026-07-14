@@ -187,11 +187,11 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
     print(f"Saturazione completata. Formule derivate totali: {len(derived)}")
     
     # 4. Carica i teoremi esistenti nel database per non duplicarli
-    existing_theorems = set()
+    existing_theorems = {}
     with db.connection_scope() as conn:
-        cursor = conn.execute("SELECT thesis_str FROM theorems WHERE is_verified = 1;")
+        cursor = conn.execute("SELECT name, thesis_str FROM theorems WHERE is_verified = 1;")
         for row in cursor.fetchall():
-            existing_theorems.add(parse_formula(row[0]))
+            existing_theorems[parse_formula(row[1])] = row[0]
             
     # Ordina le formule derivate per complessità strutturale (formule più semplici per prime)
     def formula_complexity(f):
@@ -217,7 +217,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             continue
             
         try:
-            steps = reconstruct_proof(goal, derived)
+            steps = reconstruct_proof(goal, derived, lemma_map=existing_theorems, db=db)
         except Exception as e:
             print(f"Errore nella ricostruzione dei passi per {goal}: {e}")
             continue
@@ -237,7 +237,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
         success, res_msg = verify_and_save(thm, db)
         if success:
             print(f"  -> Verificato con successo in Lean 4 e salvato nel database!")
-            existing_theorems.add(goal)
+            existing_theorems[goal] = thm_name
             new_theorems_count += 1
             thm_id_counter += 1
         else:
