@@ -1,0 +1,246 @@
+import time
+from database import TheoryDatabase
+from formula import parse_formula, Var, Not, Implies
+from verifier import verify_and_save
+from prover import reconstruct_proof
+
+def generate_candidates(basic_vars, max_depth):
+    """
+    Genera ricorsivamente tutte le formule candidate composte dalle variabili di base
+    fino a una determinata profondità di annidamento.
+    """
+    current = [Var(v) for v in basic_vars]
+    all_candidates = list(current)
+    
+    for depth in range(1, max_depth + 1):
+        next_candidates = []
+        # Negazioni di formule a profondità precedente
+        for f in current:
+            next_candidates.append(Not(f))
+        
+        # Implicazioni A -> B con almeno una formula a profondità precedente
+        for A in all_candidates:
+            for B in all_candidates:
+                if A in current or B in current:
+                    next_candidates.append(Implies(A, B))
+                    
+        # Rimuove duplicati
+        seen = set(all_candidates)
+        unique_next = []
+        for f in next_candidates:
+            if f not in seen:
+                seen.add(f)
+                unique_next.append(f)
+                
+        current = unique_next
+        all_candidates.extend(current)
+        
+    return all_candidates
+
+def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_theorems=20, min_proof_steps=0):
+    """
+    Genera sistematicamente conseguenze logiche instanziando assiomi e lemmi
+    e applicando il Modus Ponens. Registra e valida ciascun risultato tramite Lean 4.
+    """
+    candidates = generate_candidates(basic_vars, max_depth)
+    print(f"Formule candidate generate ({len(candidates)}): {[str(c) for c in candidates]}")
+    
+    derived = {}
+    
+    def register(formula, justification):
+        if formula not in derived:
+            derived[formula] = justification
+            return True
+        return False
+        
+    # 1. Istanzia gli Assiomi presenti nel database
+    axioms = db.get_all_axioms()
+    for ax_name, ax_str in axioms.items():
+        schema = parse_formula(ax_str)
+        if ax_name in ['ax1', 'ax2', 'ax3']:
+            schema_vars = sorted(list(schema.free_variables()))
+            
+            def get_substitutions(vars_list):
+                if not vars_list:
+                    yield {}
+                    return
+                v = vars_list[0]
+                for c in candidates:
+                    for rest in get_substitutions(vars_list[1:]):
+                        rest[v] = c
+                        yield rest
+                        
+            for sub in get_substitutions(schema_vars):
+                inst_f = schema.substitute(sub)
+                register(inst_f, {
+                    'justification_type': 'Axiom',
+                    'ref_name': ax_name,
+                    'substitution_json': {k: str(v) for k, v in sub.items()}
+                })
+        else:
+            # Assioma specifico del dominio (non schematico)
+            register(schema, {
+                'justification_type': 'Axiom',
+                'ref_name': ax_name,
+                'substitution_json': {}
+            })
+            
+    # 2. Carica e istanzia i Lemmi verificati dal database
+    lemmas = []
+    with db.connection_scope() as conn:
+        cursor = conn.execute("SELECT name FROM theorems WHERE is_verified = 1;")
+        names = [row[0] for row in cursor.fetchall()]
+        for name in names:
+            lemmas.append(db.get_theorem(name))
+            
+    for lemma in lemmas:
+        lemma_thesis = parse_formula(lemma['thesis_str'])
+        lemma_hyps = [parse_formula(h) for h in lemma['hypotheses']]
+        lemma_vars = set(lemma_thesis.free_variables())
+        for h in lemma_hyps:
+            lemma_vars.update(h.free_variables())
+        sorted_vars = sorted(list(lemma_vars))
+        
+        if len(sorted_vars) > 3:
+            continue
+            
+        def get_substitutions(vars_list):
+            if not vars_list:
+                yield {}
+                return
+            v = vars_list[0]
+            for c in candidates:
+                for rest in get_substitutions(vars_list[1:]):
+                    rest[v] = c
+                    yield rest
+                    
+        for sub in get_substitutions(sorted_vars):
+            inst_thesis = lemma_thesis.substitute(sub)
+            inst_hyps = [lh.substitute(sub) for lh in lemma_hyps]
+            
+            # Il lemma è applicabile se tutte le sue ipotesi sono state già derivate
+            if all(ih in derived for ih in inst_hyps):
+                just = {
+                    'justification_type': 'Lemma',
+                    'ref_name': lemma['name'],
+                    'substitution_json': {k: str(v) for k, v in sub.items()}
+                }
+                if len(inst_hyps) >= 1:
+                    just['arg1_formula'] = inst_hyps[0]
+                if len(inst_hyps) >= 2:
+                    just['arg2_formula'] = inst_hyps[1]
+                    
+                register(inst_thesis, just)
+
+    # 3. BFS per il Modus Ponens
+    queue = list(derived.keys())
+    
+    implications_by_ant = {}
+    for f in queue:
+        if isinstance(f, Implies):
+            if f.left not in implications_by_ant:
+                implications_by_ant[f.left] = []
+            implications_by_ant[f.left].append(f)
+            
+    head = 0
+    while head < len(queue):
+        current = queue[head]
+        head += 1
+        
+        # Caso A: current è antecedente (A)
+        if current in implications_by_ant:
+            for impl in implications_by_ant[current]:
+                consequent = impl.right
+                just = {
+                    'justification_type': 'MP',
+                    'arg1_formula': current,
+                    'arg2_formula': impl
+                }
+                if register(consequent, just):
+                    queue.append(consequent)
+                    if isinstance(consequent, Implies):
+                        if consequent.left not in implications_by_ant:
+                            implications_by_ant[consequent.left] = []
+                        implications_by_ant[consequent.left].append(consequent)
+                        
+        # Caso B: current è implicazione (A -> B)
+        if isinstance(current, Implies):
+            if current.left not in implications_by_ant:
+                implications_by_ant[current.left] = []
+            if current not in implications_by_ant[current.left]:
+                implications_by_ant[current.left].append(current)
+                
+            if current.left in derived:
+                consequent = current.right
+                just = {
+                    'justification_type': 'MP',
+                    'arg1_formula': current.left,
+                    'arg2_formula': current
+                }
+                if register(consequent, just):
+                    queue.append(consequent)
+                    if isinstance(consequent, Implies):
+                        if consequent.left not in implications_by_ant:
+                            implications_by_ant[consequent.left] = []
+                        implications_by_ant[consequent.left].append(consequent)
+
+    print(f"Saturazione completata. Formule derivate totali: {len(derived)}")
+    
+    # 4. Carica i teoremi esistenti nel database per non duplicarli
+    existing_theorems = set()
+    with db.connection_scope() as conn:
+        cursor = conn.execute("SELECT thesis_str FROM theorems WHERE is_verified = 1;")
+        for row in cursor.fetchall():
+            existing_theorems.add(parse_formula(row[0]))
+            
+    # Ordina le formule derivate per complessità strutturale (formule più semplici per prime)
+    def formula_complexity(f):
+        if isinstance(f, Var):
+            return 1
+        elif isinstance(f, Not):
+            return 1 + formula_complexity(f.formula)
+        elif isinstance(f, Implies):
+            return 1 + formula_complexity(f.left) + formula_complexity(f.right)
+            
+    sorted_derived = sorted(list(derived.keys()), key=formula_complexity)
+    
+    new_theorems_count = 0
+    with db.connection_scope() as conn:
+        cursor = conn.execute("SELECT COUNT(*) FROM theorems;")
+        thm_id_counter = cursor.fetchone()[0] + 1
+
+    for goal in sorted_derived:
+        if new_theorems_count >= max_theorems:
+            break
+            
+        if goal in existing_theorems:
+            continue
+            
+        try:
+            steps = reconstruct_proof(goal, derived)
+        except Exception as e:
+            print(f"Errore nella ricostruzione dei passi per {goal}: {e}")
+            continue
+            
+        if len(steps) < min_proof_steps:
+            continue
+            
+        thm_name = f"thm_{thm_id_counter}"
+        thm = {
+            'name': thm_name,
+            'thesis_str': str(goal),
+            'hypotheses': [],
+            'steps': steps
+        }
+        
+        print(f"Verifica formale e salvataggio di {thm_name}: {goal}")
+        success, res_msg = verify_and_save(thm, db)
+        if success:
+            print(f"  -> Verificato con successo in Lean 4 e salvato nel database!")
+            existing_theorems.add(goal)
+            new_theorems_count += 1
+            thm_id_counter += 1
+        else:
+            print(f"  -> Fallito: {res_msg}")
+            
+    return new_theorems_count
