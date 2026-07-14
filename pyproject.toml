@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hilbert-solver"
+version = "0.1.0"
+description = "Solver sperimentale per logica proposizionale in stile Hilbert con persistenza SQLite ed esportazione Lean 4."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Contributors"}
+]
+keywords = ["logic", "hilbert", "propositional-logic", "sqlite", "lean4"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Mathematics"
+]
+dependencies = []
+
+[project.scripts]
+hilbert-solver = "main:main"
+
+[tool.setuptools]
+py-modules = [
+  "analysis_1",
+  "database",
+  "explorer",
+  "formula",
+  "group_theory",
+  "lean_exporter",
+  "main",
+  "prover",
+  "verifier"
+]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.db", "*.lean", "__pycache__/*"]
