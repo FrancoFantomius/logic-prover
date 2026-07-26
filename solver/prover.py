@@ -1,6 +1,6 @@
 import time
-from formula import parse_formula, Var, Not, Implies, Formula
-from database import TheoryDatabase
+from .formula import parse_formula, Var, Not, Implies, Formula
+from .database import TheoryDatabase
 
 def get_subformulas(formula):
     """Estrae ricorsivamente tutte le sottoformule di una formula data."""

@@ -1,8 +1,8 @@
 import subprocess
 import os
-from database import TheoryDatabase
-from formula import parse_formula, Implies
-import lean_exporter
+from .database import TheoryDatabase
+from .formula import parse_formula, Implies
+from . import lean_exporter
 
 def verify_proof_local(thm, db: TheoryDatabase):
     """
@@ -123,6 +123,38 @@ def verify_proof_local(thm, db: TheoryDatabase):
 
     return True, None
 
+def verify_proof_with_lean(thm, db: TheoryDatabase):
+    """Genera ed esegue il controllo della dimostrazione con Lean 4."""
+    try:
+        lean_code = lean_exporter.export_proof(thm['name'], db)
+    except Exception as e:
+        return False, f"Errore durante la generazione di Lean 4: {e}"
+
+    temp_filename = "temp_proof.lean"
+    with open(temp_filename, "w", encoding="utf-8") as f:
+        f.write(lean_code)
+
+    try:
+        res = subprocess.run(
+            ["lean", temp_filename],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+        if res.returncode == 0:
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+            return True, lean_code
+        else:
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+            error_msg = res.stderr if res.stderr else res.stdout
+            return False, f"Errore di compilazione Lean 4:\n{error_msg}"
+    except Exception as e:
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+        return False, f"Impossibile avviare il compilatore Lean 4: {e}"
+
 def verify_and_save(thm, db: TheoryDatabase):
     """
     Verifica localmente e poi tramite Lean 4 il teorema fornito.
@@ -150,47 +182,18 @@ def verify_and_save(thm, db: TheoryDatabase):
         is_verified=0
     )
 
-    # 2. Genera il codice sorgente Lean 4
-    try:
-        lean_code = lean_exporter.export_proof(thm['name'], db)
-    except Exception as e:
-        return False, f"Errore durante la generazione di Lean 4: {e}"
-
-    # Scrive il codice Lean in un file temporaneo
-    temp_filename = "temp_proof.lean"
-    with open(temp_filename, "w", encoding="utf-8") as f:
-        f.write(lean_code)
-
-    # 3. Compila il file con Lean 4
-    try:
-        res = subprocess.run(
-            ["lean", temp_filename],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
+    # 2. Genera il codice sorgente Lean 4 ed esegue Lean
+    ok_lean, lean_res = verify_proof_with_lean(thm, db)
+    if ok_lean:
+        db.save_theorem(
+            name=thm['name'],
+            thesis_str=thm['thesis_str'],
+            hypotheses=thm['hypotheses'],
+            steps=thm['steps'],
+            dependencies=list(dependencies),
+            lean_code=lean_res,
+            is_verified=1
         )
-        if res.returncode == 0:
-            # Se la compilazione ha successo, aggiorna il teorema a verificato
-            db.save_theorem(
-                name=thm['name'],
-                thesis_str=thm['thesis_str'],
-                hypotheses=thm['hypotheses'],
-                steps=thm['steps'],
-                dependencies=list(dependencies),
-                lean_code=lean_code,
-                is_verified=1
-            )
-            # Rimuove il file temporaneo
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
-            return True, lean_code
-        else:
-            # Altrimenti mantiene is_verified = 0 ed elimina il file temporaneo
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
-            error_msg = res.stderr if res.stderr else res.stdout
-            return False, f"Errore di compilazione Lean 4:\n{error_msg}"
-    except Exception as e:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-        return False, f"Impossibile avviare il compilatore Lean 4: {e}"
+        return True, lean_res
+    else:
+        return False, lean_res

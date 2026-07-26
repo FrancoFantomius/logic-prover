@@ -1,8 +1,9 @@
 import time
-from database import TheoryDatabase
-from formula import parse_formula, Var, Not, Implies
-from verifier import verify_and_save
-from prover import reconstruct_proof
+import sys
+from .database import TheoryDatabase
+from .formula import parse_formula, Var, Not, Implies, And, Or, Iff, Forall, Exists, Equals, Pred, Formula
+from .verifier import verify_and_save
+from .prover import reconstruct_proof
 
 def generate_candidates(basic_vars, max_depth):
     """
@@ -199,8 +200,13 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             return 1
         elif isinstance(f, Not):
             return 1 + formula_complexity(f.formula)
-        elif isinstance(f, Implies):
+        elif isinstance(f, (Implies, And, Or, Iff, Equals)):
             return 1 + formula_complexity(f.left) + formula_complexity(f.right)
+        elif isinstance(f, (Forall, Exists)):
+            return 1 + formula_complexity(f.body)
+        elif isinstance(f, Pred):
+            return 1 + sum(formula_complexity(a) for a in f.args if isinstance(a, Formula))
+        return 1
             
     sorted_derived = sorted(list(derived.keys()), key=formula_complexity)
     
@@ -241,6 +247,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             new_theorems_count += 1
             thm_id_counter += 1
         else:
-            print(f"  -> Fallito: {res_msg}")
+            safe_msg = str(res_msg).encode(getattr(sys.stdout, 'encoding', None) or 'utf-8', errors='replace').decode(getattr(sys.stdout, 'encoding', None) or 'utf-8', errors='replace')
+            print(f"  -> Fallito: {safe_msg}")
             
     return new_theorems_count
