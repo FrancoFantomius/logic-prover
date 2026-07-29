@@ -13,6 +13,7 @@ Questo documento contiene la guida di riferimento dettagliata per ciascun modulo
 5. [solver.explorer](#5-solverexplorer)
 6. [solver.lean_exporter](#6-solverlean_exporter)
 7. [solver.dependencies](#7-solverdependencies)
+8. [solver.deducer](#8-solverdeducer)
 
 ---
 
@@ -324,3 +325,63 @@ axioms = db.get_all_axioms()
 print(f"Caricati {len(axioms)} assiomi nel database.")
 print("Assioma eq_subst:", axioms.get("eq_subst"))
 ```
+
+---
+
+## 8. `solver.deducer`
+
+Il modulo [`solver.deducer`](file:///c:/Users/franc/Programmazione/solver/solver/deducer.py) fornisce il motore di deduzione logica in avanti (Forward Deduction Engine). A partire da un insieme di ipotesi fornite dall'utente, applica gli assiomi della teoria e i teoremi/lemmi precedentemente salvati nel database per derivare tutte le conseguenze logiche possibili tramite Modus Ponens e istanziazione.
+
+### Classe `Deducer`
+
+#### Inizializzazione
+```python
+deducer = Deducer(db=None, auto_load_axioms=True)
+```
+- **`db`**: Istanza di `TheoryDatabase`. Se non fornita, viene creato automaticamente un database in-memory.
+- **`auto_load_axioms`**: Se `True`, assicura il caricamento degli assiomi logici di base (es. `ax1`, `ax2`, `ax3`).
+
+#### Metodo `deduce(hypotheses, max_formulas=200, include_hypotheses=False, timeout_seconds=30.0)`
+Esegue la ricerca in avanti per derivare le conseguenze.
+- **`hypotheses`**: Lista di stringhe (es. `["p -> q", "p"]`) o istanze di `Formula`.
+- **`max_formulas`**: Numero massimo di formule da derivare.
+- **`include_hypotheses`**: Se `True`, include anche le ipotesi iniziali tra i risultati.
+- **`timeout_seconds`**: Tempo massimo di esecuzione in secondi.
+
+Restituisce una lista di oggetti `Consequence`.
+
+### Classe `Consequence`
+Rappresenta una conseguenza derivata. Proprietà principali:
+- **`formula`**: Oggetto `Formula` della conseguenza.
+- **`formula_str`**: Stringa rappresentativa della formula.
+- **`proof`**: Lista ordinata dei passi di dimostrazione formale compatibili con `verify_proof_local`.
+- **`justification_type`**: Tipo di giustificazione (`'MP'`, `'Axiom'`, `'Lemma'`, `'Hypothesis'`).
+- **`is_verified`**: Booleano che indica l'esito della validazione locale.
+
+### Funzione `deduce_consequences(hypotheses, db=None, max_formulas=200, include_hypotheses=False)`
+Funzione ausiliaria rapida per eseguire la deduzione senza dover istanziare manualmente `Deducer`.
+
+#### Esempio di utilizzo:
+
+```python
+from solver.deducer import Deducer, deduce_consequences
+
+# Esempio 1: Uso rapido con funzione helper
+consequences = deduce_consequences(["p -> q", "q -> r", "p"])
+for c in consequences:
+    print(f"Derivato: {c.formula_str} via {c.justification_type}")
+    # Output: 
+    # Derivato: q via MP
+    # Derivato: r via MP
+
+# Esempio 2: Uso con database personalizzato
+from solver.database import TheoryDatabase
+
+db = TheoryDatabase("my_theory.db")
+deducer = Deducer(db=db)
+results = deducer.deduce(hypotheses=["A -> B", "A"])
+for res in results:
+    print(f"Conseguenza: {res.formula_str}")
+    print(f"Passi di dimostrazione: {res.proof}")
+```
+
