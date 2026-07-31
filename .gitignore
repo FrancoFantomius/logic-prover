@@ -29,6 +29,3 @@ dist/
 .DS_Store
 .idea/
 .vscode/
-
-# Examples files
-group*

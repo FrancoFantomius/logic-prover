@@ -21,7 +21,7 @@ class TestDeducer(unittest.TestCase):
     def test_modus_ponens_deduction(self):
         deducer = Deducer(db=self.db)
         hyps = ["p -> q", "p"]
-        consequences = deducer.deduce(hyps, include_hypotheses=False)
+        consequences = deducer.deduce(hyps, include_hypotheses=False, require_axioms=False, exclude_pure_hypotheses=False)
         
         formula_strs = [c.formula_str for c in consequences]
         self.assertIn("q", formula_strs)
@@ -44,7 +44,7 @@ class TestDeducer(unittest.TestCase):
     def test_chain_modus_ponens_deduction(self):
         deducer = Deducer(db=self.db)
         hyps = ["p -> q", "q -> r", "p"]
-        consequences = deducer.deduce(hyps)
+        consequences = deducer.deduce(hyps, require_axioms=False, exclude_pure_hypotheses=False)
         
         formula_strs = [c.formula_str for c in consequences]
         self.assertIn("q", formula_strs)
@@ -56,7 +56,7 @@ class TestDeducer(unittest.TestCase):
     def test_deduction_with_axioms(self):
         deducer = Deducer(db=self.db, auto_load_axioms=True)
         hyps = ["p"]
-        consequences = deducer.deduce(hyps, max_formulas=100)
+        consequences = deducer.deduce(hyps, max_formulas=100, require_axioms=True)
         
         formula_strs = [c.formula_str for c in consequences]
         # With ax1: A -> (B -> A), substituting A=p yields p -> (p -> p) or p -> (~p -> p)
@@ -87,17 +87,31 @@ class TestDeducer(unittest.TestCase):
         self.assertIn("(a -> a)", formula_strs)
 
     def test_deduce_consequences_helper_function(self):
-        results = deduce_consequences(["A -> B", "A"], db=self.db)
+        results = deduce_consequences(["A -> B", "A"], db=self.db, require_axioms=False, exclude_pure_hypotheses=False)
         self.assertTrue(any(c.formula_str == "B" for c in results))
 
     def test_include_hypotheses_flag(self):
         deducer = Deducer(db=self.db)
         hyps = ["p -> q", "p"]
-        consequences_excl = deducer.deduce(hyps, include_hypotheses=False)
-        consequences_incl = deducer.deduce(hyps, include_hypotheses=True)
+        consequences_excl = deducer.deduce(hyps, include_hypotheses=False, require_axioms=False, exclude_pure_hypotheses=False)
+        consequences_incl = deducer.deduce(hyps, include_hypotheses=True, require_axioms=False, exclude_pure_hypotheses=False)
         
         self.assertNotIn("p", [c.formula_str for c in consequences_excl])
         self.assertIn("p", [c.formula_str for c in consequences_incl])
+
+    def test_target_axiom_prefix_filtering(self):
+        self.db.add_axiom("grp_id", "forall x, (f(e, x) = x)")
+        self.db.add_axiom("other_ax", "A -> A")
+        deducer = Deducer(db=self.db, auto_load_axioms=False)
+        
+        consequences_grp = deducer.deduce(
+            hypotheses=["f(e, e) = e"],
+            require_axioms=True,
+            target_axiom_prefix="grp_"
+        )
+        for c in consequences_grp:
+            ref_names = [s.get('ref_name', '') for s in c.proof if s.get('justification_type') == 'Axiom']
+            self.assertTrue(any(r.startswith("grp_") for r in ref_names))
 
     def test_get_all_subformulas(self):
         f = parse_formula("forall x, (P(x) -> Q(x))")

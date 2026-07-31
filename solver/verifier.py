@@ -1,7 +1,7 @@
 import subprocess
 import os
 from .database import TheoryDatabase
-from .formula import parse_formula, Implies
+from .formula import parse_formula, Implies, Forall
 from . import lean_exporter
 
 def verify_proof_local(thm, db: TheoryDatabase):
@@ -30,6 +30,8 @@ def verify_proof_local(thm, db: TheoryDatabase):
             if ax_name not in axioms:
                 return False, f"Step {idx}: Axiom '{ax_name}' not found in database."
             schema = axioms[ax_name]
+            while isinstance(schema, Forall):
+                schema = schema.body
             bindings = f.match_schema(schema)
             if bindings is None:
                 return False, f"Step {idx}: Formula '{f}' is not a valid instance of axiom {ax_name} '{schema}'."

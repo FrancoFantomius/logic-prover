@@ -165,6 +165,8 @@ def export_proof(theorem_name: str, db: TheoryDatabase) -> str:
             ax_str = db.get_axiom(ax_name)
             if ax_str:
                 ax_f = parse_formula(ax_str)
+                while isinstance(ax_f, Forall):
+                    ax_f = ax_f.body
                 ax_vars = sorted(list(ax_f.free_variables()))
                 if ax_vars:
                     sub_json = step.get('substitution_json')

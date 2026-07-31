@@ -333,6 +333,12 @@ print("Axiom eq_subst:", axioms.get("eq_subst"))
 
 The [`solver.deducer`](file:///c:/Users/franc/Programmazione/solver/solver/deducer.py) module provides the Forward Deduction Engine. Starting from a set of user-provided hypotheses, it applies theory axioms and previously saved theorems/lemmas in the database to derive all possible logical consequences via Modus Ponens and instantiation.
 
+### Priority Queue & Axiom-Focused Search
+
+The deduction engine uses a **Two-Tiered Priority Queue** during forward search:
+- Formulas derived via an `'Axiom'` or `'Lemma'` (or Modus Ponens inheriting axiom lineage) enter a high-priority queue (`axiom_queue`).
+- Formulas derived purely from initial hypotheses ($h_0, h_1, \dots$) enter a secondary queue (`hypothesis_queue`) and are processed only when the axiom queue is exhausted.
+
 ### `Deducer` Class
 
 #### Initialization
@@ -342,12 +348,15 @@ deducer = Deducer(db=None, auto_load_axioms=True)
 - **`db`**: Instance of `TheoryDatabase`. If not provided, an in-memory database is created automatically.
 - **`auto_load_axioms`**: If `True`, ensures loading basic logical axioms (e.g. `ax1`, `ax2`, `ax3`).
 
-#### `deduce(hypotheses, max_formulas=200, include_hypotheses=False, timeout_seconds=30.0)` Method
+#### `deduce(hypotheses, max_formulas=200, include_hypotheses=False, timeout_seconds=30.0, require_axioms=True, target_axiom_prefix=None, exclude_pure_hypotheses=True)` Method
 Performs forward search to derive consequences.
 - **`hypotheses`**: List of strings (e.g. `["p -> q", "p"]`) or `Formula` instances.
 - **`max_formulas`**: Maximum number of formulas to derive.
 - **`include_hypotheses`**: If `True`, includes initial hypotheses among results.
 - **`timeout_seconds`**: Maximum execution time in seconds.
+- **`require_axioms`**: If `True` (default), filters out consequences whose reconstructed proof does not contain at least one step justified by an `'Axiom'` or `'Lemma'`.
+- **`target_axiom_prefix`**: Optional string (e.g. `'grp_'`). When specified, requires proof steps to use an axiom whose name starts with this prefix.
+- **`exclude_pure_hypotheses`**: If `True` (default), excludes consequences derived strictly from hypotheses without axiom involvement.
 
 Returns a list of `Consequence` objects.
 
@@ -359,7 +368,7 @@ Represents a derived consequence. Key properties:
 - **`justification_type`**: Justification type (`'MP'`, `'Axiom'`, `'Lemma'`, `'Hypothesis'`).
 - **`is_verified`**: Boolean indicating local validation outcome.
 
-### `deduce_consequences(hypotheses, db=None, max_formulas=200, include_hypotheses=False)` Function
+### `deduce_consequences(hypotheses, db=None, max_formulas=200, include_hypotheses=False, require_axioms=True, target_axiom_prefix=None, exclude_pure_hypotheses=True)` Function
 Quick helper function to perform deduction without manually instantiating `Deducer`.
 
 #### Example Usage:
@@ -367,23 +376,23 @@ Quick helper function to perform deduction without manually instantiating `Deduc
 ```python
 from solver.deducer import Deducer, deduce_consequences
 
-# Example 1: Quick usage with helper function
-consequences = deduce_consequences(["p -> q", "q -> r", "p"])
+# Example 1: Deduce group theory consequences focusing on domain axioms (grp_*)
+consequences = deduce_consequences(
+    hypotheses=["f(e, e) = e"],
+    require_axioms=True,
+    target_axiom_prefix="grp_"
+)
 for c in consequences:
     print(f"Derived: {c.formula_str} via {c.justification_type}")
-    # Output: 
-    # Derived: q via MP
-    # Derived: r via MP
 
-# Example 2: Usage with custom database
-from solver.database import TheoryDatabase
-
-db = TheoryDatabase("my_theory.db")
-deducer = Deducer(db=db)
-results = deducer.deduce(hypotheses=["A -> B", "A"])
+# Example 2: Pure Modus Ponens deduction between hypotheses (disable axiom requirement)
+results = deduce_consequences(
+    hypotheses=["p -> q", "q -> r", "p"],
+    require_axioms=False,
+    exclude_pure_hypotheses=False
+)
 for res in results:
     print(f"Consequence: {res.formula_str}")
-    print(f"Proof steps: {res.proof}")
 ```
 
 ---

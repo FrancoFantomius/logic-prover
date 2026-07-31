@@ -109,7 +109,10 @@ class Deducer:
         hypotheses: List[Union[str, Formula]],
         max_formulas: int = 200,
         include_hypotheses: bool = False,
-        timeout_seconds: float = 30.0
+        timeout_seconds: float = 30.0,
+        require_axioms: bool = True,
+        target_axiom_prefix: Optional[str] = None,
+        exclude_pure_hypotheses: bool = True
     ) -> List[Consequence]:
         """
         Deduces logical consequences from the given hypotheses, based on axioms
@@ -120,6 +123,9 @@ class Deducer:
             max_formulas: Maximum number of formulas to derive in the search.
             include_hypotheses: If True, includes the hypotheses in the output list.
             timeout_seconds: Time limit in seconds.
+            require_axioms: If True, requires proof to utilize at least one Axiom.
+            target_axiom_prefix: If specified, requires proof to utilize an axiom matching prefix.
+            exclude_pure_hypotheses: If True, filters out consequences derived purely from hypotheses.
 
         Returns:
             List of Consequence objects containing the resulting formulas and their proofs.
@@ -128,13 +134,36 @@ class Deducer:
         parsed_hyps = [_ensure_formula(h) for h in hypotheses]
         
         derived: Dict[Formula, Dict] = {}
-        queue: List[Formula] = []
+        uses_axiom: Dict[Formula, bool] = {}
+        axiom_queue: List[Formula] = []
+        hypothesis_queue: List[Formula] = []
         implications_by_ant: Dict[Formula, List[Implies]] = {}
 
         def register(formula: Formula, justification: Dict) -> bool:
             if formula not in derived:
                 derived[formula] = justification
-                queue.append(formula)
+                
+                # Determine axiom lineage (Strategy 3)
+                jtype = justification.get('justification_type')
+                if jtype in ('Axiom', 'Lemma'):
+                    uses_ax = True
+                elif jtype == 'Hypothesis':
+                    uses_ax = False
+                elif jtype == 'MP':
+                    arg1 = justification.get('arg1_formula')
+                    arg2 = justification.get('arg2_formula')
+                    uses_ax = uses_axiom.get(arg1, False) or uses_axiom.get(arg2, False)
+                else:
+                    uses_ax = False
+                
+                uses_axiom[formula] = uses_ax
+
+                # Axiom-derived formulas enter high-priority queue first
+                if uses_ax:
+                    axiom_queue.append(formula)
+                else:
+                    hypothesis_queue.append(formula)
+
                 if isinstance(formula, Implies):
                     if formula.left not in implications_by_ant:
                         implications_by_ant[formula.left] = []
@@ -167,18 +196,19 @@ class Deducer:
                 verified_lemmas.append(lemma)
                 existing_lemma_map[parse_formula(lemma['thesis_str'])] = name
 
-        head = 0
-        instantiated_axioms_and_lemmas = False
-
         while len(derived) < max_formulas and (time.time() - start_time) < timeout_seconds:
             added_any_mp = False
 
-            # 2. Modus Ponens Saturation Loop
-            while head < len(queue) and len(derived) < max_formulas:
+            # 2. Modus Ponens Saturation Loop with Priority Queue (Strategy 3)
+            while (axiom_queue or hypothesis_queue) and len(derived) < max_formulas:
                 if (time.time() - start_time) > timeout_seconds:
                     break
-                current = queue[head]
-                head += 1
+                
+                # Pop from axiom_queue first; if empty, pop from hypothesis_queue
+                if axiom_queue:
+                    current = axiom_queue.pop(0)
+                else:
+                    current = hypothesis_queue.pop(0)
 
                 # If current is an antecedent A
                 if current in implications_by_ant:
@@ -218,11 +248,23 @@ class Deducer:
             for c in extra_candidates:
                 candidates.add(Not(c))
 
-            candidate_list = list(candidates)
+            # Prioritize terms (Var, Pred) before complex formulas
+            candidate_list = sorted(list(candidates), key=lambda c: 0 if isinstance(c, (Var, Pred)) else 1)
 
-            # Axiom instantiation
-            for ax_name, schema in parsed_axioms.items():
+            # Axiom instantiation: prioritize target_axiom_prefix if specified
+            axiom_items = list(parsed_axioms.items())
+            if target_axiom_prefix:
+                prefixes = tuple(target_axiom_prefix) if isinstance(target_axiom_prefix, (list, tuple)) else (target_axiom_prefix,)
+                target_items = [item for item in axiom_items if item[0].startswith(prefixes)]
+                other_items = [item for item in axiom_items if not item[0].startswith(prefixes)]
+                axiom_items = target_items + other_items
+
+            for ax_name, raw_schema in axiom_items:
+                schema = raw_schema
+                while isinstance(schema, Forall):
+                    schema = schema.body
                 schema_vars = sorted(list(schema.free_variables()))
+                ax_added = False
                 if schema_vars:
                     if len(schema_vars) <= 3:
                         def get_substitutions(vars_list):
@@ -230,12 +272,14 @@ class Deducer:
                                 yield {}
                                 return
                             v = vars_list[0]
-                            for c in candidate_list:
+                            current_candidates = [c for c in candidate_list if isinstance(c, (Var, Pred))] if ax_name == 'eq_ref' else candidate_list
+                            for c in current_candidates:
                                 for rest in get_substitutions(vars_list[1:]):
                                     res = dict(rest)
                                     res[v] = c
                                     yield res
 
+                        schema_added_count = 0
                         for sub in get_substitutions(schema_vars):
                             if len(derived) >= max_formulas or (time.time() - start_time) > timeout_seconds:
                                 break
@@ -246,6 +290,10 @@ class Deducer:
                                 'substitution_json': {k: str(v) for k, v in sub.items()}
                             }):
                                 added_any_inst = True
+                                ax_added = True
+                                schema_added_count += 1
+                                if schema_added_count >= 5:
+                                    break
                 else:
                     if register(schema, {
                         'justification_type': 'Axiom',
@@ -253,6 +301,10 @@ class Deducer:
                         'substitution_json': {}
                     }):
                         added_any_inst = True
+                        ax_added = True
+
+                if ax_added:
+                    break
 
             # Lemma instantiation
             for lemma in verified_lemmas:
@@ -310,7 +362,7 @@ class Deducer:
             if not added_any_mp and not added_any_inst:
                 break
 
-        # 4. Proof reconstruction and result assembly
+        # 4. Proof reconstruction and result assembly with dependency filtering (Strategy 1)
         hyp_set = set(parsed_hyps)
         hyp_strs = [str(h) for h in parsed_hyps]
         consequences = []
@@ -321,6 +373,22 @@ class Deducer:
 
             try:
                 steps = reconstruct_proof(goal, derived, lemma_map=existing_lemma_map, db=self.db)
+                
+                # Dependency Tracing (Strategy 1)
+                axiom_steps = [s for s in steps if s.get('justification_type') in ('Axiom', 'Lemma')]
+                axiom_ref_names = [s.get('ref_name', '') for s in axiom_steps if s.get('ref_name')]
+                
+                if require_axioms and not axiom_steps:
+                    continue
+                if target_axiom_prefix:
+                    prefixes = tuple(target_axiom_prefix) if isinstance(target_axiom_prefix, (list, tuple)) else (target_axiom_prefix,)
+                    if not any(r.startswith(prefixes) for r in axiom_ref_names):
+                        continue
+                if exclude_pure_hypotheses:
+                    has_axiom_or_lemma = any(s.get('justification_type') in ('Axiom', 'Lemma') for s in steps)
+                    if not has_axiom_or_lemma:
+                        continue
+
                 thm = {
                     'name': 'temp_deduction',
                     'thesis_str': str(goal),
@@ -345,10 +413,21 @@ def deduce_consequences(
     hypotheses: List[Union[str, Formula]],
     db: Optional[TheoryDatabase] = None,
     max_formulas: int = 200,
-    include_hypotheses: bool = False
+    include_hypotheses: bool = False,
+    require_axioms: bool = True,
+    target_axiom_prefix: Optional[str] = None,
+    exclude_pure_hypotheses: bool = True
 ) -> List[Consequence]:
     """
     Helper function to deduce consequences from a set of hypotheses.
     """
     deducer = Deducer(db=db)
-    return deducer.deduce(hypotheses, max_formulas=max_formulas, include_hypotheses=include_hypotheses)
+    return deducer.deduce(
+        hypotheses,
+        max_formulas=max_formulas,
+        include_hypotheses=include_hypotheses,
+        require_axioms=require_axioms,
+        target_axiom_prefix=target_axiom_prefix,
+        exclude_pure_hypotheses=exclude_pure_hypotheses
+    )
+
