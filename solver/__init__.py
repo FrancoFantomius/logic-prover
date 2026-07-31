@@ -11,6 +11,7 @@ from .verifier import verify_proof_local, verify_proof_with_lean, verify_and_sav
 from .explorer import explore_consequences
 from .deducer import Deducer, deduce_consequences, Consequence
 from .lean_exporter import formula_to_lean, export_proof
+from .graph_exporter import build_theory_graph, export_graph_dot, export_graph_json, export_graph_html
 from . import dependencies
 
 __all__ = [
@@ -39,6 +40,10 @@ __all__ = [
     "Consequence",
     "formula_to_lean",
     "export_proof",
+    "build_theory_graph",
+    "export_graph_dot",
+    "export_graph_json",
+    "export_graph_html",
     "dependencies",
 ]
 

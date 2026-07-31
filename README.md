@@ -162,3 +162,5 @@ Module | Description
 [`solver.explorer`](DOCUMENTATION.md#5-solverexplorer) | Automatic generation and saturation of new theoretical consequences
 [`solver.lean_exporter`](DOCUMENTATION.md#6-solverlean_exporter) | AST-to-Lean translator and generator of verifiable Lean 4 source files
 [`solver.dependencies`](DOCUMENTATION.md#7-solverdependencies) | Axiom packages for First-Order Logic (FOL) and Second-Order Logic (SOL)
+[`solver.deducer`](DOCUMENTATION.md#8-solverdeducer) | Forward deduction engine for deriving logical consequences
+[`solver.graph_exporter`](DOCUMENTATION.md#9-solvergraph_exporter) | Proof dependency graph extractor (DOT, JSON, interactive HTML)

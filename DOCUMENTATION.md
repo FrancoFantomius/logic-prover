@@ -14,6 +14,7 @@ This document contains the detailed reference guide for each module and subpacka
 6. [solver.lean_exporter](#6-solverlean_exporter)
 7. [solver.dependencies](#7-solverdependencies)
 8. [solver.deducer](#8-solverdeducer)
+9. [solver.graph_exporter](#9-solvergraph_exporter)
 
 ---
 
@@ -383,4 +384,49 @@ results = deducer.deduce(hypotheses=["A -> B", "A"])
 for res in results:
     print(f"Consequence: {res.formula_str}")
     print(f"Proof steps: {res.proof}")
+```
+
+---
+
+## 9. `solver.graph_exporter`
+
+The [`solver.graph_exporter`](file:///c:/Users/franc/Programmazione/solver/solver/graph_exporter.py) module extracts directed graph representations of formal theories from a `TheoryDatabase`. It maps Axioms, Hypotheses, and Derived Theorems into graph nodes, connected by directed edges representing logical derivation dependencies.
+
+### Main Functions
+
+#### `build_theory_graph(db)`
+Extracts nodes and edges from the `TheoryDatabase`.
+- **Nodes**:
+  - `type: "axiom"` (Axioms registered in `db`)
+  - `type: "hypothesis"` (Assumed hypotheses for theorems)
+  - `type: "theorem"` (Verified derived theorems/results)
+- **Edges**: Directed dependencies linking hypotheses, axioms, and prior lemmas to the resulting theorem.
+
+Returns a dictionary `{"nodes": [...], "edges": [...]}`.
+
+#### `export_graph_dot(db, output_path="group_graph.dot")`
+Exports the graph structure into Graphviz DOT syntax and writes it to file.
+
+#### `export_graph_json(db, output_path="group_graph.json")`
+Exports the graph structure as a structured JSON document.
+
+#### `export_graph_html(db, output_path="group_graph.html")`
+Exports an interactive visual HTML graph rendered with the `vis-network` JavaScript library. Color coding:
+- **Blue**: Axiom nodes
+- **Yellow**: Hypothesis nodes
+- **Green**: Derived Result/Theorem nodes
+
+#### Example Usage:
+
+```python
+from solver.database import TheoryDatabase
+from solver.graph_exporter import export_graph_dot, export_graph_html
+
+db = TheoryDatabase("group.db")
+
+# Export to Graphviz DOT format
+export_graph_dot(db, "group_graph.dot")
+
+# Export to interactive web visualization
+export_graph_html(db, "group_graph.html")
 ```
