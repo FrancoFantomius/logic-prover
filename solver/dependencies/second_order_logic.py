@@ -1,6 +1,6 @@
 """
 Second-Order Logic (SOL) Axioms Module
-================----------------------
+======================================
 Contains standard axiom schemas for Second-Order Logic (SOL),
 including Second-Order Quantifiers, Comprehension Schema, Second-Order Choice,
 and Mathematical Induction in Second-Order Form.
@@ -59,11 +59,11 @@ SECOND_ORDER_AXIOMS = {
 
 
 def get_second_order_axioms():
-    """Restituisce un dizionario contenente tutti gli assiomi della logica del secondo ordine."""
+    """Returns a dictionary containing all Second-Order Logic axioms."""
     return dict(SECOND_ORDER_AXIOMS)
 
 
 def load_second_order_axioms(db: TheoryDatabase):
-    """Carica tutti gli assiomi della logica del secondo ordine nel database delle teorie specificato."""
+    """Loads all Second-Order Logic axioms into the specified theory database."""
     for name, formula_str in SECOND_ORDER_AXIOMS.items():
         db.add_axiom(name, formula_str)

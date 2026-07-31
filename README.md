@@ -1,83 +1,83 @@
 # Solver Library
 
-**Solver** è una libreria Python per la rappresentazione di formule logiche, il dimostratore automatico di teoremi in sistemi alla Hilbert, la verifica formale locale e l'integrazione con l'assistente di prova **Lean 4**, nonché l'esplorazione automatica di nuove conseguenze logiche e la gestione di teorie di Primo e Secondo Ordine.
+**Solver** is a Python library for representing logical formulas, automated theorem proving in Hilbert-style proof systems, local formal verification, integration with the **Lean 4** proof assistant, automated exploration of new logical consequences, and managing First-Order and Second-Order logic theories.
 
 ---
 
-## Caratteristiche Principali
+## Key Features
 
-- **AST Logico e Parser**: Costruzione orientata agli oggetti di formule logiche (Proposizionali, Primo Ordine, Secondo Ordine, Uguaglianza) con supporto a sintassi Unicode (`∀`, `∃`, `→`, `↔`, `∧`, `∨`, `¬`) ed ASCII (`forall`, `exists`, `->`, `<->`, `&`, `|`, `~`).
-- **Database SQLite per Teorie (`TheoryDatabase`)**: Memorizzazione strutturata e persistente di assiomi, ipotesi, teoremi dimostrati, passi della dimostrazione e grafico delle dipendenze.
-- **Prover Automatico (`prove`)**: Algoritmo di forward search basato su Breadth-First Search (BFS) e Modus Ponens con istanziazione schematica di assiomi e riutilizzo di lemmi.
-- **Verificatore a Due Livelli (`verifier`)**:
-  1. Validazione strutturale e correttezza logica locale in Python.
-  2. Generazione ed esecuzione di codice self-contained in **Lean 4** tramite la CLI ufficiale di Lean.
-- **Esploratore di Conseguenze Logiche (`explore_consequences`)**: Generazione automatica e saturazione di nuove formule derivabili, con verifica ed inserimento automatico nel database.
-- **Librerie Assiomatiche Pronte all'Uso (`solver.dependencies`)**: Moduli integrati con assiomi per il calcolo proposizionale, la logica del primo ordine (FOL) con uguaglianza di Leibniz e la logica del secondo ordine (SOL) con schema di comprensione, scelta ed induzione matematica.
+- **Logical AST and Parser**: Object-oriented construction of logical formulas (Propositional, First-Order, Second-Order, Equality) with support for Unicode (`∀`, `∃`, `→`, `↔`, `∧`, `∨`, `¬`) and ASCII syntax (`forall`, `exists`, `->`, `<->`, `&`, `|`, `~`).
+- **SQLite Theory Database (`TheoryDatabase`)**: Structured and persistent storage of axioms, hypotheses, proved theorems, proof steps, and dependency graphs.
+- **Automated Prover (`prove`)**: Forward search algorithm based on Breadth-First Search (BFS) and Modus Ponens with schematic axiom instantiation and lemma reuse.
+- **Two-Level Verifier (`verifier`)**:
+  1. Structural validation and local logical correctness in Python.
+  2. Generation and execution of self-contained **Lean 4** code via the official Lean CLI.
+- **Logical Consequence Explorer (`explore_consequences`)**: Automatic generation and saturation of new derivable formulas, with automatic verification and database entry.
+- **Ready-to-Use Axiom Libraries (`solver.dependencies`)**: Built-in modules with axioms for propositional calculus, First-Order Logic (FOL) with Leibniz equality, and Second-Order Logic (SOL) with comprehension schema, choice, and mathematical induction.
 
 ---
 
-## Installazione
+## Installation
 
-Assicurati di avere Python >= 3.8 installato. Per installare la libreria in modalità sviluppatore:
+Ensure you have Python >= 3.8 installed. To install the library in developer mode:
 
 ```bash
 pip install -e .
 ```
 
-Per eseguire i test unitari:
+To run unit tests:
 
 ```bash
 python -m unittest discover tests
 ```
 
-*(Opzionale)* Per abilitare la verifica tramite Lean 4, installa il compilatore `lean` e assicurati che sia disponibile nel `PATH` di sistema.
+*(Optional)* To enable Lean 4 verification, install the `lean` compiler and make sure it is available in your system `PATH`.
 
 ---
 
-## Esempi Basici (Quick Start)
+## Quick Start Examples
 
-### 1. Creare e manipolare Formule
+### 1. Creating and Manipulating Formulas
 
-Puoi costruire le formule programmaticamente con l'AST, usare gli operatori overloaded di Python (`~`, `>>`, `&`, `|`), oppure usare il parser:
+You can construct formulas programmatically using the AST, use Python's overloaded operators (`~`, `>>`, `&`, `|`), or use the parser:
 
 ```python
 from solver import Var, Implies, parse_formula, formula_to_lean
 
-# Costruzione programmatica tramite AST
+# Programmatic construction via AST
 p = Var("p")
 q = Var("q")
 formula1 = p >> (q >> p)
 print("Formula AST:", formula1)  # (p -> (q -> p))
 
-# Parsing da stringa (supporta sintassi ASCII o Unicode)
+# String parsing (supports ASCII or Unicode syntax)
 formula2 = parse_formula("forall x, (P(x) -> Q(x))")
 print("Formula Parser:", formula2)  # (forall x, (P(x) -> Q(x)))
 
-# Conversione in sintassi Lean 4
+# Conversion to Lean 4 syntax
 print("Lean 4:", formula_to_lean(formula2))  # (∀ x, ((P x) → (Q x)))
 ```
 
-### 2. Gestione del Database e Assiomi
+### 2. Database Management and Axioms
 
-Inizializza una teoria logica registrando gli assiomi del calcolo proposizionale:
+Initialize a logical theory by registering propositional calculus axioms:
 
 ```python
 from solver import TheoryDatabase
 
 db = TheoryDatabase("my_theory.db")
 
-# Aggiunta manuale degli assiomi di Hilbert
+# Manual addition of Hilbert axioms
 db.add_axiom("ax1", "A -> (B -> A)")
 db.add_axiom("ax2", "(A -> (B -> C)) -> ((A -> B) -> (A -> C))")
 db.add_axiom("ax3", "(~A -> ~B) -> (B -> A)")
 
-print("Assiomi registrati:", db.get_all_axioms())
+print("Registered Axioms:", db.get_all_axioms())
 ```
 
-### 3. Dimostrazione Automatica di un Teorema
+### 3. Automated Theorem Proving
 
-Genera una dimostrazione formale per la tesi $p \to p$ a partire dagli assiomi registrati:
+Generate a formal proof for the thesis $p \to p$ starting from registered axioms:
 
 ```python
 from solver import TheoryDatabase, prove
@@ -87,25 +87,25 @@ db.add_axiom("ax1", "A -> (B -> A)")
 db.add_axiom("ax2", "(A -> (B -> C)) -> ((A -> B) -> (A -> C))")
 db.add_axiom("ax3", "(~A -> ~B) -> (B -> A)")
 
-# Dimostrazione di (p -> p) senza ipotesi
+# Proof of (p -> p) without hypotheses
 steps = prove(thesis_str="p -> p", hypotheses_strs=[], db=db)
 
 for step in steps:
-    print(f"Passo {step['step_idx']}: {step['formula_str']} [{step['justification_type']}]")
+    print(f"Step {step['step_idx']}: {step['formula_str']} [{step['justification_type']}]")
 ```
 
-### 4. Validazione Locale, Lean 4 ed Esportazione
+### 4. Local Validation, Lean 4 & Export
 
-Verifica il teorema e salvalo nel database:
+Verify the theorem and save it to the database:
 
 ```python
 from solver import TheoryDatabase, verify_and_save, export_proof
 
 db = TheoryDatabase("my_theory.db")
-# (Ipotizzando che gli assiomi siano stati caricati e i passi generati...)
+# (Assuming axioms were loaded and steps generated...)
 
 thm = {
-    'name': 'identita_p',
+    'name': 'identity_p',
     'thesis_str': 'p -> p',
     'hypotheses': [],
     'steps': steps
@@ -113,52 +113,52 @@ thm = {
 
 success, msg = verify_and_save(thm, db)
 if success:
-    print("Teorema verificato con successo!")
-    # Esporta il codice Lean 4 autosufficiente
-    lean_code = export_proof("identita_p", db)
-    print("\n--- Codice Sorgente Lean 4 ---")
+    print("Theorem successfully verified!")
+    # Export self-contained Lean 4 code
+    lean_code = export_proof("identity_p", db)
+    print("\n--- Lean 4 Source Code ---")
     print(lean_code)
 else:
-    print("Errore di verifica:", msg)
+    print("Verification error:", msg)
 ```
 
-### 5. Esplorazione Automatica di Nuovi Teoremi
+### 5. Automatic Exploration of New Theorems
 
-Consenti al solver di esplorare e scoprire automaticamente nuove conseguenze derivabili dagli assiomi caricati:
+Allow the solver to explore and automatically discover new consequences derived from loaded axioms:
 
 ```python
 from solver import TheoryDatabase, explore_consequences, dependencies
 
 db = TheoryDatabase("explore.db")
 
-# Carica tutti gli assiomi logici di Primo e Secondo Ordine inclusi nel pacchetto
+# Load all First and Second-Order logic axioms included in the package
 dependencies.load_all_logic_axioms(db)
 
-# Genera ed esplora fino a 5 nuovi teoremi
-nuovi_teoremi = explore_consequences(
+# Generate and explore up to 5 new theorems
+new_theorems = explore_consequences(
     db, 
     basic_vars=['p'], 
     max_depth=1, 
     max_theorems=5
 )
 
-print(f"Generati e verificati {nuovi_teoremi} nuovi teoremi!")
+print(f"Generated and verified {new_theorems} new theorems!")
 ```
 
 ---
 
-## Documentazione dei Moduli
+## Module Documentation
 
-Per una guida completa su ciascun modulo della libreria, consulta la documentazione dettagliata:
+For a complete guide on each library module, refer to the detailed documentation manual:
 
 **[DOCUMENTATION.md](DOCUMENTATION.md)**
 
-Modulo | Descrizione
+Module | Description
 --- | ---
-[`solver.formula`](DOCUMENTATION.md#1-solverformula) | AST per formule proposizionali, FOL e SOL, parser e trasformazioni
-[`solver.database`](DOCUMENTATION.md#2-solverdatabase) | Interfaccia SQLite per assiomi, teoremi, passi e dipendenze
-[`solver.prover`](DOCUMENTATION.md#3-solverprover) | Algoritmo di dimostrazione automatica Forward BFS con Modus Ponens
-[`solver.verifier`](DOCUMENTATION.md#4-solververifier) | Verificatore strutturale locale e integrazione con il compilatore Lean 4
-[`solver.explorer`](DOCUMENTATION.md#5-solverexplorer) | Generazione e saturazione automatica di nuove conseguenze teoriche
-[`solver.lean_exporter`](DOCUMENTATION.md#6-solverlean_exporter) | Traduttore AST-Lean e generatore di sorgenti Lean 4 verificabili
-[`solver.dependencies`](DOCUMENTATION.md#7-solverdependencies) | Pacchetto di assiomi per Logica del Primo Ordine (FOL) e Secondo Ordine (SOL)
+[`solver.formula`](DOCUMENTATION.md#1-solverformula) | AST for propositional formulas, FOL and SOL, parser and transformations
+[`solver.database`](DOCUMENTATION.md#2-solverdatabase) | SQLite interface for axioms, theorems, steps, and dependencies
+[`solver.prover`](DOCUMENTATION.md#3-solverprover) | Automated proof search algorithm (Forward BFS with Modus Ponens)
+[`solver.verifier`](DOCUMENTATION.md#4-solververifier) | Local structural verifier and integration with the Lean 4 compiler
+[`solver.explorer`](DOCUMENTATION.md#5-solverexplorer) | Automatic generation and saturation of new theoretical consequences
+[`solver.lean_exporter`](DOCUMENTATION.md#6-solverlean_exporter) | AST-to-Lean translator and generator of verifiable Lean 4 source files
+[`solver.dependencies`](DOCUMENTATION.md#7-solverdependencies) | Axiom packages for First-Order Logic (FOL) and Second-Order Logic (SOL)

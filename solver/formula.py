@@ -4,19 +4,19 @@ import re
 class Formula(ABC):
     @abstractmethod
     def substitute(self, sub_map):
-        """Sostituisce le variabili presenti nelle chiavi di sub_map con le formule corrispondenti."""
+        """Substitutes variables in sub_map keys with corresponding formulas."""
         pass
 
     @abstractmethod
     def free_variables(self):
-        """Restituisce l'insieme delle variabili libere presenti nella formula."""
+        """Returns the set of free variables present in the formula."""
         pass
 
     def match_schema(self, schema):
         """
-        Controlla se la formula corrente fa il match con la formula schema (che contiene meta-variabili).
-        Ritorna un dizionario di associazioni (nome_meta_variabile -> sottoformula) se il match ha successo,
-        altrimenti None.
+        Checks whether the current formula matches the schema formula (which contains meta-variables).
+        Returns a dictionary of bindings (meta_variable_name -> subformula) if matching succeeds,
+        otherwise None.
         """
         bindings = {}
         if self._match(schema, self, bindings):
@@ -390,7 +390,7 @@ def tokenize(s):
         if kind == 'SKIP':
             continue
         elif kind == 'MISMATCH':
-            raise ValueError(f"Carattere inatteso: '{value}'")
+            raise ValueError(f"Unexpected character: '{value}'")
         else:
             tokens.append((kind, value))
     return tokens
@@ -409,16 +409,16 @@ class Parser:
     def consume(self, expected_kind=None):
         tok = self.peek()
         if tok is None:
-            raise ValueError("Fine inattesa dell'input")
+            raise ValueError("Unexpected end of input")
         if expected_kind and tok[0] != expected_kind:
-            raise ValueError(f"Atteso token '{expected_kind}', trovato '{tok[0]}' ('{tok[1]}')")
+            raise ValueError(f"Expected token '{expected_kind}', found '{tok[0]}' ('{tok[1]}')")
         self.pos += 1
         return tok
 
     def parse_formula(self):
         res = self.parse_quantifier()
         if self.peek() is not None:
-            raise ValueError(f"Token extra inatteso alla fine: '{self.peek()[1]}'")
+            raise ValueError(f"Unexpected extra token at end: '{self.peek()[1]}'")
         return res
 
     def parse_quantifier(self):
@@ -493,11 +493,11 @@ class Parser:
     def parse_primary(self):
         tok = self.peek()
         if tok is None:
-            raise ValueError("Attesa variabile o parentesi aperta, fine dell'input raggiunta")
+            raise ValueError("Expected variable or open parenthesis, reached end of input")
         if tok[0] == 'VAR':
             var_tok = self.consume('VAR')
             if self.peek() and self.peek()[0] == 'LPAREN':
-                # Predicato P(x, y)
+                # Predicate P(x, y)
                 self.consume('LPAREN')
                 args = []
                 if self.peek() and self.peek()[0] != 'RPAREN':
@@ -514,11 +514,11 @@ class Parser:
             self.consume('RPAREN')
             return expr
         else:
-            raise ValueError(f"Token inatteso: '{tok[1]}'")
+            raise ValueError(f"Unexpected token: '{tok[1]}'")
 
 
 def parse_formula(s):
-    """Esegue il parsing di una stringa in un oggetto Formula."""
+    """Parses a string into a Formula object."""
     tokens = tokenize(s)
     parser = Parser(tokens)
     return parser.parse_formula()

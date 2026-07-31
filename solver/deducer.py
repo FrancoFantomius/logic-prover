@@ -1,9 +1,9 @@
 """
 Deducer Module
 ==============
-Modulo per la deduzione logica in avanti (Forward Deduction Engine).
-Data una serie di ipotesi e basandosi su assiomi e formule/teoremi precedenti memorizzati
-nel database delle teorie (TheoryDatabase), il Deducer deduce e ricava le conseguenze logiche.
+Forward Deduction Engine module.
+Given a set of hypotheses and relying on axioms and prior formulas/theorems stored
+in the theory database (TheoryDatabase), the Deducer derives logical consequences.
 """
 
 import time
@@ -18,17 +18,17 @@ from .verifier import verify_proof_local
 
 
 def _ensure_formula(f: Union[str, Formula]) -> Formula:
-    """Converte una stringa o garantisce che l'oggetto sia una Formula."""
+    """Converts a string or ensures the object is a Formula."""
     if isinstance(f, Formula):
         return f
     elif isinstance(f, str):
         return parse_formula(f)
     else:
-        raise TypeError(f"Atteso str o Formula, ottenuto {type(f)}")
+        raise TypeError(f"Expected str or Formula, got {type(f)}")
 
 
 def get_all_subformulas(formula: Formula) -> Set[Formula]:
-    """Estrae ricorsivamente tutte le sottoformule di qualsiasi tipo di Formula."""
+    """Recursively extracts all subformulas of any Formula type."""
     subs = {formula}
     if isinstance(formula, Not):
         subs.update(get_all_subformulas(formula.formula))
@@ -46,7 +46,7 @@ def get_all_subformulas(formula: Formula) -> Set[Formula]:
 
 class Consequence:
     """
-    Rappresenta una conseguenza logica derivata con la relativa dimostrazione.
+    Represents a derived logical consequence along with its proof.
     """
     def __init__(self, formula: Formula, proof: List[Dict], justification_type: str, is_verified: bool = True):
         self.formula = formula
@@ -73,16 +73,16 @@ class Consequence:
 
 class Deducer:
     """
-    Motore di deduzione logica in avanti (Forward Deductive Engine).
-    Dati degli assiomi, teoremi/formule precedenti nel database e una serie di ipotesi,
-    ricava automaticamente le conseguenze logiche tramite istanziazione e Modus Ponens.
+    Forward Logical Deductive Engine.
+    Given axioms, previous theorems/formulas in the database, and a set of hypotheses,
+    it automatically derives logical consequences via instantiation and Modus Ponens.
     """
 
     def __init__(self, db: Optional[TheoryDatabase] = None, auto_load_axioms: bool = True):
         """
-        Inizializza il Deducer.
-        Se db è None, crea un database in-memory (:memory:).
-        Se auto_load_axioms è True, assicura che gli assiomi logici di base siano presenti nel DB.
+        Initializes the Deducer.
+        If db is None, creates an in-memory database (:memory:).
+        If auto_load_axioms is True, ensures essential basic logical axioms are present in the DB.
         """
         if db is None:
             self.db = TheoryDatabase(":memory:")
@@ -93,7 +93,7 @@ class Deducer:
             self._init_default_axioms()
 
     def _init_default_axioms(self):
-        """Assicura che gli assiomi essenziali del calcolo proposizionale di Hilbert siano presenti nel DB."""
+        """Ensures essential Hilbert propositional calculus axioms are present in the DB."""
         existing = self.db.get_all_axioms()
         default_axioms = {
             "ax1": "A -> (B -> A)",
@@ -112,17 +112,17 @@ class Deducer:
         timeout_seconds: float = 30.0
     ) -> List[Consequence]:
         """
-        Deduce le conseguenze logiche a partire dalle ipotesi date, basandosi sugli assiomi
-        e sulle formule/lemmi salvati nel database.
+        Deduces logical consequences from the given hypotheses, based on axioms
+        and formulas/lemmas stored in the database.
 
         Args:
-            hypotheses: Lista di stringhe o oggetti Formula che costituiscono le ipotesi.
-            max_formulas: Numero massimo di formule da derivare nella ricerca.
-            include_hypotheses: Se True, include anche le ipotesi nell'elenco di output.
-            timeout_seconds: Limite di tempo in secondi.
+            hypotheses: List of strings or Formula objects representing the hypotheses.
+            max_formulas: Maximum number of formulas to derive in the search.
+            include_hypotheses: If True, includes the hypotheses in the output list.
+            timeout_seconds: Time limit in seconds.
 
         Returns:
-            Lista di oggetti Consequence contenenti le formule conseguenti e le loro dimostrazioni.
+            List of Consequence objects containing the resulting formulas and their proofs.
         """
         start_time = time.time()
         parsed_hyps = [_ensure_formula(h) for h in hypotheses]
@@ -142,7 +142,7 @@ class Deducer:
                 return True
             return False
 
-        # 1. Inserisce le ipotesi iniziali
+        # 1. Insert initial hypotheses
         for idx, hyp in enumerate(parsed_hyps):
             register(hyp, {
                 'justification_type': 'Hypothesis',
@@ -150,11 +150,11 @@ class Deducer:
                 'formula_str': str(hyp)
             })
 
-        # Carica gli assiomi dal DB
+        # Load axioms from DB
         axioms = self.db.get_all_axioms()
         parsed_axioms = {ax_name: parse_formula(ax_str) for ax_name, ax_str in axioms.items()}
 
-        # Carica i lemmi verificati dal DB
+        # Load verified lemmas from DB
         verified_lemmas = []
         existing_lemma_map = {}
         with self.db.connection_scope() as conn:
@@ -180,7 +180,7 @@ class Deducer:
                 current = queue[head]
                 head += 1
 
-                # Se current è un antecedente A
+                # If current is an antecedent A
                 if current in implications_by_ant:
                     for impl in list(implications_by_ant[current]):
                         consequent = impl.right
@@ -192,7 +192,7 @@ class Deducer:
                         if register(consequent, just):
                             added_any_mp = True
 
-                # Se current è un'implicazione A -> B
+                # If current is an implication A -> B
                 if isinstance(current, Implies):
                     if current.left in derived:
                         consequent = current.right
@@ -204,10 +204,10 @@ class Deducer:
                         if register(consequent, just):
                             added_any_mp = True
 
-            # 3. Istanziazione di Assiomi e Lemmi se MP è saturo o non ha derivato nuove formule
+            # 3. Axiom and Lemma instantiation if MP is saturated or derived no new formulas
             added_any_inst = False
 
-            # Raccogli candidati rilevanti dalle formule attualmente derivate ed ipotesi
+            # Collect relevant candidate formulas from currently derived formulas and hypotheses
             candidates: Set[Formula] = set()
             for f in list(derived.keys()):
                 candidates.update(get_all_subformulas(f))
@@ -220,7 +220,7 @@ class Deducer:
 
             candidate_list = list(candidates)
 
-            # Istanziazione Assiomi
+            # Axiom instantiation
             for ax_name, schema in parsed_axioms.items():
                 schema_vars = sorted(list(schema.free_variables()))
                 if schema_vars:
@@ -254,7 +254,7 @@ class Deducer:
                     }):
                         added_any_inst = True
 
-            # Istanziazione Lemmi
+            # Lemma instantiation
             for lemma in verified_lemmas:
                 if len(derived) >= max_formulas or (time.time() - start_time) > timeout_seconds:
                     break
@@ -306,11 +306,11 @@ class Deducer:
                             if register(inst_thesis, just):
                                 added_any_inst = True
 
-            # Se non sono state aggiunte nuove formule né tramite MP né tramite istanziazione, la deduzione è satura.
+            # If no new formulas were added via MP or instantiation, deduction is saturated.
             if not added_any_mp and not added_any_inst:
                 break
 
-        # 4. Ricostruzione delle dimostrazioni e assemblaggio dei risultati
+        # 4. Proof reconstruction and result assembly
         hyp_set = set(parsed_hyps)
         hyp_strs = [str(h) for h in parsed_hyps]
         consequences = []
@@ -348,7 +348,7 @@ def deduce_consequences(
     include_hypotheses: bool = False
 ) -> List[Consequence]:
     """
-    Funzione ausiliaria per dedurre conseguenze da un insieme di ipotesi.
+    Helper function to deduce consequences from a set of hypotheses.
     """
     deducer = Deducer(db=db)
     return deducer.deduce(hypotheses, max_formulas=max_formulas, include_hypotheses=include_hypotheses)

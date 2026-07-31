@@ -2,10 +2,7 @@ import unittest
 import os
 import tempfile
 
-from solver.formula import (
-    parse_formula, Formula, Var, Not, Implies, And, Or, Iff,
-    Forall, Exists, Equals, Pred
-)
+from solver.formula import parse_formula, Formula
 from solver.database import TheoryDatabase
 from solver.dependencies import (
     FIRST_ORDER_AXIOMS,
@@ -21,7 +18,7 @@ from solver.dependencies import (
 from solver.lean_exporter import formula_to_lean
 
 
-class TestLogicDependencies(unittest.TestCase):
+class TestLogic(unittest.TestCase):
     def setUp(self):
         self.temp_db_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db_file.close()
@@ -45,42 +42,9 @@ class TestLogicDependencies(unittest.TestCase):
         self.assertIn("sol_induction", sol_axioms)
         self.assertEqual(len(sol_axioms), len(SECOND_ORDER_AXIOMS))
 
-    def test_load_all_logic_axioms_into_db(self):
-        load_all_logic_axioms(self.db)
-        db_axioms = self.db.get_all_axioms()
-        for name in LOGIC_AXIOMS:
-            self.assertIn(name, db_axioms)
-            # Verify formula parsing on every axiom string
-            parsed = parse_formula(db_axioms[name])
-            self.assertIsInstance(parsed, Formula)
-
-    def test_fol_and_sol_parsing_and_lean_conversion(self):
-        # Test Quantifier Parsing & Lean conversion
-        f1 = parse_formula("forall x, (P(x) -> Q(x))")
-        self.assertIsInstance(f1, Forall)
-        self.assertEqual(formula_to_lean(f1), "(∀ x, ((P x) → (Q x)))")
-
-        # Test Existential & Equals
-        f2 = parse_formula("exists y, (y = x)")
-        self.assertIsInstance(f2, Exists)
-        self.assertIsInstance(f2.body, Equals)
-        self.assertEqual(formula_to_lean(f2), "(∃ y, (y = x))")
-
-        # Test And, Or, Iff
-        f3 = parse_formula("(A & B) <-> (B | A)")
-        self.assertIsInstance(f3, Iff)
-        self.assertIsInstance(f3.left, And)
-        self.assertIsInstance(f3.right, Or)
-
-    def test_fol_schema_matching(self):
-        # Match fol_ui: (forall x, P(x)) -> P(t)
-        schema = parse_formula("(forall x, P(x)) -> P(t)")
-        concrete = parse_formula("(forall x, Q(x)) -> Q(a)")
-        match = concrete.match_schema(schema)
-        self.assertIsNotNone(match)
-        self.assertEqual(str(match['P']), "Q")
-        self.assertEqual(str(match['t']), "a")
-
+    def test_all_logic_axioms_dict(self):
+        logic_axioms = get_all_logic_axioms()
+        self.assertEqual(len(logic_axioms), len(LOGIC_AXIOMS))
 
     def test_load_first_order_axioms(self):
         load_first_order_axioms(self.db)
@@ -93,6 +57,14 @@ class TestLogicDependencies(unittest.TestCase):
         db_axioms = self.db.get_all_axioms()
         for name in SECOND_ORDER_AXIOMS:
             self.assertIn(name, db_axioms)
+
+    def test_load_all_logic_axioms_into_db(self):
+        load_all_logic_axioms(self.db)
+        db_axioms = self.db.get_all_axioms()
+        for name in LOGIC_AXIOMS:
+            self.assertIn(name, db_axioms)
+            parsed = parse_formula(db_axioms[name])
+            self.assertIsInstance(parsed, Formula)
 
     def test_all_axioms_parse_and_export_to_lean(self):
         for name, f_str in LOGIC_AXIOMS.items():

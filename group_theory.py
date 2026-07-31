@@ -1,43 +1,43 @@
 """
 Group Theory Axioms Module
 ==========================
-Contiene gli assiomi della Teoria dei Gruppi compatibili con Solver.
+Contains Group Theory axioms compatible with Solver.
 """
 
 from solver.database import TheoryDatabase
 from solver.formula import parse_formula
 
-# Assiomi della teoria dei gruppi
+# Group Theory axioms
 GROUP_AXIOMS = {
-    # Associatività: ∀x ∀y ∀z ((x * y) * z = x * (y * z))
+    # Associativity: ∀x ∀y ∀z ((x * y) * z = x * (y * z))
     "group_assoc": "forall x, forall y, forall z, (f(f(x, y), z) = f(x, f(y, z)))",
     
-    # Elemento neutro a sinistra: ∀x (e * x = x)
+    # Left Identity: ∀x (e * x = x)
     "group_identity_left": "forall x, (f(e, x) = x)",
     
-    # Elemento neutro a destra: ∀x (x * e = x)
+    # Right Identity: ∀x (x * e = x)
     "group_identity_right": "forall x, (f(x, e) = x)",
     
-    # Elemento inverso a sinistra: ∀x (inv(x) * x = e)
+    # Left Inverse: ∀x (inv(x) * x = e)
     "group_inverse_left": "forall x, (f(inv(x), x) = e)",
     
-    # Elemento inverso a destra: ∀x (x * inv(x) = e)
+    # Right Inverse: ∀x (x * inv(x) = e)
     "group_inverse_right": "forall x, (f(x, inv(x)) = e)",
     
-    # Commutatività (Gruppi Abeliani): ∀x ∀y (x * y = y * x)
+    # Commutativity (Abelian Groups): ∀x ∀y (x * y = y * x)
     "group_comm": "forall x, forall y, (f(x, y) = f(y, x))",
 }
 
 
 def get_group_axioms():
-    """Restituisce il dizionario contenente gli assiomi della teoria dei gruppi."""
+    """Returns a dictionary containing all Group Theory axioms."""
     return dict(GROUP_AXIOMS)
 
 
 def load_group_axioms(db: TheoryDatabase, include_fol: bool = False):
     """
-    Carica tutti gli assiomi della teoria dei gruppi nel database specificato.
-    Se include_fol è True, carica anche gli assiomi della Logica del Primo Ordine (FOL).
+    Loads all Group Theory axioms into the specified theory database.
+    If include_fol is True, also loads First-Order Logic (FOL) axioms.
     """
     if include_fol:
         from solver.dependencies.first_order_logic import load_first_order_axioms
@@ -49,7 +49,7 @@ def load_group_axioms(db: TheoryDatabase, include_fol: bool = False):
 
 def explore_group_theory(db_path: str = "group_theory.db", basic_vars=None, max_depth: int = 1, max_theorems: int = 20, include_fol: bool = False):
     """
-    Inizializza il database, carica gli assiomi della teoria dei gruppi ed avvia l'esplorazione delle conseguenze logiche.
+    Initializes the database, loads Group Theory axioms, and starts exploring logical consequences.
     """
     from solver.explorer import explore_consequences
     if basic_vars is None:

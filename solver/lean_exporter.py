@@ -1,260 +1,253 @@
-from .formula import Formula, Var, Not, Implies, And, Or, Iff, Forall, Exists, Equals, Pred, parse_formula
+"""
+Lean 4 Exporter Module
+======================
+Translates Python Formula ASTs into Lean 4 formal logic syntax and exports
+self-contained Lean 4 proof files for verification.
+"""
+
+from .formula import (
+    Formula, Var, Not, Implies, And, Or, Iff,
+    Forall, Exists, Equals, Pred, parse_formula
+)
+from .database import TheoryDatabase
 
 
-def formula_to_lean(formula, has_fol=False):
-    """Converte un oggetto Formula nella sintassi di Lean 4."""
+def formula_to_lean(formula: Formula) -> str:
+    """
+    Recursively maps a Formula AST node into the corresponding Lean 4 syntax string.
+    """
     if isinstance(formula, Var):
         return formula.name
     elif isinstance(formula, Not):
-        return f"¬({formula_to_lean(formula.formula, has_fol=has_fol)})"
+        return f"(¬{formula_to_lean(formula.formula)})"
     elif isinstance(formula, Implies):
-        return f"({formula_to_lean(formula.left, has_fol=has_fol)} → {formula_to_lean(formula.right, has_fol=has_fol)})"
+        return f"({formula_to_lean(formula.left)} → {formula_to_lean(formula.right)})"
     elif isinstance(formula, And):
-        return f"({formula_to_lean(formula.left, has_fol=has_fol)} ∧ {formula_to_lean(formula.right, has_fol=has_fol)})"
+        return f"({formula_to_lean(formula.left)} ∧ {formula_to_lean(formula.right)})"
     elif isinstance(formula, Or):
-        return f"({formula_to_lean(formula.left, has_fol=has_fol)} ∨ {formula_to_lean(formula.right, has_fol=has_fol)})"
+        return f"({formula_to_lean(formula.left)} ∨ {formula_to_lean(formula.right)})"
     elif isinstance(formula, Iff):
-        return f"({formula_to_lean(formula.left, has_fol=has_fol)} ↔ {formula_to_lean(formula.right, has_fol=has_fol)})"
+        return f"({formula_to_lean(formula.left)} ↔ {formula_to_lean(formula.right)})"
     elif isinstance(formula, Forall):
-        if has_fol:
-            return f"(∀ ({formula.var} : U), {formula_to_lean(formula.body, has_fol=has_fol)})"
-        else:
-            return f"(∀ {formula.var}, {formula_to_lean(formula.body, has_fol=has_fol)})"
+        return f"(∀ {formula.var}, {formula_to_lean(formula.body)})"
     elif isinstance(formula, Exists):
-        if has_fol:
-            return f"(∃ ({formula.var} : U), {formula_to_lean(formula.body, has_fol=has_fol)})"
-        else:
-            return f"(∃ {formula.var}, {formula_to_lean(formula.body, has_fol=has_fol)})"
+        return f"(∃ {formula.var}, {formula_to_lean(formula.body)})"
     elif isinstance(formula, Equals):
-        return f"({formula_to_lean(formula.left, has_fol=has_fol)} = {formula_to_lean(formula.right, has_fol=has_fol)})"
+        return f"({formula_to_lean(formula.left)} = {formula_to_lean(formula.right)})"
     elif isinstance(formula, Pred):
-        args_str = " ".join(formula_to_lean(a, has_fol=has_fol) if isinstance(a, Formula) else str(a) for a in formula.args)
-        return f"({formula.name} {args_str})" if args_str else formula.name
+        if formula.args:
+            args_str = " ".join(
+                formula_to_lean(a) if isinstance(a, Formula) else str(a)
+                for a in formula.args
+            )
+            return f"({formula.name} {args_str})"
+        return formula.name
     else:
-        raise TypeError(f"Tipo di formula non supportato: {type(formula)}")
+        return str(formula)
 
 
-def extract_domain_symbols(formulas):
-    """Analizza le formule per separare simboli di proposizione, termini, funzioni e predicati FOL."""
-    prop_vars = set()
-    term_vars = set()
-    func_vars = {}
-    pred_vars = {}
-    bound_vars = set()
+def export_proof(theorem_name: str, db: TheoryDatabase) -> str:
+    """
+    Loads a theorem and its dependency graph from the database and generates
+    a complete, self-contained Lean 4 source document.
+    """
+    thm = db.get_theorem(theorem_name)
+    if not thm:
+        raise ValueError(f"Theorem '{theorem_name}' not found in database.")
 
-    def analyze(f, in_term=False):
-        nonlocal prop_vars, term_vars, func_vars, pred_vars, bound_vars
-        if isinstance(f, Var):
-            if f.name not in bound_vars:
-                if in_term:
-                    term_vars.add(f.name)
+    dep_names = db.get_dependencies_recursive(theorem_name)
+    dep_thms = [db.get_theorem(name) for name in dep_names if db.get_theorem(name)]
+
+    # 1. Collect all referenced axioms
+    axiom_names = []
+    for step in thm['steps']:
+        if step['justification_type'] == 'Axiom':
+            ax_name = step['ref_name']
+            if ax_name and ax_name not in axiom_names:
+                axiom_names.append(ax_name)
+
+    # 2. Collect free variables for global variable declarations
+    collected_vars = set()
+
+    thesis_f = parse_formula(thm['thesis_str'])
+    collected_vars.update(thesis_f.free_variables())
+
+    hyps_f = [parse_formula(h) for h in thm['hypotheses']]
+    for h in hyps_f:
+        collected_vars.update(h.free_variables())
+
+    for step in thm['steps']:
+        step_f = parse_formula(step['formula_str'])
+        collected_vars.update(step_f.free_variables())
+
+    for d_thm in dep_thms:
+        d_thesis = parse_formula(d_thm['thesis_str'])
+        collected_vars.update(d_thesis.free_variables())
+        for h_str in d_thm['hypotheses']:
+            collected_vars.update(parse_formula(h_str).free_variables())
+
+    prop_vars = sorted(list(collected_vars))
+
+    lines = ["-- Auto-generated by solver.lean_exporter", ""]
+
+    if prop_vars:
+        lines.append(f"variable ({' '.join(prop_vars)} : Prop)")
+        lines.append("")
+
+    # 3. Declare Axioms
+    if axiom_names:
+        for ax_name in axiom_names:
+            ax_str = db.get_axiom(ax_name)
+            if ax_str:
+                ax_f = parse_formula(ax_str)
+                ax_vars = sorted(list(ax_f.free_variables()))
+                if ax_vars:
+                    lines.append(
+                        f"axiom {ax_name} ({' '.join(ax_vars)} : Prop) : {formula_to_lean(ax_f)}"
+                    )
                 else:
-                    prop_vars.add(f.name)
-        elif isinstance(f, Not):
-            analyze(f.formula, in_term=in_term)
-        elif isinstance(f, (Implies, And, Or, Iff)):
-            analyze(f.left, in_term=in_term)
-            analyze(f.right, in_term=in_term)
-        elif isinstance(f, (Forall, Exists)):
-            bound_vars.add(f.var)
-            analyze(f.body, in_term=in_term)
-            bound_vars.remove(f.var)
-        elif isinstance(f, Equals):
-            analyze(f.left, in_term=True)
-            analyze(f.right, in_term=True)
-        elif isinstance(f, Pred):
-            if in_term:
-                func_vars[f.name] = max(func_vars.get(f.name, 0), len(f.args))
-            else:
-                pred_vars[f.name] = max(pred_vars.get(f.name, 0), len(f.args))
-            for arg in f.args:
-                if isinstance(arg, Formula):
-                    analyze(arg, in_term=True)
-                elif isinstance(arg, str):
-                    if arg not in bound_vars:
-                        term_vars.add(arg)
+                    lines.append(f"axiom {ax_name} : {formula_to_lean(ax_f)}")
+        lines.append("")
 
-    for f in formulas:
-        analyze(f)
+    # 4. Declare Prerequisite Lemma Axioms
+    if dep_thms:
+        for dep_thm in dep_thms:
+            l_name = dep_thm['name']
+            l_thesis = parse_formula(dep_thm['thesis_str'])
+            l_hyps = [parse_formula(h) for h in dep_thm['hypotheses']]
 
-    term_vars -= set(func_vars.keys())
-    term_vars -= set(pred_vars.keys())
-    prop_vars -= set(func_vars.keys())
-    prop_vars -= set(pred_vars.keys())
-    prop_vars -= term_vars
+            l_vars = set(l_thesis.free_variables())
+            for lh in l_hyps:
+                l_vars.update(lh.free_variables())
+            sorted_lvars = sorted(list(l_vars))
 
-    has_fol = bool(term_vars or func_vars or pred_vars)
-    return has_fol, sorted(list(prop_vars)), sorted(list(term_vars)), func_vars, pred_vars
+            hyp_decls = [
+                f"(h{idx} : {formula_to_lean(h)})"
+                for idx, h in enumerate(l_hyps)
+            ]
 
+            param_parts = []
+            if sorted_lvars:
+                param_parts.append(f"({' '.join(sorted_lvars)} : Prop)")
+            if hyp_decls:
+                param_parts.extend(hyp_decls)
 
-def get_formula_symbols(formula):
-    """Raccoglie tutti i simboli liberi presenti in una formula (variabili libere, funzioni, predicati)."""
-    symbols = set()
-    bound_vars = set()
+            param_str = (" " + " ".join(param_parts)) if param_parts else ""
+            lines.append(
+                f"axiom {l_name}{param_str} : {formula_to_lean(l_thesis)}"
+            )
+        lines.append("")
 
-    def walk(f):
-        nonlocal bound_vars
-        if isinstance(f, Var):
-            if f.name not in bound_vars:
-                symbols.add(f.name)
-        elif isinstance(f, Not):
-            walk(f.formula)
-        elif isinstance(f, (Implies, And, Or, Iff, Equals)):
-            walk(f.left)
-            walk(f.right)
-        elif isinstance(f, (Forall, Exists)):
-            bound_vars.add(f.var)
-            walk(f.body)
-            bound_vars.remove(f.var)
-        elif isinstance(f, Pred):
-            symbols.add(f.name)
-            for a in f.args:
-                if isinstance(a, Formula):
-                    walk(a)
-                elif isinstance(a, str):
-                    if a not in bound_vars:
-                        symbols.add(a)
-    walk(formula)
-    return symbols
+    # 5. Declare Main Theorem Signature
+    hyp_params = [
+        f"(h{idx} : {formula_to_lean(h)})"
+        for idx, h in enumerate(hyps_f)
+    ]
+    param_str = (" " + " ".join(hyp_params)) if hyp_params else ""
+    lines.append(
+        f"theorem {thm['name']}{param_str} : {formula_to_lean(thesis_f)} := by"
+    )
 
+    # 6. Generate Proof Steps
+    step_formulas = {
+        s['step_idx']: parse_formula(s['formula_str'])
+        for s in thm['steps']
+    }
 
-def _generate_steps(steps, has_fol):
-    lines = []
-    for step in steps:
-        s_idx = step['step_idx']
-        f_lean = formula_to_lean(parse_formula(step['formula_str']), has_fol=has_fol)
+    for step in thm['steps']:
+        idx = step['step_idx']
+        f = step_formulas[idx]
+        f_lean = formula_to_lean(f)
         j_type = step['justification_type']
 
         if j_type == 'Axiom':
             ax_name = step['ref_name']
-            sub_json = step.get('substitution_json') or {}
-            if ax_name in ['ax1', 'ax3']:
-                sub_a = formula_to_lean(parse_formula(sub_json.get('A', 'A')), has_fol=has_fol)
-                sub_b = formula_to_lean(parse_formula(sub_json.get('B', 'B')), has_fol=has_fol)
-                lines.append(f"  have step{s_idx} : {f_lean} := {ax_name} ({sub_a}) ({sub_b})")
-            elif ax_name == 'ax2':
-                sub_a = formula_to_lean(parse_formula(sub_json.get('A', 'A')), has_fol=has_fol)
-                sub_b = formula_to_lean(parse_formula(sub_json.get('B', 'B')), has_fol=has_fol)
-                sub_c = formula_to_lean(parse_formula(sub_json.get('C', 'C')), has_fol=has_fol)
-                lines.append(f"  have step{s_idx} : {f_lean} := ax2 ({sub_a}) ({sub_b}) ({sub_c})")
+            ax_str = db.get_axiom(ax_name)
+            if ax_str:
+                ax_f = parse_formula(ax_str)
+                ax_vars = sorted(list(ax_f.free_variables()))
+                if ax_vars:
+                    sub_json = step.get('substitution_json')
+                    if not sub_json:
+                        bindings = f.match_schema(ax_f)
+                        sub_json = (
+                            {k: str(v) for k, v in bindings.items()}
+                            if bindings else {}
+                        )
+
+                    args = []
+                    for v in ax_vars:
+                        if v in sub_json:
+                            val = sub_json[v]
+                            val_f = parse_formula(val) if isinstance(val, str) else val
+                            args.append(formula_to_lean(val_f))
+                    term = f"{ax_name} {' '.join(args)}" if args else ax_name
+                else:
+                    term = ax_name
             else:
-                lines.append(f"  have step{s_idx} : {f_lean} := {ax_name}")
+                term = ax_name
+
         elif j_type == 'Hypothesis':
-            ref_name = step['ref_name']
-            lines.append(f"  have step{s_idx} : {f_lean} := {ref_name}")
+            term = step['ref_name']
+
         elif j_type == 'MP':
             arg1 = step['arg1']
             arg2 = step['arg2']
-            lines.append(f"  have step{s_idx} : {f_lean} := step{arg2} step{arg1}")
+            f1 = step_formulas[arg1]
+            f2 = step_formulas[arg2]
+
+            if isinstance(f1, Implies) and f1.left == f2:
+                impl_idx, ant_idx = arg1, arg2
+            elif isinstance(f2, Implies) and f2.left == f1:
+                impl_idx, ant_idx = arg2, arg1
+            else:
+                impl_idx, ant_idx = arg1, arg2
+
+            term = f"step_{impl_idx} step_{ant_idx}"
+
         elif j_type == 'Lemma':
-            lemma_name = step['ref_name']
-            args_parts = []
-            if step.get('arg1') is not None:
-                args_parts.append(f"step{step['arg1']}")
-            if step.get('arg2') is not None:
-                args_parts.append(f"step{step['arg2']}")
+            l_name = step['ref_name']
+            l_thm = db.get_theorem(l_name)
+            if l_thm:
+                l_thesis = parse_formula(l_thm['thesis_str'])
+                l_hyps = [parse_formula(h) for h in l_thm['hypotheses']]
 
-            args_str = (" " + " ".join(args_parts)) if args_parts else ""
-            lines.append(f"  have step{s_idx} : {f_lean} := {lemma_name}{args_str}")
+                l_vars = set(l_thesis.free_variables())
+                for lh in l_hyps:
+                    l_vars.update(lh.free_variables())
+                sorted_lvars = sorted(list(l_vars))
 
-    last_step_idx = steps[-1]['step_idx']
-    lines.append(f"  exact step{last_step_idx}")
-    return lines
+                sub_json = step.get('substitution_json')
+                if not sub_json:
+                    bindings = f.match_schema(l_thesis)
+                    sub_json = (
+                        {k: str(v) for k, v in bindings.items()}
+                        if bindings else {}
+                    )
 
+                var_args = []
+                for v in sorted_lvars:
+                    if v in sub_json:
+                        val = sub_json[v]
+                        val_f = parse_formula(val) if isinstance(val, str) else val
+                        var_args.append(formula_to_lean(val_f))
 
-def export_proof(theorem_name, db):
-    """
-    Genera il codice sorgente Lean 4 self-contained per il teorema specificato,
-    caricando le dipendenze dal database SQLite.
-    """
-    thm = db.get_theorem(theorem_name)
-    if not thm:
-        raise ValueError(f"Teorema '{theorem_name}' non trovato nel database.")
+                hyp_args = []
+                if len(l_hyps) >= 1 and step.get('arg1') is not None:
+                    hyp_args.append(f"step_{step['arg1']}")
+                if len(l_hyps) >= 2 and step.get('arg2') is not None:
+                    hyp_args.append(f"step_{step['arg2']}")
 
-    # Carica le dipendenze ricorsive
-    dep_names = db.get_dependencies_recursive(theorem_name)
-    dep_thms = [db.get_theorem(name) for name in dep_names]
+                all_args = var_args + hyp_args
+                term = f"{l_name} {' '.join(all_args)}" if all_args else l_name
+            else:
+                term = l_name
+        else:
+            term = "sorry"
 
-    all_db_axioms = db.get_all_axioms()
+        lines.append(f"  have step_{idx} : {f_lean} := {term}")
 
-    # Raccoglie tutte le formule per l'analisi dei simboli
-    all_formulas = []
-    for ax_str in all_db_axioms.values():
-        all_formulas.append(parse_formula(ax_str))
+    last_idx = thm['steps'][-1]['step_idx']
+    lines.append(f"  exact step_{last_idx}")
 
-    for t in [thm] + dep_thms:
-        all_formulas.append(parse_formula(t['thesis_str']))
-        for hyp in t['hypotheses']:
-            all_formulas.append(parse_formula(hyp))
-        for step in t['steps']:
-            all_formulas.append(parse_formula(step['formula_str']))
-            if step.get('substitution_json'):
-                for sub_val_str in step['substitution_json'].values():
-                    all_formulas.append(parse_formula(str(sub_val_str)))
-
-    has_fol, prop_vars, term_vars, func_vars, pred_vars = extract_domain_symbols(all_formulas)
-
-    lines = []
-    lines.append("-- Assiomi standard della logica proposizionale")
-    lines.append("axiom ax1 (A B : Prop) : A → (B → A)")
-    lines.append("axiom ax2 (A B C : Prop) : (A → (B → C)) → ((A → B) → (A → C))")
-    lines.append("axiom ax3 (A B : Prop) : (¬A → ¬B) → (B → A)")
-    lines.append("")
-
-    # Dichiarazione delle variabili di sezione per Lean (con parentesi graffe per renderle implicite)
-    if has_fol:
-        lines.append("variable {U : Type}")
-        for tv in term_vars:
-            lines.append(f"variable {{{tv} : U}}")
-        for f_name, arity in sorted(func_vars.items()):
-            t_sig = " → ".join(["U"] * (arity + 1))
-            lines.append(f"variable {{{f_name} : {t_sig}}}")
-        for p_name, arity in sorted(pred_vars.items()):
-            t_sig = " → ".join(["U"] * arity) + " → Prop"
-            lines.append(f"variable {{{p_name} : {t_sig}}}")
-    if prop_vars:
-        for pv in prop_vars:
-            lines.append(f"variable {{{pv} : Prop}}")
-
-    # Esporta tutti gli assiomi personalizzati del database
-    lines.append("")
-    lines.append("-- Assiomi specifici del database della teoria")
-    for ax_name, ax_str in all_db_axioms.items():
-        if ax_name in ['ax1', 'ax2', 'ax3']:
-            continue
-        ax_f = parse_formula(ax_str)
-        ax_lean = formula_to_lean(ax_f, has_fol=has_fol)
-        lines.append(f"axiom {ax_name} : {ax_lean}")
-    lines.append("")
-
-    # Genera i blocchi per i lemmi da cui dipende questo teorema
-    for dep in dep_thms:
-        hyp_strs = []
-        for idx, hyp in enumerate(dep['hypotheses']):
-            f_lean = formula_to_lean(parse_formula(hyp), has_fol=has_fol)
-            hyp_strs.append(f"(h{idx} : {f_lean})")
-
-        thesis_lean = formula_to_lean(parse_formula(dep['thesis_str']), has_fol=has_fol)
-        hyps_part = (" " + " ".join(hyp_strs)) if hyp_strs else ""
-
-        lines.append(f"theorem {dep['name']}{hyps_part} : {thesis_lean} := by")
-        lines.extend(_generate_steps(dep['steps'], has_fol=has_fol))
-        lines.append("")
-
-    # Genera il blocco per il teorema principale
-    hyp_strs = []
-    for idx, hyp in enumerate(thm['hypotheses']):
-        f_lean = formula_to_lean(parse_formula(hyp), has_fol=has_fol)
-        hyp_strs.append(f"(h{idx} : {f_lean})")
-
-    thesis_lean = formula_to_lean(parse_formula(thm['thesis_str']), has_fol=has_fol)
-    hyps_part = (" " + " ".join(hyp_strs)) if hyp_strs else ""
-
-    lines.append(f"theorem {thm['name']}{hyps_part} : {thesis_lean} := by")
-    lines.extend(_generate_steps(thm['steps'], has_fol=has_fol))
-    lines.append("")
-
-    return "\n".join(lines)
-
-
-
+    return "\n".join(lines) + "\n"

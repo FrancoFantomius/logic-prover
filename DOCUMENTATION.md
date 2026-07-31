@@ -1,10 +1,10 @@
-# Manuale di Documentazione dei Moduli (`solver`)
+# Module Documentation Manual (`solver`)
 
-Questo documento contiene la guida di riferimento dettagliata per ciascun modulo e sottopacchetto presente nella libreria `solver`.
+This document contains the detailed reference guide for each module and subpackage present in the `solver` library.
 
 ---
 
-## Indice
+## Table of Contents
 
 1. [solver.formula](#1-solverformula)
 2. [solver.database](#2-solverdatabase)
@@ -19,137 +19,137 @@ Questo documento contiene la guida di riferimento dettagliata per ciascun modulo
 
 ## 1. `solver.formula`
 
-Il modulo [`solver.formula`](file:///c:/Users/franc/Programmazione/solver/solver/formula.py) definisce la struttura dell'Abstract Syntax Tree (AST) per le formule logiche e fornisce un parser da stringa a oggetto AST.
+The [`solver.formula`](file:///c:/Users/franc/Programmazione/solver/solver/formula.py) module defines the Abstract Syntax Tree (AST) structure for logical formulas and provides a string-to-AST parser.
 
-### Classi dell'AST
+### AST Classes
 
-Tutte le formule ereditano dalla classe astratta `Formula`.
+All formulas inherit from the abstract class `Formula`.
 
-- **`Var(name)`**: Rappresenta una variabile proposizionale o individuale (es. `Var("p")`, `Var("x")`).
-- **`Not(formula)`**: Negazione logica (`~A` o `Not(A)`).
-- **`Implies(left, right)`**: Implicazione logica (`A -> B` o `A >> B`).
-- **`And(left, right)`**: Congiunzione logica (`A & B` o `And(A, B)`).
-- **`Or(left, right)`**: Disgiunzione logica (`A | B` or `Or(A, B)`).
-- **`Iff(left, right)`**: Doppia implicazione / Equivalenza logica (`A <-> B` o `Iff(A, B)`).
-- **`Forall(var, body)`**: Quantificatore universale (`forall x, P(x)` o `Forall("x", P)`).
-- **`Exists(var, body)`**: Quantificatore esistenziale (`exists x, P(x)` o `Exists("x", P)`).
-- **`Equals(left, right)`**: Uguaglianza formale (`x = y` o `Equals("x", "y")`).
-- **`Pred(name, args)`**: Applicazione di un predicato (es. `Pred("P", [Var("x"), Var("y")])`).
+- **`Var(name)`**: Represents a propositional or individual variable (e.g., `Var("p")`, `Var("x")`).
+- **`Not(formula)`**: Logical negation (`~A` or `Not(A)`).
+- **`Implies(left, right)`**: Logical implication (`A -> B` or `A >> B`).
+- **`And(left, right)`**: Logical conjunction (`A & B` or `And(A, B)`).
+- **`Or(left, right)`**: Logical disjunction (`A | B` or `Or(A, B)`).
+- **`Iff(left, right)`**: Double implication / Logical equivalence (`A <-> B` or `Iff(A, B)`).
+- **`Forall(var, body)`**: Universal quantifier (`forall x, P(x)` or `Forall("x", P)`).
+- **`Exists(var, body)`**: Existential quantifier (`exists x, P(x)` or `Exists("x", P)`).
+- **`Equals(left, right)`**: Formal equality (`x = y` or `Equals("x", "y")`).
+- **`Pred(name, args)`**: Predicate application (e.g., `Pred("P", [Var("x"), Var("y")])`).
 
-### Overloading degli Operatori Python
+### Python Operator Overloading
 
-È possibile combinare le istanze di `Formula` con sintassi nativa Python:
+You can combine `Formula` instances using native Python syntax:
 - `~f` $\rightarrow$ `Not(f)`
 - `f1 >> f2` $\rightarrow$ `Implies(f1, f2)`
 - `f1 & f2` $\rightarrow$ `And(f1, f2)`
 - `f1 | f2` $\rightarrow$ `Or(f1, f2)`
 
-### Metodi Principali di `Formula`
+### Main `Formula` Methods
 
 #### `substitute(sub_map)`
-Sostituisce le variabili specificate nelle chiavi del dizionario `sub_map` (es. `{"A": Var("p"), "B": Var("q")}`) con le corrispettive formule. Gestisce correttamente il fenomeno del variable binding evitando la sostituzione involontaria delle variabili legate da quantificatori.
+Substitutes variables specified in `sub_map` keys (e.g., `{"A": Var("p"), "B": Var("q")}`) with corresponding formulas. Correctly handles variable binding to prevent capture of variables bound by quantifiers.
 
 #### `free_variables()`
-Restituisce un insieme (`set`) contenente i nomi di tutte le variabili libere presenti nella formula.
+Returns a `set` containing the names of all free variables in the formula.
 
 #### `match_schema(schema)`
-Confronta la formula corrente con una formula schema (contenente meta-variabili). Se il matching ha successo, restituisce un dizionario `{nome_meta_variabile: sottoformula_o_stringa}`, altrimenti restituisce `None`.
+Compares the current formula against a schema formula (containing meta-variables). If matching succeeds, returns a dictionary `{meta_variable_name: subformula_or_string}`, otherwise returns `None`.
 
-### Funzione `parse_formula(s)`
+### `parse_formula(s)` Function
 
-Converte una stringa di testo in un albero `Formula`.
+Parses a text string into a `Formula` tree.
 
-- **Operatori ASCII supportati**: `->`, `<->`, `&`, `|`, `~`, `!`, `=`, `forall`, `exists`.
-- **Simboli Unicode supportati**: `→`, `↔`, `∧`, `∨`, `¬`, `∀`, `∃`.
+- **Supported ASCII operators**: `->`, `<->`, `&`, `|`, `~`, `!`, `=`, `forall`, `exists`.
+- **Supported Unicode symbols**: `→`, `↔`, `∧`, `∨`, `¬`, `∀`, `∃`.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.formula import parse_formula, Var, Not, Implies
 
-# Uso degli operatori Python
+# Using Python operators
 A = Var("A")
 B = Var("B")
 f1 = (~A) >> B
 print(f1)  # (~A -> B)
 
-# Parsing da stringa
+# Parsing from string
 f2 = parse_formula("forall x, (P(x) -> (exists y, (x = y)))")
-print("Variabili libere in f2:", f2.free_variables())
+print("Free variables in f2:", f2.free_variables())
 
-# Matching di uno schema
+# Schema matching
 schema = parse_formula("P -> Q")
 concrete = parse_formula("(a & b) -> c")
 bindings = concrete.match_schema(schema)
-print("Bindings del match:", bindings)  # {'P': And(Var('a'), Var('b')), 'Q': Var('c')}
+print("Match bindings:", bindings)  # {'P': And(Var('a'), Var('b')), 'Q': Var('c')}
 ```
 
 ---
 
 ## 2. `solver.database`
 
-Il modulo [`solver.database`](file:///c:/Users/franc/Programmazione/solver/solver/database.py) gestisce la persistenza dei dati relativi a teorie, assiomi, teoremi e dimostrazioni mediante un database SQLite.
+The [`solver.database`](file:///c:/Users/franc/Programmazione/solver/solver/database.py) module manages data persistence for theories, axioms, theorems, and proofs using an SQLite database.
 
-### Classe `TheoryDatabase`
+### `TheoryDatabase` Class
 
-#### Inizializzazione
+#### Initialization
 ```python
 db = TheoryDatabase(db_path="theory.db")
 ```
 
-All'atto della creazione, `init_db()` viene eseguito automaticamente per creare le seguenti tabelle se non esistono:
-1. **`axioms`**: Memorizza gli assiomi (`id`, `name`, `formula_str`).
-2. **`theorems`**: Memorizza la tesi dei teoremi (`id`, `name`, `thesis_str`, `lean_code`, `is_verified`).
-3. **`theorem_hypotheses`**: Mantiene l'elenco delle ipotesi associate a ciascun teorema.
-4. **`theorem_steps`**: Memorizza ciascun passo della dimostrazione con tipo di giustificazione (`Axiom`, `Hypothesis`, `MP`, `Lemma`), indici dei passi argomenti (`arg1`, `arg2`), riferimento (`ref_name`) e sostituzioni JSON.
-5. **`dependencies`**: Traccia le dipendenze orientate (DAG) tra teoremi e lemmi.
+Upon creation, `init_db()` runs automatically to create the following tables if they do not exist:
+1. **`axioms`**: Stores axioms (`id`, `name`, `formula_str`).
+2. **`theorems`**: Stores theorem theses (`id`, `name`, `thesis_str`, `lean_code`, `is_verified`).
+3. **`theorem_hypotheses`**: Maintains the list of hypotheses associated with each theorem.
+4. **`theorem_steps`**: Stores each proof step with justification type (`Axiom`, `Hypothesis`, `MP`, `Lemma`), argument step indices (`arg1`, `arg2`), reference name (`ref_name`), and JSON substitutions.
+5. **`dependencies`**: Tracks directed acyclic graph (DAG) dependencies between theorems and lemmas.
 
-### Metodi Principali
+### Main Methods
 
-- **`add_axiom(name, formula_str)`**: Inserisce un nuovo assioma nel database.
-- **`get_axiom(name)`**: Recupera la stringa della formula dell'assioma specificato.
-- **`get_all_axioms()`**: Restituisce un dizionario `{nome: stringa_formula}` di tutti gli assiomi registrati.
-- **`save_theorem(name, thesis_str, hypotheses, steps, dependencies=None, lean_code=None, is_verified=0)`**: Salva o sovrascrive un teorema, le sue ipotesi, i suoi passi e le sue dipendenze.
-- **`get_theorem(name)`**: Carica dal database la struttura completa di un teorema sotto forma di dizionario Python.
-- **`get_dependencies_recursive(theorem_name)`**: Restituisce la lista ordinata topologicamente di tutti i lemmi da cui il teorema dipende ricorsivamente.
+- **`add_axiom(name, formula_str)`**: Inserts a new axiom into the database.
+- **`get_axiom(name)`**: Retrieves the formula string for the specified axiom.
+- **`get_all_axioms()`**: Returns a dictionary `{name: formula_string}` of all registered axioms.
+- **`save_theorem(name, thesis_str, hypotheses, steps, dependencies=None, lean_code=None, is_verified=0)`**: Saves or overwrites a theorem, its hypotheses, steps, and dependencies.
+- **`get_theorem(name)`**: Loads a complete theorem structure from the database as a Python dictionary.
+- **`get_dependencies_recursive(theorem_name)`**: Returns a topologically sorted list of all lemmas on which the theorem recursively depends.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.database import TheoryDatabase
 
 db = TheoryDatabase("algebra.db")
-db.add_axiom("associativita", "forall x, forall y, forall z, (f(f(x, y), z) = f(x, f(y, z)))")
+db.add_axiom("associativity", "forall x, forall y, forall z, (f(f(x, y), z) = f(x, f(y, z)))")
 
 axioms = db.get_all_axioms()
-print("Assiomi salvati:", axioms)
+print("Saved axioms:", axioms)
 ```
 
 ---
 
 ## 3. `solver.prover`
 
-Il modulo [`solver.prover`](file:///c:/Users/franc/Programmazione/solver/solver/prover.py) fornisce l'algoritmo per la ricerca automatica di dimostrazioni formali nel sistema alla Hilbert.
+The [`solver.prover`](file:///c:/Users/franc/Programmazione/solver/solver/prover.py) module provides the algorithm for automated search of formal proofs in Hilbert systems.
 
-### Funzioni Principali
+### Main Functions
 
 #### `prove(thesis_str, hypotheses_strs, db, exclude_name=None, max_depth=10, max_formulas=1000, timeout_seconds=30)`
 
-Ricerca automaticamente una sequenza di passi deduttivi per dimostrare `thesis_str` a partire da `hypotheses_strs`.
+Automatically searches for a sequence of deductive steps to prove `thesis_str` starting from `hypotheses_strs`.
 
-**Algoritmo**:
-1. Estrae le sottoformule dalla tesi e dalle ipotesi per costruire il *Candidate Pool*.
-2. Istanzia gli schemi assiomatici di Hilbert (`ax1`, `ax2`, `ax3`) e i lemmi già verificati nel `TheoryDatabase` usando i candidati.
-3. Applica una ricerca in ampiezza (BFS) basata sulla regola del **Modus Ponens (MP)** per derivare nuove formule finché la tesi non viene raggiunta o si supera il timeout.
-4. Richiama `reconstruct_proof` per generare una sequenza di passi ordinata topologicamente.
+**Algorithm**:
+1. Extracts subformulas from thesis and hypotheses to build the *Candidate Pool*.
+2. Instantiates Hilbert axiom schemas (`ax1`, `ax2`, `ax3`) and previously verified lemmas in `TheoryDatabase` using candidates.
+3. Applies a Breadth-First Search (BFS) based on **Modus Ponens (MP)** to derive new formulas until thesis is reached or timeout expires.
+4. Calls `reconstruct_proof` to generate a topologically ordered step sequence.
 
 #### `reconstruct_proof(goal, derived, lemma_map=None, db=None)`
-Ripercorre a ritroso le giustificazioni raccolte e ricostruisce la catena minimale di passi di dimostrazione dal primo assioma/ipotesi fino al `goal`.
+Traces back collected justifications to reconstruct the minimal chain of proof steps from the initial axiom/hypothesis up to `goal`.
 
 #### `get_subformulas(formula)`
-Funzione ausiliaria ricorsiva che estrae tutte le sottoformule che compongono un oggetto `Formula`.
+Recursive helper function extracting all subformulas constituting a `Formula` object.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.database import TheoryDatabase
@@ -159,37 +159,37 @@ db = TheoryDatabase("logic.db")
 db.add_axiom("ax1", "A -> (B -> A)")
 db.add_axiom("ax2", "(A -> (B -> C)) -> ((A -> B) -> (A -> C))")
 
-# Dimostra che (p -> (q -> p)) segue direttamente dall'assioma 1
+# Proves that (p -> (q -> p)) follows directly from axiom 1
 steps = prove(thesis_str="p -> (q -> p)", hypotheses_strs=[], db=db)
-print("Numero di passi trovati:", len(steps))
+print("Number of steps found:", len(steps))
 ```
 
 ---
 
 ## 4. `solver.verifier`
 
-Il modulo [`solver.verifier`](file:///c:/Users/franc/Programmazione/solver/solver/verifier.py) esegue la verifica a due livelli delle dimostrazioni formali.
+The [`solver.verifier`](file:///c:/Users/franc/Programmazione/solver/solver/verifier.py) module performs two-level formal proof verification.
 
-### Funzioni Principali
+### Main Functions
 
 #### `verify_proof_local(thm, db)`
-Esegue un controllo di validità formale in ambiente Python puro.
-Verifica che ogni passo sia giustificato da:
-- **`Axiom`**: La formula deve fare il match con uno schema di assioma presente nel DB.
-- **`Hypothesis`**: Il riferimento `ref_name` (es. `h0`) deve corrispondere esattamente all'ipotesi.
-- **`MP`**: La formula deve essere la conclusione valida del Modus Ponens applicato ai due passi precedenti specificati da `arg1` e `arg2`.
-- **`Lemma`**: La formula e gli argomenti devono corrispondere alla tesi e alle ipotesi sostituite di un lemma verificato nel DB.
+Performs a formal validity check in pure Python environment.
+Verifies that each step is justified by:
+- **`Axiom`**: Formula must match an axiom schema present in the DB.
+- **`Hypothesis`**: Reference `ref_name` (e.g. `h0`) must match the hypothesis exactly.
+- **`MP`**: Formula must be the valid conclusion of Modus Ponens applied to the two specified prior steps `arg1` and `arg2`.
+- **`Lemma`**: Formula and arguments must match thesis and substituted hypotheses of a verified lemma in the DB.
 
-Restituisce una tupla `(ok: bool, error_message: str | None)`.
+Returns a tuple `(ok: bool, error_message: str | None)`.
 
 #### `verify_proof_with_lean(thm, db)`
-Genera il codice sorgente Lean 4 autosufficiente per il teorema (tramite `solver.lean_exporter`) e lo compila invocando l'eseguibile CLI `lean`.
-Restituisce `(True, lean_code)` se la compilazione avviene con successo (exit code 0), altrimenti `(False, error_message)`.
+Generates self-contained Lean 4 source code for the theorem (via `solver.lean_exporter`) and compiles it using the CLI executable `lean`.
+Returns `(True, lean_code)` if compilation succeeds (exit code 0), otherwise `(False, error_message)`.
 
 #### `verify_and_save(thm, db)`
-Esegue prima `verify_proof_local`. Se ha successo, tenta la verifica con `verify_proof_with_lean`. Se Lean 4 approva il teorema, lo memorizza nel `TheoryDatabase` impostando `is_verified = 1`.
+Executes `verify_proof_local` first. If successful, attempts verification with `verify_proof_with_lean`. If Lean 4 approves the theorem, stores it in `TheoryDatabase` setting `is_verified = 1`.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.database import TheoryDatabase
@@ -212,28 +212,28 @@ thm_def = {
 }
 
 is_valid, error = verify_proof_local(thm_def, db)
-print("Dimostrazione valida localmente:", is_valid)
+print("Locally valid proof:", is_valid)
 ```
 
 ---
 
 ## 5. `solver.explorer`
 
-Il modulo [`solver.explorer`](file:///c:/Users/franc/Programmazione/solver/solver/explorer.py) offre funzionalità di esplorazione automatizzata e scoperta di teoremi in modo autonomo.
+The [`solver.explorer`](file:///c:/Users/franc/Programmazione/solver/solver/explorer.py) module offers automated theorem exploration and autonomous discovery capabilities.
 
-### Funzioni Principali
+### Main Functions
 
 #### `explore_consequences(db, basic_vars=['p'], max_depth=1, max_theorems=20, min_proof_steps=0)`
 
-1. **Genera Formule Candidate**: Crea un insieme combinatorio di formule usando le variabili `basic_vars` fino alla profondità `max_depth` (tramite `generate_candidates`).
-2. **Istanzia Assiomi e Lemmi**: Applica le formule candidate agli assiomi e lemmi presenti nel DB.
-3. **Saturazione Modus Ponens**: Esegue un ciclo BFS per derivare tutte le conseguenze logiche possibili.
-4. **Filtro e Salvataggio**: Ordina le formule derivate per complessità strutturale, ricostruisce le relative dimostrazioni ed esegue `verify_and_save` con Lean 4 per ciascun nuovo teorema trovato.
+1. **Generates Candidate Formulas**: Creates a combinatorial set of formulas using variables `basic_vars` up to depth `max_depth` (via `generate_candidates`).
+2. **Instantiates Axioms and Lemmas**: Applies candidate formulas to axioms and lemmas present in the DB.
+3. **Modus Ponens Saturation**: Runs a BFS loop to derive all possible logical consequences.
+4. **Filtering and Saving**: Sorts derived formulas by structural complexity, reconstructs proofs, and executes `verify_and_save` with Lean 4 for each newly discovered theorem.
 
 #### `generate_candidates(basic_vars, max_depth)`
-Genera ricorsivamente tutte le formule combinatorie formabili a partire da una lista di variabili base (es. `['p', 'q']`).
+Recursively generates all combinatorial formulas formable from a list of base variables (e.g. `['p', 'q']`).
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.database import TheoryDatabase
@@ -243,21 +243,21 @@ from solver.explorer import explore_consequences
 db = TheoryDatabase("explore_demo.db")
 load_first_order_axioms(db)
 
-# Esplora fino a 3 nuovi teoremi
-nuovi_trovati = explore_consequences(db, basic_vars=['p'], max_depth=1, max_theorems=3)
-print(f"Teoremi scoperti e verificati: {nuovi_trovati}")
+# Explore up to 3 new theorems
+new_found = explore_consequences(db, basic_vars=['p'], max_depth=1, max_theorems=3)
+print(f"Discovered and verified theorems: {new_found}")
 ```
 
 ---
 
 ## 6. `solver.lean_exporter`
 
-Il modulo [`solver.lean_exporter`](file:///c:/Users/franc/Programmazione/solver/solver/lean_exporter.py) converte la sintassi interna dell'AST Python nella sintassi formale di **Lean 4**.
+The [`solver.lean_exporter`](file:///c:/Users/franc/Programmazione/solver/solver/lean_exporter.py) module converts Python AST internal syntax to **Lean 4** formal syntax.
 
-### Funzioni Principali
+### Main Functions
 
 #### `formula_to_lean(formula)`
-Mappa ricorsivamente un nodo dell'AST `Formula` nella stringa corrispondente in sintassi Lean 4:
+Recursively maps a `Formula` AST node into the corresponding string in Lean 4 syntax:
 - `Implies(A, B)` $\rightarrow$ `(A → B)`
 - `And(A, B)` $\rightarrow$ `(A ∧ B)`
 - `Or(A, B)` $\rightarrow$ `(A ∨ B)`
@@ -268,49 +268,49 @@ Mappa ricorsivamente un nodo dell'AST `Formula` nella stringa corrispondente in 
 - `Pred("P", [a, b])` $\rightarrow$ `(P a b)`
 
 #### `export_proof(theorem_name, db)`
-Carica il teorema ed il grafo delle sue dipendenze dal database e genera un documento sorgente Lean 4 completo e autosufficiente (comprensivo di definizioni di assiomi, lemmi preliminari e passi della dimostrazione tramite tattiche `have` ed `exact`).
+Loads the theorem and its dependency graph from the database and generates a complete, self-contained Lean 4 source document (including axiom definitions, preliminary lemmas, and proof steps using `have` and `exact` tactics).
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.formula import parse_formula
 from solver.lean_exporter import formula_to_lean
 
 f = parse_formula("forall x, (P(x) & Q(x))")
-print("Sintassi Lean 4:", formula_to_lean(f))
-# Stampa: (∀ x, ((P x) ∧ (Q x)))
+print("Lean 4 syntax:", formula_to_lean(f))
+# Prints: (∀ x, ((P x) ∧ (Q x)))
 ```
 
 ---
 
 ## 7. `solver.dependencies`
 
-Il sottopacchetto [`solver.dependencies`](file:///c:/Users/franc/Programmazione/solver/solver/dependencies/__init__.py) fornisce librerie assiomatiche predefinite per la logica matematica.
+The [`solver.dependencies`](file:///c:/Users/franc/Programmazione/solver/solver/dependencies/__init__.py) subpackage provides predefined axiomatic libraries for mathematical logic.
 
-### Moduli Inclusi
+### Included Modules
 
 #### 1. `solver.dependencies.first_order_logic`
-Contiene gli assiomi standard per la Logica del Primo Ordine (FOL):
-- **Calcolo Proposizionale**: `fol_k`, `fol_s`, `fol_dn`.
-- **Quantificatori**: `fol_ui` (Istanziazione universale), `fol_ug` (Generalizzazione universale), `fol_eg` (Generalizzazione esistenziale), `fol_ed` (Eliminazione esistenziale).
-- **Uguaglianza (Leibniz)**: `eq_ref` (Riflessività), `eq_sym` (Simmetria), `eq_trans` (Transitività), `eq_subst` (Sostituzione/Congruenza).
+Contains standard axioms for First-Order Logic (FOL):
+- **Propositional Calculus**: `fol_k`, `fol_s`, `fol_dn`.
+- **Quantifiers**: `fol_ui` (Universal Instantiation), `fol_ug` (Universal Generalization), `fol_eg` (Existential Generalization), `fol_ed` (Existential Elimination).
+- **Equality (Leibniz)**: `eq_ref` (Reflexivity), `eq_sym` (Symmetry), `eq_trans` (Transitivity), `eq_subst` (Substitution/Congruence).
 
-Funzioni: `get_first_order_axioms()`, `load_first_order_axioms(db)`.
+Functions: `get_first_order_axioms()`, `load_first_order_axioms(db)`.
 
 #### 2. `solver.dependencies.second_order_logic`
-Contiene gli assiomi per la Logica del Secondo Ordine (SOL):
-- **Quantificatori del Secondo Ordine**: `sol_ui`, `sol_ug`, `sol_eg`, `sol_ed`.
-- **Strutturali**: `sol_comp` (Schema di Comprensione), `sol_choice` (Assioma della Scelta Relazionale).
-- **Induzione**: `sol_induction` (Schema di Induzione Matematica di Peano al Secondo Ordine).
+Contains axioms for Second-Order Logic (SOL):
+- **Second-Order Quantifiers**: `sol_ui`, `sol_ug`, `sol_eg`, `sol_ed`.
+- **Structural**: `sol_comp` (Schema of Comprehension), `sol_choice` (Relational Axiom of Choice).
+- **Induction**: `sol_induction` (Second-Order Peano Mathematical Induction Schema).
 
-Funzioni: `get_second_order_axioms()`, `load_second_order_axioms(db)`.
+Functions: `get_second_order_axioms()`, `load_second_order_axioms(db)`.
 
 #### 3. `solver.dependencies.logic`
-Modulo unificato che aggrega sia FOL sia SOL.
+Unified module aggregating both FOL and SOL.
 
-Funzioni: `get_all_logic_axioms()`, `load_all_logic_axioms(db)`.
+Functions: `get_all_logic_axioms()`, `load_all_logic_axioms(db)`.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.database import TheoryDatabase
@@ -318,70 +318,69 @@ from solver.dependencies import load_all_logic_axioms, get_first_order_axioms
 
 db = TheoryDatabase("fol_sol_demo.db")
 
-# Carica tutti gli assiomi di FOL e SOL
+# Load all FOL and SOL axioms
 load_all_logic_axioms(db)
 
 axioms = db.get_all_axioms()
-print(f"Caricati {len(axioms)} assiomi nel database.")
-print("Assioma eq_subst:", axioms.get("eq_subst"))
+print(f"Loaded {len(axioms)} axioms into database.")
+print("Axiom eq_subst:", axioms.get("eq_subst"))
 ```
 
 ---
 
 ## 8. `solver.deducer`
 
-Il modulo [`solver.deducer`](file:///c:/Users/franc/Programmazione/solver/solver/deducer.py) fornisce il motore di deduzione logica in avanti (Forward Deduction Engine). A partire da un insieme di ipotesi fornite dall'utente, applica gli assiomi della teoria e i teoremi/lemmi precedentemente salvati nel database per derivare tutte le conseguenze logiche possibili tramite Modus Ponens e istanziazione.
+The [`solver.deducer`](file:///c:/Users/franc/Programmazione/solver/solver/deducer.py) module provides the Forward Deduction Engine. Starting from a set of user-provided hypotheses, it applies theory axioms and previously saved theorems/lemmas in the database to derive all possible logical consequences via Modus Ponens and instantiation.
 
-### Classe `Deducer`
+### `Deducer` Class
 
-#### Inizializzazione
+#### Initialization
 ```python
 deducer = Deducer(db=None, auto_load_axioms=True)
 ```
-- **`db`**: Istanza di `TheoryDatabase`. Se non fornita, viene creato automaticamente un database in-memory.
-- **`auto_load_axioms`**: Se `True`, assicura il caricamento degli assiomi logici di base (es. `ax1`, `ax2`, `ax3`).
+- **`db`**: Instance of `TheoryDatabase`. If not provided, an in-memory database is created automatically.
+- **`auto_load_axioms`**: If `True`, ensures loading basic logical axioms (e.g. `ax1`, `ax2`, `ax3`).
 
-#### Metodo `deduce(hypotheses, max_formulas=200, include_hypotheses=False, timeout_seconds=30.0)`
-Esegue la ricerca in avanti per derivare le conseguenze.
-- **`hypotheses`**: Lista di stringhe (es. `["p -> q", "p"]`) o istanze di `Formula`.
-- **`max_formulas`**: Numero massimo di formule da derivare.
-- **`include_hypotheses`**: Se `True`, include anche le ipotesi iniziali tra i risultati.
-- **`timeout_seconds`**: Tempo massimo di esecuzione in secondi.
+#### `deduce(hypotheses, max_formulas=200, include_hypotheses=False, timeout_seconds=30.0)` Method
+Performs forward search to derive consequences.
+- **`hypotheses`**: List of strings (e.g. `["p -> q", "p"]`) or `Formula` instances.
+- **`max_formulas`**: Maximum number of formulas to derive.
+- **`include_hypotheses`**: If `True`, includes initial hypotheses among results.
+- **`timeout_seconds`**: Maximum execution time in seconds.
 
-Restituisce una lista di oggetti `Consequence`.
+Returns a list of `Consequence` objects.
 
-### Classe `Consequence`
-Rappresenta una conseguenza derivata. Proprietà principali:
-- **`formula`**: Oggetto `Formula` della conseguenza.
-- **`formula_str`**: Stringa rappresentativa della formula.
-- **`proof`**: Lista ordinata dei passi di dimostrazione formale compatibili con `verify_proof_local`.
-- **`justification_type`**: Tipo di giustificazione (`'MP'`, `'Axiom'`, `'Lemma'`, `'Hypothesis'`).
-- **`is_verified`**: Booleano che indica l'esito della validazione locale.
+### `Consequence` Class
+Represents a derived consequence. Key properties:
+- **`formula`**: `Formula` object of the consequence.
+- **`formula_str`**: String representation of the formula.
+- **`proof`**: Ordered list of formal proof steps compatible with `verify_proof_local`.
+- **`justification_type`**: Justification type (`'MP'`, `'Axiom'`, `'Lemma'`, `'Hypothesis'`).
+- **`is_verified`**: Boolean indicating local validation outcome.
 
-### Funzione `deduce_consequences(hypotheses, db=None, max_formulas=200, include_hypotheses=False)`
-Funzione ausiliaria rapida per eseguire la deduzione senza dover istanziare manualmente `Deducer`.
+### `deduce_consequences(hypotheses, db=None, max_formulas=200, include_hypotheses=False)` Function
+Quick helper function to perform deduction without manually instantiating `Deducer`.
 
-#### Esempio di utilizzo:
+#### Example Usage:
 
 ```python
 from solver.deducer import Deducer, deduce_consequences
 
-# Esempio 1: Uso rapido con funzione helper
+# Example 1: Quick usage with helper function
 consequences = deduce_consequences(["p -> q", "q -> r", "p"])
 for c in consequences:
-    print(f"Derivato: {c.formula_str} via {c.justification_type}")
+    print(f"Derived: {c.formula_str} via {c.justification_type}")
     # Output: 
-    # Derivato: q via MP
-    # Derivato: r via MP
+    # Derived: q via MP
+    # Derived: r via MP
 
-# Esempio 2: Uso con database personalizzato
+# Example 2: Usage with custom database
 from solver.database import TheoryDatabase
 
 db = TheoryDatabase("my_theory.db")
 deducer = Deducer(db=db)
 results = deducer.deduce(hypotheses=["A -> B", "A"])
 for res in results:
-    print(f"Conseguenza: {res.formula_str}")
-    print(f"Passi di dimostrazione: {res.proof}")
+    print(f"Consequence: {res.formula_str}")
+    print(f"Proof steps: {res.proof}")
 ```
-

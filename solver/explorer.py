@@ -7,25 +7,25 @@ from .prover import reconstruct_proof
 
 def generate_candidates(basic_vars, max_depth):
     """
-    Genera ricorsivamente tutte le formule candidate composte dalle variabili di base
-    fino a una determinata profondità di annidamento.
+    Recursively generates candidate formulas composed of basic variables
+    up to a given nesting depth.
     """
     current = [Var(v) for v in basic_vars]
     all_candidates = list(current)
     
     for depth in range(1, max_depth + 1):
         next_candidates = []
-        # Negazioni di formule a profondità precedente
+        # Negations of formulas from previous depth
         for f in current:
             next_candidates.append(Not(f))
         
-        # Implicazioni A -> B con almeno una formula a profondità precedente
+        # Implications A -> B with at least one formula from previous depth
         for A in all_candidates:
             for B in all_candidates:
                 if A in current or B in current:
                     next_candidates.append(Implies(A, B))
                     
-        # Rimuove duplicati
+        # Remove duplicates
         seen = set(all_candidates)
         unique_next = []
         for f in next_candidates:
@@ -40,11 +40,11 @@ def generate_candidates(basic_vars, max_depth):
 
 def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_theorems=20, min_proof_steps=0):
     """
-    Genera sistematicamente conseguenze logiche instanziando assiomi e lemmi
-    e applicando il Modus Ponens. Registra e valida ciascun risultato tramite Lean 4.
+    Systematically generates logical consequences by instantiating axioms and lemmas
+    and applying Modus Ponens. Registers and validates each result via Lean 4.
     """
     candidates = generate_candidates(basic_vars, max_depth)
-    print(f"Formule candidate generate ({len(candidates)}): {[str(c) for c in candidates]}")
+    print(f"Generated candidate formulas ({len(candidates)}): {[str(c) for c in candidates]}")
     
     derived = {}
     
@@ -54,7 +54,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             return True
         return False
         
-    # 1. Istanzia gli Assiomi presenti nel database
+    # 1. Instantiate Axioms present in the database
     axioms = db.get_all_axioms()
     for ax_name, ax_str in axioms.items():
         schema = parse_formula(ax_str)
@@ -79,14 +79,14 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
                     'substitution_json': {k: str(v) for k, v in sub.items()}
                 })
         else:
-            # Assioma specifico del dominio (non schematico)
+            # Domain-specific axiom (non-schematic)
             register(schema, {
                 'justification_type': 'Axiom',
                 'ref_name': ax_name,
                 'substitution_json': {}
             })
             
-    # 2. Carica e istanzia i Lemmi verificati dal database
+    # 2. Load and instantiate verified Lemmas from database
     lemmas = []
     with db.connection_scope() as conn:
         cursor = conn.execute("SELECT name FROM theorems WHERE is_verified = 1;")
@@ -119,7 +119,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             inst_thesis = lemma_thesis.substitute(sub)
             inst_hyps = [lh.substitute(sub) for lh in lemma_hyps]
             
-            # Il lemma è applicabile se tutte le sue ipotesi sono state già derivate
+            # The lemma is applicable if all of its hypotheses have already been derived
             if all(ih in derived for ih in inst_hyps):
                 just = {
                     'justification_type': 'Lemma',
@@ -133,7 +133,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
                     
                 register(inst_thesis, just)
 
-    # 3. BFS per il Modus Ponens
+    # 3. BFS for Modus Ponens
     queue = list(derived.keys())
     
     implications_by_ant = {}
@@ -148,7 +148,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
         current = queue[head]
         head += 1
         
-        # Caso A: current è antecedente (A)
+        # Case A: current is an antecedent (A)
         if current in implications_by_ant:
             for impl in implications_by_ant[current]:
                 consequent = impl.right
@@ -164,7 +164,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
                             implications_by_ant[consequent.left] = []
                         implications_by_ant[consequent.left].append(consequent)
                         
-        # Caso B: current è implicazione (A -> B)
+        # Case B: current is an implication (A -> B)
         if isinstance(current, Implies):
             if current.left not in implications_by_ant:
                 implications_by_ant[current.left] = []
@@ -185,16 +185,16 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
                             implications_by_ant[consequent.left] = []
                         implications_by_ant[consequent.left].append(consequent)
 
-    print(f"Saturazione completata. Formule derivate totali: {len(derived)}")
+    print(f"Saturation completed. Total derived formulas: {len(derived)}")
     
-    # 4. Carica i teoremi esistenti nel database per non duplicarli
+    # 4. Load existing theorems from database to avoid duplicating them
     existing_theorems = {}
     with db.connection_scope() as conn:
         cursor = conn.execute("SELECT name, thesis_str FROM theorems WHERE is_verified = 1;")
         for row in cursor.fetchall():
             existing_theorems[parse_formula(row[1])] = row[0]
             
-    # Ordina le formule derivate per complessità strutturale (formule più semplici per prime)
+    # Sort derived formulas by structural complexity (simpler formulas first)
     def formula_complexity(f):
         if isinstance(f, Var):
             return 1
@@ -225,7 +225,7 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
         try:
             steps = reconstruct_proof(goal, derived, lemma_map=existing_theorems, db=db)
         except Exception as e:
-            print(f"Errore nella ricostruzione dei passi per {goal}: {e}")
+            print(f"Error reconstructing steps for {goal}: {e}")
             continue
             
         if len(steps) < min_proof_steps:
@@ -239,15 +239,15 @@ def explore_consequences(db: TheoryDatabase, basic_vars=['p'], max_depth=1, max_
             'steps': steps
         }
         
-        print(f"Verifica formale e salvataggio di {thm_name}: {goal}")
+        print(f"Formal verification and saving of {thm_name}: {goal}")
         success, res_msg = verify_and_save(thm, db)
         if success:
-            print(f"  -> Verificato con successo in Lean 4 e salvato nel database!")
+            print(f"  -> Successfully verified in Lean 4 and saved to database!")
             existing_theorems[goal] = thm_name
             new_theorems_count += 1
             thm_id_counter += 1
         else:
             safe_msg = str(res_msg).encode(getattr(sys.stdout, 'encoding', None) or 'utf-8', errors='replace').decode(getattr(sys.stdout, 'encoding', None) or 'utf-8', errors='replace')
-            print(f"  -> Fallito: {safe_msg}")
+            print(f"  -> Failed: {safe_msg}")
             
     return new_theorems_count

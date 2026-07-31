@@ -16,11 +16,11 @@ LOGIC_AXIOMS = {
 
 
 def get_all_logic_axioms():
-    """Restituisce un dizionario completo con tutti gli assiomi del primo e del secondo ordine."""
+    """Returns a complete dictionary containing all First-Order and Second-Order logic axioms."""
     return dict(LOGIC_AXIOMS)
 
 
 def load_all_logic_axioms(db: TheoryDatabase):
-    """Carica tutti gli assiomi del primo e del secondo ordine nel database fornito."""
+    """Loads all First-Order and Second-Order logic axioms into the provided database."""
     load_first_order_axioms(db)
     load_second_order_axioms(db)

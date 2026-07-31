@@ -10,7 +10,7 @@ class TheoryDatabase:
 
     @contextlib.contextmanager
     def connection_scope(self):
-        """Scope context manager per gestire e chiudere correttamente le connessioni SQLite."""
+        """Context manager for managing and properly closing SQLite database connections."""
         conn = sqlite3.connect(self.db_path)
         conn.execute("PRAGMA foreign_keys = ON;")
         try:
@@ -80,7 +80,7 @@ class TheoryDatabase:
                 )
                 conn.commit()
             except sqlite3.IntegrityError:
-                # Se l'assioma esiste già, non fa nulla
+                # If axiom already exists, do nothing
                 pass
 
     def get_axiom(self, name):
@@ -105,14 +105,14 @@ class TheoryDatabase:
                 return None
             thm_id, thm_name, thesis_str, lean_code, is_verified = row
             
-            # Carica ipotesi
+            # Load hypotheses
             cursor = conn.execute(
                 "SELECT formula_str FROM theorem_hypotheses WHERE theorem_id = ? ORDER BY hypothesis_idx;",
                 (thm_id,)
             )
             hypotheses = [r[0] for r in cursor.fetchall()]
             
-            # Carica passi
+            # Load steps
             cursor = conn.execute(
                 "SELECT step_idx, formula_str, justification_type, arg1, arg2, ref_name, substitution_json "
                 "FROM theorem_steps WHERE theorem_id = ? ORDER BY step_idx;",
@@ -141,7 +141,7 @@ class TheoryDatabase:
             }
 
     def save_theorem(self, name, thesis_str, hypotheses, steps, dependencies=None, lean_code=None, is_verified=0):
-        # Validazione indici dei passi MP
+        # Validate MP step indices
         for step in steps:
             step_idx = step['step_idx']
             if step['justification_type'] == 'MP':
@@ -149,11 +149,11 @@ class TheoryDatabase:
                 arg2 = step['arg2']
                 if arg1 >= step_idx or arg2 >= step_idx:
                     raise ValueError(
-                        f"Nel passo {step_idx}: gli argomenti MP ({arg1}, {arg2}) devono essere minori di step_idx."
+                        f"In step {step_idx}: MP arguments ({arg1}, {arg2}) must be less than step_idx."
                     )
 
         with self.connection_scope() as conn:
-            # Rimuove versioni precedenti per garantire la pulizia
+            # Remove previous versions to ensure cleanliness
             conn.execute("DELETE FROM theorems WHERE name = ?;", (name,))
             
             cursor = conn.execute(
@@ -189,7 +189,7 @@ class TheoryDatabase:
 
     def get_dependencies_recursive(self, theorem_name):
         """
-        Ritorna l'albero delle dipendenze ordinato topologicamente (i lemmi indipendenti vengono prima).
+        Returns the dependency tree in topological order (independent lemmas come first).
         """
         with self.connection_scope() as conn:
             cursor = conn.execute("SELECT id, name FROM theorems;")

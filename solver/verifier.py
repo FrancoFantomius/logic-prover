@@ -6,16 +6,16 @@ from . import lean_exporter
 
 def verify_proof_local(thm, db: TheoryDatabase):
     """
-    Esegue una convalida strutturale locale in Python della dimostrazione del teorema.
-    Verifica la correttezza formale di ciascun passo di dimostrazione prima di passarla a Lean.
+    Performs local Python structural validation of the theorem proof.
+    Verifies formal correctness of each proof step before passing it to Lean.
     """
     hypotheses = [parse_formula(h) for h in thm['hypotheses']]
     thesis = parse_formula(thm['thesis_str'])
     
-    # Carica tutti gli assiomi presenti nel database
+    # Load all axioms present in the database
     axioms = {name: parse_formula(f_str) for name, f_str in db.get_all_axioms().items()}
     
-    # Mappa per tracciare le formule associate ai passi per il controllo degli indici MP
+    # Map to track step formulas for checking MP indices
     step_formulas = {}
     for step in thm['steps']:
         step_formulas[step['step_idx']] = parse_formula(step['formula_str'])
@@ -28,109 +28,109 @@ def verify_proof_local(thm, db: TheoryDatabase):
         if j_type == 'Axiom':
             ax_name = step['ref_name']
             if ax_name not in axioms:
-                return False, f"Passo {idx}: Assioma '{ax_name}' non trovato nel database."
+                return False, f"Step {idx}: Axiom '{ax_name}' not found in database."
             schema = axioms[ax_name]
             bindings = f.match_schema(schema)
             if bindings is None:
-                return False, f"Passo {idx}: La formula '{f}' non è un'istanza corretta dell'assioma {ax_name} '{schema}'."
-            # Aggiorna o memorizza il dizionario delle sostituzioni per l'esportatore
+                return False, f"Step {idx}: Formula '{f}' is not a valid instance of axiom {ax_name} '{schema}'."
+            # Update or store substitution dictionary for the exporter
             step['substitution_json'] = {k: str(v) for k, v in bindings.items()}
             
         elif j_type == 'Hypothesis':
             ref_name = step['ref_name']
             if not ref_name.startswith('h'):
-                return False, f"Passo {idx}: Il riferimento all'ipotesi '{ref_name}' deve iniziare con 'h'."
+                return False, f"Step {idx}: Hypothesis reference '{ref_name}' must start with 'h'."
             try:
                 hyp_idx = int(ref_name[1:])
             except ValueError:
-                return False, f"Passo {idx}: Indice dell'ipotesi '{ref_name}' non valido."
+                return False, f"Step {idx}: Invalid hypothesis index '{ref_name}'."
             if hyp_idx < 0 or hyp_idx >= len(hypotheses):
-                return False, f"Passo {idx}: Indice dell'ipotesi '{ref_name}' fuori dai limiti."
+                return False, f"Step {idx}: Hypothesis index '{ref_name}' out of bounds."
             if f != hypotheses[hyp_idx]:
-                return False, f"Passo {idx}: La formula '{f}' non corrisponde alla definizione dell'ipotesi {ref_name} '{hypotheses[hyp_idx]}'."
+                return False, f"Step {idx}: Formula '{f}' does not match definition of hypothesis {ref_name} '{hypotheses[hyp_idx]}'."
                 
         elif j_type == 'MP':
             arg1 = step['arg1']
             arg2 = step['arg2']
             if arg1 not in step_formulas or arg2 not in step_formulas:
-                return False, f"Passo {idx}: Argomenti MP ({arg1}, {arg2}) non trovati nei passi precedenti."
+                return False, f"Step {idx}: MP arguments ({arg1}, {arg2}) not found in previous steps."
             if arg1 >= idx or arg2 >= idx:
-                return False, f"Passo {idx}: Gli argomenti MP ({arg1}, {arg2}) devono riferirsi a passi antecedenti."
+                return False, f"Step {idx}: MP arguments ({arg1}, {arg2}) must refer to prior steps."
             
             f1 = step_formulas[arg1]
             f2 = step_formulas[arg2]
             
-            # Cerca quale delle due formule è l'implicazione A -> B e quale l'antecedente A
+            # Search which formula is implication A -> B and which is antecedent A
             if isinstance(f1, Implies) and f1.left == f2:
                 consequent = f1.right
             elif isinstance(f2, Implies) and f2.left == f1:
                 consequent = f2.right
             else:
-                return False, f"Passo {idx}: I passi {arg1} e {arg2} non formano una coppia Modus Ponens valida."
+                return False, f"Step {idx}: Steps {arg1} and {arg2} do not form a valid Modus Ponens pair."
             
             if f != consequent:
-                return False, f"Passo {idx}: La conclusione MP '{consequent}' non coincide con la formula del passo '{f}'."
+                return False, f"Step {idx}: MP conclusion '{consequent}' does not match step formula '{f}'."
                 
         elif j_type == 'Lemma':
             lemma_name = step['ref_name']
             lemma = db.get_theorem(lemma_name)
             if not lemma:
-                return False, f"Passo {idx}: Lemma '{lemma_name}' non trovato nel database."
+                return False, f"Step {idx}: Lemma '{lemma_name}' not found in database."
             if not lemma['is_verified']:
-                return False, f"Passo {idx}: Il lemma '{lemma_name}' non è verificato."
+                return False, f"Step {idx}: Lemma '{lemma_name}' is not verified."
             
             lemma_thesis = parse_formula(lemma['thesis_str'])
             lemma_hyps = [parse_formula(h) for h in lemma['hypotheses']]
             
-            # Estrae o deduce la sostituzione
+            # Extract or deduce substitution
             sub_json = step.get('substitution_json')
             if not sub_json:
                 bindings = f.match_schema(lemma_thesis)
                 if bindings is None:
-                    return False, f"Passo {idx}: La formula '{f}' non corrisponde alla tesi del lemma {lemma_name} '{lemma_thesis}'."
+                    return False, f"Step {idx}: Formula '{f}' does not match thesis of lemma {lemma_name} '{lemma_thesis}'."
                 sub_json = {k: str(v) for k, v in bindings.items()}
                 step['substitution_json'] = sub_json
                 
             sub_map = {k: parse_formula(v) for k, v in sub_json.items()}
             
-            # Verifica che la tesi sostituita corrisponda al passo corrente
+            # Verify substituted thesis matches current step
             if lemma_thesis.substitute(sub_map) != f:
-                return False, f"Passo {idx}: La formula '{f}' non coincide con la tesi del lemma '{lemma_name}' sotto sostituzione."
+                return False, f"Step {idx}: Formula '{f}' does not match thesis of lemma '{lemma_name}' under substitution."
             
-            # Verifica che le ipotesi sostituite corrispondano ai passi indicati
+            # Verify substituted hypotheses match indicated steps
             if len(lemma_hyps) >= 1:
                 arg1 = step.get('arg1')
                 if arg1 is None or arg1 not in step_formulas:
-                    return False, f"Passo {idx}: Il lemma richiede almeno un argomento in ingresso (arg1)."
+                    return False, f"Step {idx}: Lemma requires at least one input argument (arg1)."
                 expected_hyp = lemma_hyps[0].substitute(sub_map)
                 if step_formulas[arg1] != expected_hyp:
-                    return False, f"Passo {idx}: Il passo argomenti {arg1} non corrisponde alla prima ipotesi del lemma (atteso: '{expected_hyp}')."
+                    return False, f"Step {idx}: Argument step {arg1} does not match first hypothesis of lemma (expected: '{expected_hyp}')."
             
             if len(lemma_hyps) >= 2:
                 arg2 = step.get('arg2')
                 if arg2 is None or arg2 not in step_formulas:
-                    return False, f"Passo {idx}: Il lemma richiede un secondo argomento in ingresso (arg2)."
+                    return False, f"Step {idx}: Lemma requires a second input argument (arg2)."
                 expected_hyp = lemma_hyps[1].substitute(sub_map)
                 if step_formulas[arg2] != expected_hyp:
-                    return False, f"Passo {idx}: Il passo argomenti {arg2} non corrisponde alla seconda ipotesi del lemma (atteso: '{expected_hyp}')."
+                    return False, f"Step {idx}: Argument step {arg2} does not match second hypothesis of lemma (expected: '{expected_hyp}')."
         else:
-            return False, f"Passo {idx}: Tipo di giustificazione sconosciuto '{j_type}'."
+            return False, f"Step {idx}: Unknown justification type '{j_type}'."
 
-    # Verifica che l'ultimo passo corrisponda alla tesi
+    # Verify that the last step matches the thesis
     last_idx = thm['steps'][-1]['step_idx']
     if step_formulas[last_idx] != thesis:
-        return False, f"L'ultimo passo {last_idx} ({step_formulas[last_idx]}) non coincide con la tesi ({thesis})."
+        return False, f"Last step {last_idx} ({step_formulas[last_idx]}) does not match thesis ({thesis})."
 
     return True, None
 
 def verify_proof_with_lean(thm, db: TheoryDatabase):
-    """Genera ed esegue il controllo della dimostrazione con Lean 4."""
+    """Generates and executes proof verification with Lean 4."""
     try:
         lean_code = lean_exporter.export_proof(thm['name'], db)
     except Exception as e:
-        return False, f"Errore durante la generazione di Lean 4: {e}"
+        return False, f"Error during Lean 4 generation: {e}"
 
-    temp_filename = "temp_proof.lean"
+    temp_filename = f"temp_proof_{os.getpid()}_{thm['name']}.lean"
     with open(temp_filename, "w", encoding="utf-8") as f:
         f.write(lean_code)
 
@@ -142,36 +142,36 @@ def verify_proof_with_lean(thm, db: TheoryDatabase):
             encoding="utf-8"
         )
         if res.returncode == 0:
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
             return True, lean_code
         else:
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
             error_msg = res.stderr if res.stderr else res.stdout
-            return False, f"Errore di compilazione Lean 4:\n{error_msg}"
+            return False, f"Lean 4 compilation error:\n{error_msg}"
     except Exception as e:
+        return False, f"Could not start Lean 4 compiler: {e}"
+    finally:
         if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-        return False, f"Impossibile avviare il compilatore Lean 4: {e}"
+            try:
+                os.remove(temp_filename)
+            except OSError:
+                pass
 
 def verify_and_save(thm, db: TheoryDatabase):
     """
-    Verifica localmente e poi tramite Lean 4 il teorema fornito.
-    Se ha successo, memorizza il teorema come verificato nel database SQLite.
+    Verifies locally and then via Lean 4 the provided theorem.
+    If successful, stores the theorem as verified in the SQLite database.
     """
-    # 1. Verifica strutturale locale in Python
+    # 1. Local Python structural verification
     ok, err = verify_proof_local(thm, db)
     if not ok:
-        return False, f"Errore di validazione locale: {err}"
+        return False, f"Local validation error: {err}"
 
-    # Trova le dipendenze dirette per salvarle
+    # Find direct dependencies to save them
     dependencies = set()
     for step in thm['steps']:
         if step['justification_type'] == 'Lemma':
             dependencies.add(step['ref_name'])
 
-    # Salvataggio temporaneo nel DB come non verificato per consentire all'esportatore di leggerlo
+    # Temporary save in DB as unverified to allow exporter to read it
     db.save_theorem(
         name=thm['name'],
         thesis_str=thm['thesis_str'],
@@ -182,7 +182,7 @@ def verify_and_save(thm, db: TheoryDatabase):
         is_verified=0
     )
 
-    # 2. Genera il codice sorgente Lean 4 ed esegue Lean
+    # 2. Generate Lean 4 source code and execute Lean
     ok_lean, lean_res = verify_proof_with_lean(thm, db)
     if ok_lean:
         db.save_theorem(
