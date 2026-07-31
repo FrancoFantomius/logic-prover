@@ -67,11 +67,11 @@ FIRST_ORDER_AXIOMS = {
 
 
 def get_first_order_axioms():
-    """Restituisce un dizionario contenente tutti gli assiomi della logica del primo ordine."""
+    """Returns a dictionary containing all First-Order Logic axioms."""
     return dict(FIRST_ORDER_AXIOMS)
 
 
 def load_first_order_axioms(db: TheoryDatabase):
-    """Carica tutti gli assiomi della logica del primo ordine nel database delle teorie specificato."""
+    """Loads all First-Order Logic axioms into the specified theory database."""
     for name, formula_str in FIRST_ORDER_AXIOMS.items():
         db.add_axiom(name, formula_str)

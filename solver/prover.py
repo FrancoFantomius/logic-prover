@@ -3,7 +3,7 @@ from .formula import parse_formula, Var, Not, Implies, Formula
 from .database import TheoryDatabase
 
 def get_subformulas(formula):
-    """Estrae ricorsivamente tutte le sottoformule di una formula data."""
+    """Recursively extracts all subformulas of a given formula."""
     subs = {formula}
     if isinstance(formula, Not):
         subs.update(get_subformulas(formula.formula))
@@ -14,8 +14,8 @@ def get_subformulas(formula):
 
 def reconstruct_proof(goal, derived, lemma_map=None, db=None):
     """
-    Ricostruisce la sequenza di passi ordinati topologicamente a partire
-    dal goal finale e dalle giustificazioni raccolte durante la ricerca.
+    Reconstructs the sequence of topologically ordered steps starting
+    from the final goal and the justifications collected during search.
     """
     visited = {}
     steps = []
@@ -24,8 +24,8 @@ def reconstruct_proof(goal, derived, lemma_map=None, db=None):
         if formula in visited:
             return visited[formula]
         
-        # Se la formula è già un lemma verificato nel database (escluso il goal stesso),
-        # possiamo utilizzarla come lemma invece di ricostruire la sua derivazione.
+        # If the formula is already a verified lemma in the database (excluding the goal itself),
+        # we can use it as a lemma instead of reconstructing its derivation.
         if lemma_map and db and formula in lemma_map and formula != goal:
             lemma_name = lemma_map[formula]
             lemma_thm = db.get_theorem(lemma_name)
@@ -61,7 +61,7 @@ def reconstruct_proof(goal, derived, lemma_map=None, db=None):
         just = derived[formula]
         args = []
         
-        # Visita prima gli argomenti per garantire l'ordinamento topologico
+        # Visit arguments first to guarantee topological ordering
         if just['justification_type'] == 'MP':
             arg1_idx = visit(just['arg1_formula'])
             arg2_idx = visit(just['arg2_formula'])
@@ -85,8 +85,8 @@ def reconstruct_proof(goal, derived, lemma_map=None, db=None):
             step['substitution_json'] = just['substitution_json']
             
         if just['justification_type'] == 'MP':
-            # Ordina gli argomenti in modo che arg1 sia la formula minore
-            # (conforme alle aspettative del verifier)
+            # Sort arguments so arg1 is the smaller formula
+            # (conforming to verifier expectations)
             step['arg1'] = min(args)
             step['arg2'] = max(args)
         elif just['justification_type'] == 'Lemma':
@@ -104,16 +104,16 @@ def reconstruct_proof(goal, derived, lemma_map=None, db=None):
 
 def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, max_depth=10, max_formulas=1000, timeout_seconds=30):
     """
-    Algoritmo di ricerca automatica di dimostrazioni (Forward Search con BFS).
-    Trova una dimostrazione per thesis_str a partire da hypotheses_strs, usando assiomi
-    e lemmi registrati nel database.
+    Automatic proof search algorithm (Forward Search with BFS).
+    Finds a proof for thesis_str starting from hypotheses_strs, using axioms
+    and lemmas stored in the database.
     """
     start_time = time.time()
     
     thesis = parse_formula(thesis_str)
     hypotheses = [parse_formula(h) for h in hypotheses_strs]
     
-    # 1. Raccoglie sottoformule per definire lo spazio di ricerca (Candidate Pool)
+    # 1. Collect subformulas to define the search space (Candidate Pool)
     all_fs = {thesis}
     for h in hypotheses:
         all_fs.update(get_subformulas(h))
@@ -123,17 +123,17 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
         all_subformulas.update(get_subformulas(f))
         
     candidates = set(all_subformulas)
-    # Aggiunge le negazioni per completezza
+    # Add negations for completeness
     for sf in all_subformulas:
         candidates.add(Not(sf))
         
     if not candidates:
         candidates.add(Var('p'))
         
-    # Dizionario che mappa ogni formula derivata alla sua giustificazione
+    # Dictionary mapping each derived formula to its justification
     derived = {}
     
-    # Inserisce le ipotesi
+    # Insert hypotheses
     for idx, hyp in enumerate(hypotheses):
         derived[hyp] = {
             'justification_type': 'Hypothesis',
@@ -142,7 +142,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
         if hyp == thesis:
             return reconstruct_proof(thesis, derived)
 
-    # Carica tutti i lemmi precedentemente verificati dal database
+    # Load all previously verified lemmas from database
     all_db_thms = []
     with db.connection_scope() as conn:
         if exclude_name:
@@ -159,8 +159,8 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
             return True
         return False
 
-    # 2. Istanziazione iniziale degli schemi assiomatici con le formule candidate
-    # Assioma 1: A -> (B -> A)
+    # 2. Initial instantiation of axiom schemas with candidate formulas
+    # Axiom 1: A -> (B -> A)
     for A in candidates:
         for B in candidates:
             f = Implies(A, Implies(B, A))
@@ -170,7 +170,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
                 'substitution_json': {'A': str(A), 'B': str(B)}
             })
 
-    # Assioma 2: (A -> (B -> C)) -> ((A -> B) -> (A -> C))
+    # Axiom 2: (A -> (B -> C)) -> ((A -> B) -> (A -> C))
     for A in candidates:
         for B in candidates:
             for C in candidates:
@@ -181,7 +181,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
                     'substitution_json': {'A': str(A), 'B': str(B), 'C': str(C)}
                 })
 
-    # Assioma 3: (~A -> ~B) -> (B -> A)
+    # Axiom 3: (~A -> ~B) -> (B -> A)
     for A in candidates:
         for B in candidates:
             f = Implies(Implies(Not(A), Not(B)), Implies(B, A))
@@ -191,7 +191,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
                 'substitution_json': {'A': str(A), 'B': str(B)}
             })
 
-    # Istanziazione iniziale dei lemmi
+    # Initial instantiation of lemmas
     for lemma in all_db_thms:
         lemma_thesis = parse_formula(lemma['thesis_str'])
         lemma_hyps = [parse_formula(h) for h in lemma['hypotheses']]
@@ -202,7 +202,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
         sorted_vars = sorted(list(lemma_vars))
         
         if len(sorted_vars) > 3:
-            continue  # Previene l'esplosione combinatoria per lemmi troppo complessi
+            continue  # Prevents combinatorial explosion for overly complex lemmas
             
         def get_mappings(vars_list):
             if not vars_list:
@@ -221,7 +221,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
             inst_thesis = lemma_thesis.substitute(sub_map)
             inst_hyps = [lh.substitute(sub_map) for lh in lemma_hyps]
             
-            # Possiamo applicare il lemma solo se le sue ipotesi sono state derivate
+            # We can apply the lemma only if its hypotheses have been derived
             if all(ih in derived for ih in inst_hyps):
                 just = {
                     'justification_type': 'Lemma',
@@ -238,10 +238,10 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
     if thesis in derived:
         return reconstruct_proof(thesis, derived)
 
-    # 3. BFS tramite Modus Ponens
+    # 3. BFS via Modus Ponens
     queue = list(derived.keys())
     
-    # Tabelle hash per velocizzare la ricerca di MP
+    # Hash tables to speed up MP lookup
     implications_by_ant = {}
     for f in queue:
         if isinstance(f, Implies):
@@ -259,7 +259,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
         current = queue[head]
         head += 1
         
-        # Caso A: current è l'antecedente (A). Cerca implicazioni A -> B.
+        # Case A: current is the antecedent (A). Search for implications A -> B.
         if current in implications_by_ant:
             for impl in implications_by_ant[current]:
                 consequent = impl.right
@@ -277,7 +277,7 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
                             implications_by_ant[consequent.left] = []
                         implications_by_ant[consequent.left].append(consequent)
 
-        # Caso B: current è l'implicazione (A -> B). Verifica se l'antecedente A è noto.
+        # Case B: current is the implication (A -> B). Check if antecedent A is known.
         if isinstance(current, Implies):
             if current.left not in implications_by_ant:
                 implications_by_ant[current.left] = []
@@ -300,4 +300,4 @@ def prove(thesis_str, hypotheses_strs, db: TheoryDatabase, exclude_name=None, ma
                             implications_by_ant[consequent.left] = []
                         implications_by_ant[consequent.left].append(consequent)
 
-    raise TimeoutError(f"Impossibile trovare una dimostrazione per {thesis_str} entro i limiti.")
+    raise TimeoutError(f"Could not find a proof for {thesis_str} within limits.")
