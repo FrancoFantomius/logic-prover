@@ -1,88 +1,246 @@
-import unittest
+from __future__ import annotations
+import json
 import os
+import sqlite3
 import tempfile
+import unittest
+from pathlib import Path
 
-from solver.database import TheoryDatabase
+from solver.config import SolverConfig
+from solver.core.ast import (
+    Formula, Variable, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
+)
+from solver.core.sorts import Ind, Nat
+from solver.core.exceptions import DatabaseError, SolverError
+from solver.core.validator import is_well_formed
+from solver.core.database import KnowledgeDatabase
+from solver.kb import get_all_axioms, get_combined_signature
+from solver.__main__ import main
 
 
-class TestDatabase(unittest.TestCase):
-    def setUp(self):
-        self.temp_db_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        self.temp_db_file.close()
-        self.db = TheoryDatabase(db_path=self.temp_db_file.name)
+class TestSolverConfig(unittest.TestCase):
 
-    def tearDown(self):
-        if os.path.exists(self.temp_db_file.name):
-            os.remove(self.temp_db_file.name)
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
 
-    def test_init_db_creates_tables(self):
-        with self.db.connection_scope() as conn:
-            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
-            tables = {row[0] for row in cursor.fetchall()}
-            self.assertIn("axioms", tables)
-            self.assertIn("theorems", tables)
-            self.assertIn("theorem_hypotheses", tables)
-            self.assertIn("theorem_steps", tables)
-            self.assertIn("dependencies", tables)
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
 
-    def test_add_and_get_axiom(self):
-        self.db.add_axiom("ax_test", "p -> q")
-        self.assertEqual(self.db.get_axiom("ax_test"), "p -> q")
-        self.assertIsNone(self.db.get_axiom("nonexistent"))
+    def test_config_defaults(self) -> None:
+        config = SolverConfig()
+        self.assertEqual(config.db_path, "solver_data.db")
+        self.assertEqual(config.explorer_max_depth, 4)
+        self.assertEqual(config.prover_timeout_sec, 10.0)
 
-        # Duplicate addition should be ignored without raising exception
-        self.db.add_axiom("ax_test", "p -> q")
-        self.assertEqual(self.db.get_axiom("ax_test"), "p -> q")
+    def test_config_json_roundtrip(self) -> None:
+        json_file = self.temp_path / "config.json"
+        config = SolverConfig(db_path="custom.db", explorer_max_depth=10)
+        config.save(json_file)
 
-    def test_get_all_axioms(self):
-        self.db.add_axiom("ax1", "p -> (q -> p)")
-        self.db.add_axiom("ax2", "(p -> (q -> r)) -> ((p -> q) -> (p -> r))")
-        axioms = self.db.get_all_axioms()
-        self.assertEqual(len(axioms), 2)
-        self.assertIn("ax1", axioms)
-        self.assertIn("ax2", axioms)
+        loaded = SolverConfig.from_file(json_file)
+        self.assertEqual(loaded.db_path, "custom.db")
+        self.assertEqual(loaded.explorer_max_depth, 10)
 
-    def test_save_and_get_theorem(self):
-        steps = [
-            {'step_idx': 0, 'formula_str': 'p -> q', 'justification_type': 'Hypothesis', 'arg1': None, 'arg2': None, 'ref_name': None, 'substitution_json': None},
-            {'step_idx': 1, 'formula_str': 'p', 'justification_type': 'Hypothesis', 'arg1': None, 'arg2': None, 'ref_name': None, 'substitution_json': None},
-            {'step_idx': 2, 'formula_str': 'q', 'justification_type': 'MP', 'arg1': 1, 'arg2': 0, 'ref_name': None, 'substitution_json': None}
-        ]
-        self.db.save_theorem(
-            name="test_thm",
-            thesis_str="q",
-            hypotheses=["p -> q", "p"],
-            steps=steps,
-            is_verified=1
-        )
-        thm = self.db.get_theorem("test_thm")
-        self.assertIsNotNone(thm)
-        self.assertEqual(thm['name'], "test_thm")
-        self.assertEqual(thm['thesis_str'], "q")
-        self.assertEqual(thm['is_verified'], 1)
-        self.assertEqual(thm['hypotheses'], ["p -> q", "p"])
-        self.assertEqual(len(thm['steps']), 3)
+    def test_config_unknown_keys_filtering(self) -> None:
+        json_file = self.temp_path / "extra_config.json"
+        with open(json_file, "w", encoding="utf-8") as f:
+            json.dump({"db_path": "filtered.db", "unknown_setting": 12345}, f)
 
-    def test_save_theorem_invalid_mp_index(self):
-        steps = [
-            {'step_idx': 0, 'formula_str': 'q', 'justification_type': 'MP', 'arg1': 1, 'arg2': 2, 'ref_name': None, 'substitution_json': None}
-        ]
-        with self.assertRaises(ValueError):
-            self.db.save_theorem(
-                name="invalid_mp",
-                thesis_str="q",
-                hypotheses=[],
-                steps=steps
+        loaded = SolverConfig.from_file(json_file)
+        self.assertEqual(loaded.db_path, "filtered.db")
+        self.assertFalse(hasattr(loaded, "unknown_setting"))
+
+    def test_config_missing_file(self) -> None:
+        missing_file = self.temp_path / "nonexistent.json"
+        with self.assertRaises(FileNotFoundError):
+            SolverConfig.from_file(missing_file)
+
+
+class TestKBAxioms(unittest.TestCase):
+
+    def test_all_axioms_well_formed(self) -> None:
+        sig = get_combined_signature()
+        axioms = get_all_axioms()
+        self.assertGreater(len(axioms), 0)
+
+        for name, formula, category in axioms:
+            self.assertTrue(
+                is_well_formed(formula, sig),
+                f"Axiom '{name}' in category '{category}' failed signature validation."
             )
 
-    def test_get_dependencies_recursive(self):
-        # Save base theorem
-        self.db.save_theorem("base_thm", "p -> p", [], [], is_verified=1)
-        # Save dependent theorem
-        self.db.save_theorem("dep_thm", "p -> p", [], [], dependencies=["base_thm"], is_verified=1)
 
-        deps = self.db.get_dependencies_recursive("dep_thm")
-        self.assertEqual(deps, ["base_thm"])
+class TestKnowledgeDatabase(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.temp_dir.name) / "test_solver.db"
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_database_creation(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        self.assertTrue(self.db_path.exists())
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = {row[0] for row in cursor.fetchall()}
+        conn.close()
+
+        expected_tables = {"formulas", "axioms", "theorems", "proofs", "metadata"}
+        self.assertTrue(expected_tables.issubset(tables))
+        db.close()
+
+    def test_add_and_get_axioms(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        all_axioms = get_all_axioms()
+
+        for name, formula, category in all_axioms:
+            db.add_axiom(name, formula, category)
+
+        eq_axioms = db.get_axioms("equality")
+        logic_axioms = db.get_axioms("logic")
+        peano_axioms = db.get_axioms("peano")
+
+        self.assertGreater(len(eq_axioms), 0)
+        self.assertGreater(len(logic_axioms), 0)
+        self.assertGreater(len(peano_axioms), 0)
+
+        total_retrieved = len(db.get_axioms())
+        self.assertEqual(total_retrieved, len(all_axioms))
+        db.close()
+
+    def test_persistence_across_restarts(self) -> None:
+        db1 = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        formula = Forall(x, Equality(x, x))
+        proof_data = {"root": "step1", "steps": []}
+
+        db1.add_axiom("eq_refl", formula, "equality")
+        db1.add_theorem("thm_refl", formula, proof=proof_data, category="equality")
+        db1.close()
+
+        # Re-open database from same file path
+        db2 = KnowledgeDatabase(self.db_path)
+        axioms = db2.get_axioms()
+        theorems = db2.get_theorems()
+        retrieved_proof = db2.get_proof("thm_refl")
+
+        self.assertEqual(len(axioms), 1)
+        self.assertEqual(axioms[0][0], "eq_refl")
+        self.assertEqual(len(theorems), 1)
+        self.assertEqual(theorems[0][0], "thm_refl")
+        self.assertEqual(retrieved_proof, proof_data)
+        db2.close()
+
+    def test_contains_formula_alpha_equivalence(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        f1 = Forall(x, PredicateApp("P", 1, (x,)))
+        db.add_axiom("forall_p_x", f1, "logic")
+
+        # Alpha-equivalent formula using variable ID 99
+        y = Variable(99, sort=Ind)
+        f2 = Forall(y, PredicateApp("P", 1, (y,)))
+
+        self.assertTrue(db.contains_formula(f1))
+        self.assertTrue(db.contains_formula(f2))
+
+        # Different formula
+        f3 = Forall(x, PredicateApp("Q", 1, (x,)))
+        self.assertFalse(db.contains_formula(f3))
+        db.close()
+
+    def test_hash_stability(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        formula = Forall(x, Equality(x, x))
+
+        hash1 = db._compute_ast_hash(formula)
+        hash2 = db._compute_ast_hash(formula)
+        self.assertEqual(hash1, hash2)
+        self.assertEqual(len(hash1), 64)  # SHA-256 hex digest length
+        db.close()
+
+    def test_search_formulas_indexing(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        y = Variable(1, sort=Ind)
+
+        f1 = PredicateApp("P", 1, (x,))
+        f2 = And(PredicateApp("P", 1, (x,)), PredicateApp("Q", 1, (y,)))
+        f3 = Forall(x, Forall(y, Implies(PredicateApp("P", 1, (x,)), PredicateApp("Q", 1, (y,)))))
+
+        db.add_axiom("f1", f1, "cat1")
+        db.add_axiom("f2", f2, "cat2")
+        db.add_axiom("f3", f3, "cat1")
+
+        # Search by predicate name
+        results_p = db.search_formulas(predicate_name="P")
+        self.assertEqual(len(results_p), 3)
+
+        results_q = db.search_formulas(predicate_name="Q")
+        self.assertEqual(len(results_q), 2)
+
+        # Search by max_depth
+        shallow = db.search_formulas(max_depth=1)
+        self.assertEqual(len(shallow), 1)
+
+        # Search by category
+        cat1_formulas = db.search_formulas(category="cat1")
+        self.assertEqual(len(cat1_formulas), 2)
+        db.close()
+
+    def test_duplicate_axiom_error(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        formula = Equality(x, x)
+        db.add_axiom("same_name", formula)
+
+        with self.assertRaises(DatabaseError):
+            db.add_axiom("same_name", formula)
+        db.close()
+
+    def test_transaction_rollback(self) -> None:
+        db = KnowledgeDatabase(self.db_path)
+        x = Variable(0, sort=Ind)
+        formula = Equality(x, x)
+        db.add_axiom("valid_ax", formula)
+
+        # Attempting to add an invalid axiom duplicate should roll back transaction
+        with self.assertRaises(DatabaseError):
+            db.add_axiom("valid_ax", formula)
+
+        # Verify DB is still healthy and operational
+        axioms = db.get_axioms()
+        self.assertEqual(len(axioms), 1)
+        db.close()
+
+    def test_context_manager(self) -> None:
+        with KnowledgeDatabase(self.db_path) as db:
+            x = Variable(0, sort=Ind)
+            db.add_axiom("ctx_ax", Equality(x, x))
+            self.assertIsNotNone(db._conn)
+
+        self.assertIsNone(db._conn)
+
+        # Reopen to verify context manager committed changes
+        with KnowledgeDatabase(self.db_path) as db:
+            axioms = db.get_axioms()
+            self.assertEqual(len(axioms), 1)
+            self.assertEqual(axioms[0][0], "ctx_ax")
+
+    def test_cli_init(self) -> None:
+        cli_db_path = Path(self.temp_dir.name) / "cli_init.db"
+        main(["init", "--db-path", str(cli_db_path), "--force"])
+
+        self.assertTrue(cli_db_path.exists())
+        with KnowledgeDatabase(cli_db_path) as db:
+            axioms = db.get_axioms()
+            self.assertGreater(len(axioms), 0)
 
 
 if __name__ == "__main__":
