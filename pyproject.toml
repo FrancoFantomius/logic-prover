@@ -1,19 +1,67 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "solver"
-version = "0.1.0"
-description = "A automated logical solver, proof generator, explorer and Lean 4 verifier."
+version = "1.0.0"
+description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = []
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
+authors = [
+    { name = "Solver Development Team", email = "info@solver.org" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "lark>=1.1.0",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
+[project.optional-dependencies]
+vis = [
+    "jinja2>=3.0.0",
+]
+dev = [
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0.0",
+    "hypothesis>=6.70.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+solver = "solver.__main__:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "--cov=solver --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["solver"]
+branch = true
+omit = [
+    "solver/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

@@ -1,166 +1,102 @@
-# Solver Library
+# Solver — Formal Logic Theorem Prover & Explorer in Python
 
-**Solver** is a Python library for representing logical formulas, automated theorem proving in Hilbert-style proof systems, local formal verification, integration with the **Lean 4** proof assistant, automated exploration of new logical consequences, and managing First-Order and Second-Order logic theories.
-
----
-
-## Key Features
-
-- **Logical AST and Parser**: Object-oriented construction of logical formulas (Propositional, First-Order, Second-Order, Equality) with support for Unicode (`∀`, `∃`, `→`, `↔`, `∧`, `∨`, `¬`) and ASCII syntax (`forall`, `exists`, `->`, `<->`, `&`, `|`, `~`).
-- **SQLite Theory Database (`TheoryDatabase`)**: Structured and persistent storage of axioms, hypotheses, proved theorems, proof steps, and dependency graphs.
-- **Automated Prover (`prove`)**: Forward search algorithm based on Breadth-First Search (BFS) and Modus Ponens with schematic axiom instantiation and lemma reuse.
-- **Two-Level Verifier (`verifier`)**:
-  1. Structural validation and local logical correctness in Python.
-  2. Generation and execution of self-contained **Lean 4** code via the official Lean CLI.
-- **Logical Consequence Explorer (`explore_consequences`)**: Automatic generation and saturation of new derivable formulas, with automatic verification and database entry.
-- **Ready-to-Use Axiom Libraries (`solver.dependencies`)**: Built-in modules with axioms for propositional calculus, First-Order Logic (FOL) with Leibniz equality, and Second-Order Logic (SOL) with comprehension schema, choice, and mathematical induction.
+`solver` is a Python library for formal logic, featuring First-Order Logic (FOL) AST manipulation, term rewriting, automated resolution theorem proving, formula exploration, dependency graph deduction, higher-order logic extensions, and Lean 4 export.
 
 ---
 
-## Installation
+## Features
+- **First-Order & Second-Order Logic AST**: Full support for parameterized sorts, canonical variable renaming, and substitutions.
+- **Resolution Prover with Equality**: Otter/Discount given-clause loop with superposition and natural deduction proof reconstruction.
+- **Formula Explorer**: Diversity-guided formula generation and interestingness heuristic ranking.
+- **Deducer**: Network-level minimal hypothesis detection and equivalence classification.
+- **Lean 4 Export**: High-fidelity translation of formulas, statements, and tactic proofs into Lean 4 code.
+- **Interactive HTML Graphs**: Proof DAG and dependency graph visualizer.
+- **Automated Documentation & Logging**: Structured logging subsystem and Reflection/AST documentation generator.
 
-Ensure you have Python >= 3.8 installed. To install the library in developer mode:
+---
+
+## Quickstart & CLI
+
+> **Syntax Note**: Formulas require `v0`, `v1`, ... for individual variables, `=>` (or `implies` / `→`) for implication, `&` (or `and` / `∧`) for conjunction, `|` (or `or` / `∨`) for disjunction, and `~` (or `not` / `¬`) for negation.
 
 ```bash
-pip install -e .
+# Initialize Knowledge Database
+python -m solver init --reset
+
+# Prove a Theorem
+python -m solver prove "(forall v0 (P(v0) => Q(v0))) => ((forall v0 P(v0)) => (forall v0 Q(v0)))"
+
+# Explore Candidate Formulas
+python -m solver explore --strategy mixed --count 20 --top-k 5
+
+# Analyze Network Dependencies
+python -m solver analyze
+
+# Export to Lean 4
+python -m solver export lean --output theorem.lean --stubs-only
+
+# Export Interactive Proof Graph
+python -m solver export graph --type dependency --output network.html
+
+# Generate API Documentation
+python -m solver docs --output-dir docs
 ```
 
-To run unit tests:
+---
+
+## Python API Example
+
+```python
+from solver.kb import get_combined_signature
+from solver.core.parser import parse_formula, to_string
+from solver.prover.engine import TheoremProver
+from solver.config import SolverConfig
+from solver.utils.logging import setup_logging
+
+# Configure structured logging
+setup_logging(log_level="INFO")
+
+# Load logical signature containing predefined predicates & functions
+signature = get_combined_signature()
+
+# Configure and instantiate TheoremProver
+config = SolverConfig(prover_timeout_sec=5.0, prover_max_steps=500)
+prover = TheoremProver(signature=signature, config=config)
+
+# Parse hypothesis and target formula (using 'v0', 'v1', ... for variables)
+hypothesis = parse_formula("forall v0, (P(v0) => Q(v0))", signature=signature)
+conclusion = parse_formula("(forall v0, P(v0)) => (forall v0, Q(v0))", signature=signature)
+
+# Run resolution theorem prover (returns a ProofDAG on success)
+proof_dag = prover.prove(target=conclusion, premises=[hypothesis])
+
+print(f"Proof Found for target: {to_string(proof_dag.conclusion)}")
+for step in proof_dag.topological_order():
+    print(f"  [{step.id}] {step.rule}: {to_string(step.conclusion)}")
+```
+
+---
+
+## Project Architecture
+
+```
+solver/
+├── core/         # AST, Sorts, Signature, Parser, Substitutions, Rewriting, Database
+├── kb/           # Foundational mathematical knowledge bases (Logic, Equality, Numbers, Sets, Groups)
+├── prover/       # Resolution Prover, Clausification, Proof Reconstruction
+├── explorer/     # Formula Generator, Diversity Metrics, Ranking Heuristics
+├── deducer/      # Network Analysis, Minimal Hypotheses, Equivalence Classes
+├── exporters/    # Lean 4 Exporter & HTML Interactive Graph Visualizers
+├── sol/          # Second-Order Logic (SOL) Extension
+└── utils/        # Logging Subsystem & Automated Doc Generator
+```
+
+---
+
+## Testing
+
+Run unit tests via Python's standard `unittest`:
 
 ```bash
-python -m unittest discover tests
+python -m unittest discover -s tests
 ```
-
-*(Optional)* To enable Lean 4 verification, install the `lean` compiler and make sure it is available in your system `PATH`.
-
----
-
-## Quick Start Examples
-
-### 1. Creating and Manipulating Formulas
-
-You can construct formulas programmatically using the AST, use Python's overloaded operators (`~`, `>>`, `&`, `|`), or use the parser:
-
-```python
-from solver import Var, Implies, parse_formula, formula_to_lean
-
-# Programmatic construction via AST
-p = Var("p")
-q = Var("q")
-formula1 = p >> (q >> p)
-print("Formula AST:", formula1)  # (p -> (q -> p))
-
-# String parsing (supports ASCII or Unicode syntax)
-formula2 = parse_formula("forall x, (P(x) -> Q(x))")
-print("Formula Parser:", formula2)  # (forall x, (P(x) -> Q(x)))
-
-# Conversion to Lean 4 syntax
-print("Lean 4:", formula_to_lean(formula2))  # (∀ x, ((P x) → (Q x)))
-```
-
-### 2. Database Management and Axioms
-
-Initialize a logical theory by registering propositional calculus axioms:
-
-```python
-from solver import TheoryDatabase
-
-db = TheoryDatabase("my_theory.db")
-
-# Manual addition of Hilbert axioms
-db.add_axiom("ax1", "A -> (B -> A)")
-db.add_axiom("ax2", "(A -> (B -> C)) -> ((A -> B) -> (A -> C))")
-db.add_axiom("ax3", "(~A -> ~B) -> (B -> A)")
-
-print("Registered Axioms:", db.get_all_axioms())
-```
-
-### 3. Automated Theorem Proving
-
-Generate a formal proof for the thesis $p \to p$ starting from registered axioms:
-
-```python
-from solver import TheoryDatabase, prove
-
-db = TheoryDatabase("my_theory.db")
-db.add_axiom("ax1", "A -> (B -> A)")
-db.add_axiom("ax2", "(A -> (B -> C)) -> ((A -> B) -> (A -> C))")
-db.add_axiom("ax3", "(~A -> ~B) -> (B -> A)")
-
-# Proof of (p -> p) without hypotheses
-steps = prove(thesis_str="p -> p", hypotheses_strs=[], db=db)
-
-for step in steps:
-    print(f"Step {step['step_idx']}: {step['formula_str']} [{step['justification_type']}]")
-```
-
-### 4. Local Validation, Lean 4 & Export
-
-Verify the theorem and save it to the database:
-
-```python
-from solver import TheoryDatabase, verify_and_save, export_proof
-
-db = TheoryDatabase("my_theory.db")
-# (Assuming axioms were loaded and steps generated...)
-
-thm = {
-    'name': 'identity_p',
-    'thesis_str': 'p -> p',
-    'hypotheses': [],
-    'steps': steps
-}
-
-success, msg = verify_and_save(thm, db)
-if success:
-    print("Theorem successfully verified!")
-    # Export self-contained Lean 4 code
-    lean_code = export_proof("identity_p", db)
-    print("\n--- Lean 4 Source Code ---")
-    print(lean_code)
-else:
-    print("Verification error:", msg)
-```
-
-### 5. Automatic Exploration of New Theorems
-
-Allow the solver to explore and automatically discover new consequences derived from loaded axioms:
-
-```python
-from solver import TheoryDatabase, explore_consequences, dependencies
-
-db = TheoryDatabase("explore.db")
-
-# Load all First and Second-Order logic axioms included in the package
-dependencies.load_all_logic_axioms(db)
-
-# Generate and explore up to 5 new theorems
-new_theorems = explore_consequences(
-    db, 
-    basic_vars=['p'], 
-    max_depth=1, 
-    max_theorems=5
-)
-
-print(f"Generated and verified {new_theorems} new theorems!")
-```
-
----
-
-## Module Documentation
-
-For a complete guide on each library module, refer to the detailed documentation manual:
-
-**[DOCUMENTATION.md](DOCUMENTATION.md)**
-
-Module | Description
---- | ---
-[`solver.formula`](DOCUMENTATION.md#1-solverformula) | AST for propositional formulas, FOL and SOL, parser and transformations
-[`solver.database`](DOCUMENTATION.md#2-solverdatabase) | SQLite interface for axioms, theorems, steps, and dependencies
-[`solver.prover`](DOCUMENTATION.md#3-solverprover) | Automated proof search algorithm (Forward BFS with Modus Ponens)
-[`solver.verifier`](DOCUMENTATION.md#4-solververifier) | Local structural verifier and integration with the Lean 4 compiler
-[`solver.explorer`](DOCUMENTATION.md#5-solverexplorer) | Automatic generation and saturation of new theoretical consequences
-[`solver.lean_exporter`](DOCUMENTATION.md#6-solverlean_exporter) | AST-to-Lean translator and generator of verifiable Lean 4 source files
-[`solver.dependencies`](DOCUMENTATION.md#7-solverdependencies) | Axiom packages for First-Order Logic (FOL) and Second-Order Logic (SOL)
-[`solver.deducer`](DOCUMENTATION.md#8-solverdeducer) | Forward deduction engine for deriving logical consequences
-[`solver.graph_exporter`](DOCUMENTATION.md#9-solvergraph_exporter) | Proof dependency graph extractor (DOT, JSON, interactive HTML)
