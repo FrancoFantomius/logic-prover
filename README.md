@@ -15,6 +15,40 @@
 
 ---
 
+## Installation
+
+### From GitHub via `pip`
+
+You can install `solver` directly from GitHub using `pip`:
+
+```bash
+pip install git+https://github.com/FrancoFantomius/solver.git
+```
+
+To install with optional visualization features:
+
+```bash
+pip install "solver[vis] @ git+https://github.com/FrancoFantomius/solver.git"
+```
+
+### From Source (Development)
+
+Clone the repository and install in editable mode:
+
+```bash
+git clone https://github.com/FrancoFantomius/solver.git
+cd solver
+pip install -e .
+```
+
+To install with development and visualization dependencies:
+
+```bash
+pip install -e ".[dev,vis]"
+```
+
+---
+
 ## Quickstart & CLI
 
 > **Syntax Note**: Formulas require `v0`, `v1`, ... for individual variables, `=>` (or `implies` / `→`) for implication, `&` (or `and` / `∧`) for conjunction, `|` (or `or` / `∨`) for disjunction, and `~` (or `not` / `¬`) for negation.
