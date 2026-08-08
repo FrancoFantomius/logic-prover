@@ -5,20 +5,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists, VariableKind
 )
-from solver.core.sorts import (
+from logic.core.sorts import (
     PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool, SetSort
 )
-from solver.core.database import KnowledgeDatabase
-from solver.prover.proof import ProofStep, ProofDAG
-from solver.prover.rules import InferenceRule
-from solver.deducer.graph import DependencyGraph
-from solver.exporters.lean_exporter import LeanExporter
-from solver.exporters.graph_exporter import GraphExporter
-from solver.__main__ import main, build_cli_parser
+from logic.core.database import KnowledgeDatabase
+from logic.prover.proof import ProofStep, ProofDAG
+from logic.prover.rules import InferenceRule
+from logic.deducer.graph import DependencyGraph
+from logic.exporters.lean_exporter import LeanExporter
+from logic.exporters.graph_exporter import GraphExporter
+from logic.__main__ import main, build_cli_parser
 
 
 class TestLeanExporter(unittest.TestCase):

@@ -1,12 +1,12 @@
 import unittest
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind
-from solver.core.exceptions import RewriteDivergenceError, ValidationError
-from solver.core.rewriter import (
+from logic.core.sorts import Ind
+from logic.core.exceptions import RewriteDivergenceError, ValidationError
+from logic.core.rewriter import (
     RewriteRule, match_term, match_formula, rewrite, rewrite_all, normalize
 )
 

@@ -1,14 +1,14 @@
 import unittest
 import time
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind, Nat
-from solver.core.signature import Signature
-from solver.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError
-from solver.prover.engine import TheoremProver
-from solver.kb.numbers import get_peano_signature, get_peano_axioms
+from logic.core.sorts import Ind, Nat
+from logic.core.signature import Signature
+from logic.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError
+from logic.prover.engine import TheoremProver
+from logic.kb.numbers import get_peano_signature, get_peano_axioms
 
 class TestProver(unittest.TestCase):
 

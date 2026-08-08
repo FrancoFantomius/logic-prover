@@ -1,6 +1,6 @@
-# Solver — Formal Logic Theorem Prover & Explorer in Python
+# Logic — Formal Logic Theorem Prover & Explorer in Python
 
-`solver` is a Python library for formal logic, featuring First-Order Logic (FOL) AST manipulation, term rewriting, automated resolution theorem proving, formula exploration, dependency graph deduction, higher-order logic extensions, and Lean 4 export.
+`logic` is a Python library for formal logic, featuring First-Order Logic (FOL) AST manipulation, term rewriting, automated resolution theorem proving, formula exploration, dependency graph deduction, higher-order logic extensions, and Lean 4 export.
 
 ---
 
@@ -19,16 +19,16 @@
 
 ### From GitHub via `pip`
 
-You can install `solver` directly from GitHub using `pip`:
+You can install `logic` directly from GitHub using `pip`:
 
 ```bash
-pip install git+https://github.com/FrancoFantomius/solver.git
+pip install git+https://github.com/FrancoFantomius/logic.git
 ```
 
 To install with optional visualization features:
 
 ```bash
-pip install "solver[vis] @ git+https://github.com/FrancoFantomius/solver.git"
+pip install "logic[vis] @ git+https://github.com/FrancoFantomius/logic.git"
 ```
 
 ### From Source (Development)
@@ -36,8 +36,8 @@ pip install "solver[vis] @ git+https://github.com/FrancoFantomius/solver.git"
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/FrancoFantomius/solver.git
-cd solver
+git clone https://github.com/FrancoFantomius/logic.git
+cd logic
 pip install -e .
 ```
 
@@ -55,25 +55,25 @@ pip install -e ".[dev,vis]"
 
 ```bash
 # Initialize Knowledge Database
-python -m solver init --reset
+python -m logic init --reset
 
 # Prove a Theorem
-python -m solver prove "(forall v0 (P(v0) => Q(v0))) => ((forall v0 P(v0)) => (forall v0 Q(v0)))"
+python -m logic prove "(forall v0 (P(v0) => Q(v0))) => ((forall v0 P(v0)) => (forall v0 Q(v0)))"
 
 # Explore Candidate Formulas
-python -m solver explore --strategy mixed --count 20 --top-k 5
+python -m logic explore --strategy mixed --count 20 --top-k 5
 
 # Analyze Network Dependencies
-python -m solver analyze
+python -m logic analyze
 
 # Export to Lean 4
-python -m solver export lean --output theorem.lean --stubs-only
+python -m logic export lean --output theorem.lean --stubs-only
 
 # Export Interactive Proof Graph
-python -m solver export graph --type dependency --output network.html
+python -m logic export graph --type dependency --output network.html
 
 # Generate API Documentation
-python -m solver docs --output-dir docs
+python -m logic docs --output-dir docs
 ```
 
 ---
@@ -81,11 +81,11 @@ python -m solver docs --output-dir docs
 ## Python API Example
 
 ```python
-from solver.kb import get_combined_signature
-from solver.core.parser import parse_formula, to_string
-from solver.prover.engine import TheoremProver
-from solver.config import SolverConfig
-from solver.utils.logging import setup_logging
+from logic.kb import get_combined_signature
+from logic.core.parser import parse_formula, to_string
+from logic.prover.engine import TheoremProver
+from logic.config import SolverConfig
+from logic.utils.logging import setup_logging
 
 # Configure structured logging
 setup_logging(log_level="INFO")
@@ -114,7 +114,7 @@ for step in proof_dag.topological_order():
 ## Project Architecture
 
 ```
-solver/
+logic/
 ├── core/         # AST, Sorts, Signature, Parser, Substitutions, Rewriting, Database
 ├── kb/           # Foundational mathematical knowledge bases (Logic, Equality, Numbers, Sets, Groups)
 ├── prover/       # Resolution Prover, Clausification, Proof Reconstruction

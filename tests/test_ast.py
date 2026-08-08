@@ -1,9 +1,9 @@
 import unittest
 from dataclasses import FrozenInstanceError
 
-from solver.core.exceptions import InvalidFormulaError
-from solver.core.sorts import Ind, Nat, Bool
-from solver.core.ast import (
+from logic.core.exceptions import InvalidFormulaError
+from logic.core.sorts import Ind, Nat, Bool
+from logic.core.ast import (
     VariableKind,
     Term,
     Formula,

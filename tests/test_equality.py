@@ -1,12 +1,12 @@
 import unittest
 from typing import List
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind
-from solver.core.equality import CongruenceClosure, equality_substitution
+from logic.core.sorts import Ind
+from logic.core.equality import CongruenceClosure, equality_substitution
 
 
 class TestEquality(unittest.TestCase):

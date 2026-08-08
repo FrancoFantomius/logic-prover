@@ -1,4 +1,4 @@
-# Solver Documentation Portal
+# Logic Documentation Portal
 
 Welcome to the formal logic theorem prover, explorer, and deducer library documentation.
 
@@ -20,11 +20,11 @@ Welcome to the formal logic theorem prover, explorer, and deducer library docume
 
 ## Architecture Overview
 
-- **`solver.core`**: AST definitions, sort systems, signatures, parser, substitution, rewriting.
-- **`solver.prover`**: Resolution theorem prover engine, clause generation, proof DAG reconstruction.
-- **`solver.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.
-- **`solver.deducer`**: Network dependency analysis and hypothesis minimal subset detection.
-- **`solver.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.
-- **`solver.kb`**: Knowledge database interface and foundational mathematical axioms.
-- **`solver.sol`**: Second-Order Logic (SOL) extensions.
-- **`solver.utils`**: Central logging subsystem and automated documentation generator.
+- **`logic.core`**: AST definitions, sort systems, signatures, parser, substitution, rewriting.
+- **`logic.prover`**: Resolution theorem prover engine, clause generation, proof DAG reconstruction.
+- **`logic.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.
+- **`logic.deducer`**: Network dependency analysis and hypothesis minimal subset detection.
+- **`logic.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.
+- **`logic.kb`**: Knowledge database interface and foundational mathematical axioms.
+- **`logic.sol`**: Second-Order Logic (SOL) extensions.
+- **`logic.utils`**: Central logging subsystem and automated documentation generator.

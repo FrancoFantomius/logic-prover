@@ -3,17 +3,17 @@ import os
 import tempfile
 import unittest
 
-from solver.config import SolverConfig
-from solver.core.ast import (
+from logic.config import SolverConfig
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind, Nat
-from solver.core.signature import Signature
-from solver.core.validator import validate_formula, is_well_formed
-from solver.core.database import KnowledgeDatabase
-from solver.kb import get_all_axioms, get_combined_signature
-from solver.explorer import (
+from logic.core.sorts import Ind, Nat
+from logic.core.signature import Signature
+from logic.core.validator import validate_formula, is_well_formed
+from logic.core.database import KnowledgeDatabase
+from logic.kb import get_all_axioms, get_combined_signature
+from logic.explorer import (
     DiversityMetrics,
     calculate_symbol_entropy,
     calculate_diversity_scores,
@@ -24,7 +24,7 @@ from solver.explorer import (
     anti_unify_terms,
     anti_unify_formulas
 )
-from solver.__main__ import main
+from logic.__main__ import main
 
 
 class TestExplorerHeuristics(unittest.TestCase):

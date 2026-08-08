@@ -3,14 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "solver"
-version = "1.0.0"
+name = "logic"
+version = "0.0.1"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
 authors = [
-    { name = "Solver Development Team", email = "info@solver.org" }
+    { name = "Franco Fantomius", email = "mail@francofantomius.com" }
 ]
-license = { text = "MIT" }
+license = { text = "" }
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -38,21 +38,21 @@ dev = [
 ]
 
 [project.scripts]
-solver = "solver.__main__:main"
+logic = "logic.__main__:main"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
-addopts = "--cov=solver --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
+addopts = "--cov=logic --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
 [tool.coverage.run]
-source = ["solver"]
+source = ["logic"]
 branch = true
 omit = [
-    "solver/__main__.py",
+    "logic/__main__.py",
 ]
 
 [tool.coverage.report]

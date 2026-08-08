@@ -3,14 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, And, Not, Iff
 )
-from solver.core.sorts import PrimitiveSort, SetSort, Ind
-from solver.core.validator import validate_formula
-from solver.core.database import KnowledgeDatabase
-from solver.prover.engine import TheoremProver
-from solver.kb import (
+from logic.core.sorts import PrimitiveSort, SetSort, Ind
+from logic.core.validator import validate_formula
+from logic.core.database import KnowledgeDatabase
+from logic.prover.engine import TheoremProver
+from logic.kb import (
     get_all_axioms,
     get_extended_axioms,
     get_combined_signature,
@@ -26,11 +26,11 @@ from solver.kb import (
     get_function_signature,
     get_function_axioms,
 )
-from solver.kb.groups import GroupElem
-from solver.kb.relations import RelElem
-from solver.kb.orders import OrderElem
-from solver.kb.sets import ElemSort, SetType
-from solver.kb.functions import Dom, Codom, FuncSort
+from logic.kb.groups import GroupElem
+from logic.kb.relations import RelElem
+from logic.kb.orders import OrderElem
+from logic.kb.sets import ElemSort, SetType
+from logic.kb.functions import Dom, Codom, FuncSort
 
 
 class TestExtendedKB(unittest.TestCase):

@@ -1,5 +1,5 @@
 """
-Unit tests for the doc generator subsystem (solver/utils/doc_generator.py).
+Unit tests for the doc generator subsystem (logic/utils/doc_generator.py).
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from solver.utils.doc_generator import (
+from logic.utils.doc_generator import (
     parse_google_docstring,
     extract_docstrings_from_module,
     render_markdown_module,
@@ -126,12 +126,12 @@ def sample_function(param: int) -> bool:
         """Test scanning codebase and writing Markdown documentation portal."""
         tmp_dir = tempfile.mkdtemp()
         try:
-            docs = build_markdown_docs(source_dir="solver", output_docs_dir=tmp_dir)
+            docs = build_markdown_docs(source_dir="logic", output_docs_dir=tmp_dir)
             self.assertTrue(len(docs) > 0)
             index_path = Path(tmp_dir) / "index.md"
             self.assertTrue(index_path.exists())
             index_content = index_path.read_text(encoding="utf-8")
-            self.assertIn("Solver Documentation Portal", index_content)
+            self.assertIn("Logic Documentation Portal", index_content)
 
             api_dir = Path(tmp_dir) / "api"
             self.assertTrue(api_dir.exists())

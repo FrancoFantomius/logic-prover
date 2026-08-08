@@ -6,16 +6,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from solver.config import SolverConfig
-from solver.core.ast import (
+from logic.config import SolverConfig
+from logic.core.ast import (
     Formula, Variable, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind, Nat
-from solver.core.exceptions import DatabaseError, SolverError
-from solver.core.validator import is_well_formed
-from solver.core.database import KnowledgeDatabase
-from solver.kb import get_all_axioms, get_combined_signature
-from solver.__main__ import main
+from logic.core.sorts import Ind, Nat
+from logic.core.exceptions import DatabaseError, SolverError
+from logic.core.validator import is_well_formed
+from logic.core.database import KnowledgeDatabase
+from logic.kb import get_all_axioms, get_combined_signature
+from logic.__main__ import main
 
 
 class TestSolverConfig(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestSolverConfig(unittest.TestCase):
 
     def test_config_defaults(self) -> None:
         config = SolverConfig()
-        self.assertEqual(config.db_path, "solver_data.db")
+        self.assertEqual(config.db_path, "logic_data.db")
         self.assertEqual(config.explorer_max_depth, 4)
         self.assertEqual(config.prover_timeout_sec, 10.0)
 
@@ -75,7 +75,7 @@ class TestKnowledgeDatabase(unittest.TestCase):
 
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.temp_dir.name) / "test_solver.db"
+        self.db_path = Path(self.temp_dir.name) / "test_logic.db"
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()

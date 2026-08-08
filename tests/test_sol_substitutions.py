@@ -1,10 +1,10 @@
 import unittest
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Forall, And, Equality, Implies
 )
-from solver.core.sorts import Ind
-from solver.sol.ast_ext import PredicateVariable, FunctionVariable
-from solver.sol.substitutions_ext import (
+from logic.core.sorts import Ind
+from logic.sol.ast_ext import PredicateVariable, FunctionVariable
+from logic.sol.substitutions_ext import (
     is_ho_pattern, ho_pattern_unify, beta_reduce_predicate, beta_reduce_function,
     substitute_predicate, substitute_function
 )

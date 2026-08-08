@@ -3,22 +3,22 @@ import tempfile
 import json
 from pathlib import Path
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, PredicateApp, Not, Or, Implies, And, Forall
 )
-from solver.core.sorts import Ind
-from solver.core.signature import Signature
-from solver.prover.engine import TheoremProver
-from solver.prover.proof import ProofDAG, ProofStep
-from solver.deducer.graph import DependencyGraph
-from solver.deducer.analyzer import (
+from logic.core.sorts import Ind
+from logic.core.signature import Signature
+from logic.prover.engine import TheoremProver
+from logic.prover.proof import ProofDAG, ProofStep
+from logic.deducer.graph import DependencyGraph
+from logic.deducer.analyzer import (
     analyze_dependencies,
     find_minimal_hypotheses,
     detect_redundant_hypotheses,
     compute_equivalence_classes,
 )
-from solver.core.database import KnowledgeDatabase
-from solver.__main__ import main
+from logic.core.database import KnowledgeDatabase
+from logic.__main__ import main
 
 
 class TestDeducer(unittest.TestCase):

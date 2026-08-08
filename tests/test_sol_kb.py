@@ -1,8 +1,8 @@
 import unittest
-from solver.core.ast import Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, And
-from solver.core.sorts import Nat, Ind
-from solver.sol.ast_ext import PredicateVariable, ExistsPred
-from solver.sol.kb_ext import get_sol_axioms, instantiate_comprehension, instantiate_induction
+from logic.core.ast import Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, And
+from logic.core.sorts import Nat, Ind
+from logic.sol.ast_ext import PredicateVariable, ExistsPred
+from logic.sol.kb_ext import get_sol_axioms, instantiate_comprehension, instantiate_induction
 
 
 class TestSOLKB(unittest.TestCase):

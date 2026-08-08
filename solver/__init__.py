@@ -1,1 +1,0 @@
-"""Solver library package."""

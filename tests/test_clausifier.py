@@ -1,11 +1,11 @@
 import unittest
-from solver.core.ast import (
+from logic.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from solver.core.sorts import Ind
-from solver.core.signature import Signature
-from solver.prover.clausifier import (
+from logic.core.sorts import Ind
+from logic.core.signature import Signature
+from logic.prover.clausifier import (
     Literal, Clause, eliminate_implications, to_nnf,
     standardize_variables, skolemize, distribute_cnf, to_cnf,
     negate_and_clausify, reset_skolem_counters

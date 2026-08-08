@@ -1,7 +1,7 @@
 """
 Automated docstring coverage test suite (tests/test_docstrings.py).
 
-Verifies that all public modules, classes, functions, and methods in solver have docstrings.
+Verifies that all public modules, classes, functions, and methods in logic have docstrings.
 """
 
 from __future__ import annotations
@@ -11,13 +11,13 @@ import inspect
 import pkgutil
 import unittest
 
-import solver
+import logic
 
 
-def get_all_solver_modules():
-    """Recursively retrieves all public modules in the solver package."""
+def get_all_logic_modules():
+    """Recursively retrieves all public modules in the logic package."""
     modules = []
-    for importer, modname, ispkg in pkgutil.walk_packages(solver.__path__, solver.__name__ + "."):
+    for importer, modname, ispkg in pkgutil.walk_packages(logic.__path__, logic.__name__ + "."):
         if "__main__" in modname:
             continue
         try:
@@ -29,11 +29,11 @@ def get_all_solver_modules():
 
 
 class TestDocstrings(unittest.TestCase):
-    """Test case asserting docstring coverage for all public symbols across solver."""
+    """Test case asserting docstring coverage for all public symbols across logic."""
 
     def test_all_public_symbols_have_docstrings(self) -> None:
         """Verify that every public module, class, method, and function carries a non-empty docstring."""
-        modules = get_all_solver_modules()
+        modules = get_all_logic_modules()
         missing_docstrings = []
 
         for module in modules:

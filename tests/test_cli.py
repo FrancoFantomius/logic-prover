@@ -1,5 +1,5 @@
 """
-Integration tests for the solver CLI entry point (solver/__main__.py).
+Integration tests for the logic CLI entry point (logic/__main__.py).
 """
 
 from __future__ import annotations
@@ -8,10 +8,10 @@ import shutil
 import tempfile
 import unittest
 
-from solver.__main__ import main
-from solver.core.database import KnowledgeDatabase
-from solver.core.parser import parse_formula
-from solver.kb import get_combined_signature
+from logic.__main__ import main
+from logic.core.database import KnowledgeDatabase
+from logic.core.parser import parse_formula
+from logic.kb import get_combined_signature
 
 
 class TestSolverCLI(unittest.TestCase):

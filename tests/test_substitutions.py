@@ -8,7 +8,7 @@ except ImportError:
     given = lambda *args, **kwargs: (lambda f: f)
     st = None
 
-from solver.core.ast import (
+from logic.core.ast import (
     Variable,
     Constant,
     FunctionApp,
@@ -24,9 +24,9 @@ from solver.core.ast import (
     free_variables,
     bound_variables,
 )
-from solver.core.sorts import Ind, Nat, Bool, PrimitiveSort
-from solver.core.exceptions import UnificationError, SortMismatchError
-from solver.core.substitutions import (
+from logic.core.sorts import Ind, Nat, Bool, PrimitiveSort
+from logic.core.exceptions import UnificationError, SortMismatchError
+from logic.core.substitutions import (
     substitute_term,
     substitute_formula,
     apply_substitution,
