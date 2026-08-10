@@ -1,4 +1,4 @@
-# Logic — Formal Logic Theorem Prover & Explorer in Python
+# Logic
 
 `logic` is a Python library for formal logic, featuring First-Order Logic (FOL) AST manipulation, term rewriting, automated resolution theorem proving, formula exploration, dependency graph deduction, higher-order logic extensions, and Lean 4 export.
 

@@ -4,18 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logic"
-version = "0.0.1"
+version = "0.1.2"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
 authors = [
     { name = "Franco Fantomius", email = "mail@francofantomius.com" }
 ]
-license = { text = "" }
+license = { text = "Proprietary" }
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -39,6 +40,10 @@ dev = [
 
 [project.scripts]
 logic = "logic.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["logic*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
