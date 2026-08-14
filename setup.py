@@ -1,0 +1,60 @@
+"""Optional Cython extension compilation setup script for logic library."""
+
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
+import os
+
+USE_CYTHON = False
+try:
+    from Cython.Build import cythonize
+    USE_CYTHON = True
+except ImportError:
+    USE_CYTHON = False
+
+
+class OptionalBuildExt(build_ext):
+    """Custom build_ext command that gracefully falls back to pure Python if C compilation fails."""
+
+    def build_extension(self, ext):
+        try:
+            super().build_extension(ext)
+        except Exception as e:
+            print(f"WARNING: Building C extension '{ext.name}' failed: {e}. Falling back to pure Python implementation.")
+
+
+ext_modules = []
+if USE_CYTHON:
+    hotspot_files = [
+        "logic/core/ast.py",
+        "logic/core/substitutions.py",
+        "logic/core/visitors.py",
+        "logic/prover/clausifier.py",
+        "logic/prover/rules.py",
+        "logic/prover/engine.py",
+    ]
+    # Filter files that exist
+    valid_files = [f for f in hotspot_files if os.path.exists(f)]
+    if valid_files:
+        extensions = [
+            Extension(
+                f.replace("/", ".").replace("\\", ".").replace(".py", ""),
+                [f],
+            )
+            for f in valid_files
+        ]
+        ext_modules = cythonize(
+            extensions,
+            compiler_directives={
+                "language_level": "3",
+                "boundscheck": False,
+                "wraparound": False,
+                "nonecheck": False,
+                "initializedcheck": False,
+            },
+            quiet=True,
+        )
+
+setup(
+    cmdclass={"build_ext": OptionalBuildExt} if ext_modules else {},
+    ext_modules=ext_modules,
+)
