@@ -13,7 +13,7 @@ from logic.core.ast import (
 from logic.core.visitors import ASTVisitor
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class DiversityMetrics:
     ast_size: int
     symbol_entropy: float
@@ -145,27 +145,40 @@ def calculate_subtree_penalty(formula: Formula) -> float:
     Scans the formula AST for identical subtrees of size >= 2.
     Applies an exponential penalty sum for each repeated subtree:
     penalty = sum_{sub, count > 1} (count - 1) * 0.5 * log2(size)
+    Uses a single pass to collect sizes and counts together.
     """
     subtree_counts: Dict[Formula, int] = {}
+    size_cache: Dict[int, int] = {}  # id(node) -> size
 
-    def collect_subtrees(node: Formula) -> None:
-        if formula_size(node) >= 2:
-            subtree_counts[node] = subtree_counts.get(node, 0) + 1
+    def collect_subtrees(node: Formula) -> int:
+        """Returns the formula_size of node, caching and counting as we go."""
+        node_id = id(node)
+        if node_id in size_cache:
+            return size_cache[node_id]
 
-        if isinstance(node, Not):
-            collect_subtrees(node.operand)
+        if isinstance(node, (PredicateApp, Equality)):
+            sz = formula_size(node)
+        elif isinstance(node, Not):
+            sz = 1 + collect_subtrees(node.operand)
         elif isinstance(node, (And, Or, Implies, Iff)):
-            collect_subtrees(node.left)
-            collect_subtrees(node.right)
+            sz = 1 + collect_subtrees(node.left) + collect_subtrees(node.right)
         elif isinstance(node, (Forall, Exists)):
-            collect_subtrees(node.body)
+            sz = 1 + collect_subtrees(node.body)
+        else:
+            sz = formula_size(node)
+
+        size_cache[node_id] = sz
+        if sz >= 2:
+            subtree_counts[node] = subtree_counts.get(node, 0) + 1
+        return sz
 
     collect_subtrees(formula)
 
     penalty = 0.0
     for node, count in subtree_counts.items():
         if count > 1:
-            penalty += (count - 1) * 0.5 * math.log2(formula_size(node))
+            sz = size_cache.get(id(node), formula_size(node))
+            penalty += (count - 1) * 0.5 * math.log2(sz)
 
     return penalty
 

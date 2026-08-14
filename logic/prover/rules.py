@@ -14,7 +14,7 @@ from logic.core.substitutions import (
 from logic.prover.clausifier import Clause, Literal
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class InferenceRule:
     name: str
     description: str

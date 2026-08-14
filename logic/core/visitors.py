@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Union, Set, Dict, Optional, Tuple, List
+from typing import Generic, TypeVar, Union, Any, Set, Dict, Optional, Tuple, List
 
 from logic.core.ast import (
     Term, Variable, Constant, FunctionApp,
@@ -19,42 +19,36 @@ T = TypeVar("T")
 class ASTVisitor(ABC, Generic[T]):
     """Generic visitor base class for AST traversal."""
 
+    # Class-level dispatch table mapping node types to method names
+    _dispatch_table: Dict[type, str] = {}
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._dispatch_table = {
+            Variable: 'visit_variable',
+            Constant: 'visit_constant',
+            FunctionApp: 'visit_function_app',
+            PredicateApp: 'visit_predicate_app',
+            Equality: 'visit_equality',
+            Not: 'visit_not',
+            And: 'visit_and',
+            Or: 'visit_or',
+            Implies: 'visit_implies',
+            Iff: 'visit_iff',
+            Forall: 'visit_forall',
+            Exists: 'visit_exists',
+            ForallPred: 'visit_forall_pred',
+            ExistsPred: 'visit_exists_pred',
+            ForallFunc: 'visit_forall_func',
+            ExistsFunc: 'visit_exists_func',
+        }
+
     def visit(self, node: Union[Term, Formula]) -> T:
-        """Master dispatch method targeting specific visit_* methods."""
-        if isinstance(node, Variable):
-            return self.visit_variable(node)
-        elif isinstance(node, Constant):
-            return self.visit_constant(node)
-        elif isinstance(node, FunctionApp):
-            return self.visit_function_app(node)
-        elif isinstance(node, PredicateApp):
-            return self.visit_predicate_app(node)
-        elif isinstance(node, Equality):
-            return self.visit_equality(node)
-        elif isinstance(node, Not):
-            return self.visit_not(node)
-        elif isinstance(node, And):
-            return self.visit_and(node)
-        elif isinstance(node, Or):
-            return self.visit_or(node)
-        elif isinstance(node, Implies):
-            return self.visit_implies(node)
-        elif isinstance(node, Iff):
-            return self.visit_iff(node)
-        elif isinstance(node, Forall):
-            return self.visit_forall(node)
-        elif isinstance(node, Exists):
-            return self.visit_exists(node)
-        elif isinstance(node, ForallPred):
-            return self.visit_forall_pred(node)
-        elif isinstance(node, ExistsPred):
-            return self.visit_exists_pred(node)
-        elif isinstance(node, ForallFunc):
-            return self.visit_forall_func(node)
-        elif isinstance(node, ExistsFunc):
-            return self.visit_exists_func(node)
-        else:
-            raise TypeError(f"Unsupported AST node type: {type(node).__name__}")
+        """Master dispatch method targeting specific visit_* methods via O(1) dict lookup."""
+        method_name = self._dispatch_table.get(type(node))
+        if method_name is not None:
+            return getattr(self, method_name)(node)
+        raise TypeError(f"Unsupported AST node type: {type(node).__name__}")
 
     @abstractmethod
     def visit_variable(self, node: Variable) -> T:

@@ -12,7 +12,7 @@ from logic.core.sorts import Sort, Ind
 from logic.core.exceptions import InvalidFormulaError
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PredicateVariable:
     """Quantifiable predicate variable P_index with a fixed arity."""
 
@@ -30,7 +30,7 @@ class PredicateVariable:
         return f"P_{self.index}"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FunctionVariable:
     """Quantifiable function variable F_index with argument sorts and return sort."""
 
@@ -54,7 +54,7 @@ class FunctionVariable:
         return f"F_{self.index}"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ForallPred(Formula):
     """Universal quantification over a predicate variable: ∀P. φ"""
 
@@ -62,7 +62,7 @@ class ForallPred(Formula):
     body: Formula
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ExistsPred(Formula):
     """Existential quantification over a predicate variable: ∃P. φ"""
 
@@ -70,7 +70,7 @@ class ExistsPred(Formula):
     body: Formula
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ForallFunc(Formula):
     """Universal quantification over a function variable: ∀F. φ"""
 
@@ -78,7 +78,7 @@ class ForallFunc(Formula):
     body: Formula
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ExistsFunc(Formula):
     """Existential quantification over a function variable: ∃F. φ"""
 

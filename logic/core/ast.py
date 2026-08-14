@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Tuple, Set, Union, Dict, Optional, Any
+from typing import Tuple, FrozenSet, Set, Union, Dict, Optional, Any
 
 from logic.core.sorts import Sort, Ind
 from logic.core.exceptions import InvalidFormulaError
@@ -32,7 +32,7 @@ class Formula(ABC):
     pass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Variable(Term):
     """Represents an individual variable v_id with an integer index, sort, and kind."""
 
@@ -44,7 +44,7 @@ class Variable(Term):
             raise InvalidFormulaError(f"Variable ID must be non-negative, got {self.id}.")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Constant(Term):
     """Represents a constant symbol c_name with a sort annotation."""
 
@@ -55,7 +55,7 @@ class Constant(Term):
             raise InvalidFormulaError("Constant name cannot be empty.")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FunctionApp(Term):
     """Represents function application f(t_1, ..., t_k)."""
 
@@ -63,6 +63,8 @@ class FunctionApp(Term):
     arity: int
     args: Tuple[Term, ...]
     return_sort: Sort = Ind
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+    _free_vars: FrozenSet[Variable] = field(init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self) -> None:
         if isinstance(self.func, str):
@@ -80,15 +82,28 @@ class FunctionApp(Term):
             )
         # Ensure underlying term sort matches return_sort
         object.__setattr__(self, "sort", self.return_sort)
+        # Cache hash
+        object.__setattr__(self, '_hash_cache',
+                           hash((type(self), self.func, self.arity, self.args, self.return_sort)))
+        # Cache free variables
+        fvs: Set[Variable] = set()
+        for arg in self.args:
+            fvs.update(free_variables(arg))
+        object.__setattr__(self, '_free_vars', frozenset(fvs))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PredicateApp(Formula):
     """Represents predicate application P(t_1, ..., t_k)."""
 
     pred: Union[str, Any]
     arity: int
     args: Tuple[Term, ...]
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+    _free_vars: FrozenSet[Variable] = field(init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self) -> None:
         if isinstance(self.pred, str):
@@ -104,89 +119,158 @@ class PredicateApp(Formula):
             raise InvalidFormulaError(
                 f"PredicateApp '{self.pred}' expected arity {self.arity}, got {len(self.args)} arguments."
             )
+        # Cache hash
+        object.__setattr__(self, '_hash_cache',
+                           hash((type(self), self.pred, self.arity, self.args)))
+        # Cache free variables
+        fvs: Set[Variable] = set()
+        for arg in self.args:
+            fvs.update(free_variables(arg))
+        object.__setattr__(self, '_free_vars', frozenset(fvs))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Equality(Formula):
     """Represents term equality t_1 = t_2."""
 
     left: Term
     right: Term
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+    _free_vars: FrozenSet[Variable] = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache',
+                           hash((type(self), self.left, self.right)))
+        object.__setattr__(self, '_free_vars',
+                           free_variables(self.left) | free_variables(self.right))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Not(Formula):
     """Represents logical negation ~operand."""
 
     operand: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.operand)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class And(Formula):
     """Represents logical conjunction left & right."""
 
     left: Formula
     right: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.left, self.right)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Or(Formula):
     """Represents logical disjunction left | right."""
 
     left: Formula
     right: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.left, self.right)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Implies(Formula):
     """Represents logical implication left => right."""
 
     left: Formula
     right: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.left, self.right)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Iff(Formula):
     """Represents logical equivalence left <=> right."""
 
     left: Formula
     right: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.left, self.right)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Forall(Formula):
     """Represents universal quantification forall variable. body."""
 
     variable: Variable
     body: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.variable, self.body)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Exists(Formula):
     """Represents existential quantification exists variable. body."""
 
     variable: Variable
     body: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.variable, self.body)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
 
 def free_variables(node: Union[Term, Formula]) -> Set[Variable]:
     """Returns the set of free individual variables present in a term or formula AST node."""
+    # Check for cached result on nodes that pre-compute free vars
+    cached = getattr(node, '_free_vars', None)
+    if cached is not None:
+        return set(cached)
     if isinstance(node, Variable):
         return {node}
     elif isinstance(node, Constant):
         return set()
     elif isinstance(node, FunctionApp):
-        res: Set[Variable] = set()
-        for arg in node.args:
-            res.update(free_variables(arg))
-        return res
+        return set(node._free_vars)
     elif isinstance(node, PredicateApp):
-        res = set()
-        for arg in node.args:
-            res.update(free_variables(arg))
-        return res
+        return set(node._free_vars)
     elif isinstance(node, Equality):
-        return free_variables(node.left) | free_variables(node.right)
+        return set(node._free_vars)
     elif isinstance(node, Not):
         return free_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):

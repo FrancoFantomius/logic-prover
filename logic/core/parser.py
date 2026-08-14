@@ -45,7 +45,7 @@ class TokenType(Enum):
     EOF = auto()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Token:
     type: TokenType
     value: str
@@ -76,6 +76,10 @@ TOKEN_PATTERNS = [
     (r"[a-zA-Z_][a-zA-Z0-9_]*", TokenType.IDENTIFIER),
 ]
 
+# Pre-compile all patterns at module load time for performance
+_COMPILED_TOKEN_PATTERNS = [(re.compile(p), tt) for p, tt in TOKEN_PATTERNS]
+_WS_RE = re.compile(r"\s+")
+
 
 def tokenize(text: str) -> List[Token]:
     """Scans text into a list of Token objects with line and column tracking.
@@ -88,7 +92,7 @@ def tokenize(text: str) -> List[Token]:
     length = len(text)
 
     while pos < length:
-        ws_match = re.match(r"\s+", text[pos:])
+        ws_match = _WS_RE.match(text, pos)
         if ws_match:
             val = ws_match.group(0)
             newlines = val.count("\n")
@@ -101,9 +105,8 @@ def tokenize(text: str) -> List[Token]:
             continue
 
         match = None
-        for pattern, token_type in TOKEN_PATTERNS:
-            regex = re.compile(pattern)
-            m = regex.match(text, pos)
+        for compiled_pattern, token_type in _COMPILED_TOKEN_PATTERNS:
+            m = compiled_pattern.match(text, pos)
             if m:
                 match = m
                 val = m.group(0)

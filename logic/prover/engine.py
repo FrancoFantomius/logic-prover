@@ -1,16 +1,18 @@
 """Resolution theorem prover engine implementing given-clause resolution and superposition loops."""
 
 from __future__ import annotations
+import heapq
 import time
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional, Tuple, DefaultDict
+from collections import defaultdict
 
-from logic.core.ast import Formula, Variable, Term, Not, Equality, Forall
+from logic.core.ast import Formula, Variable, Term, Not, Equality, Forall, free_variables, formula_size
 from logic.core.sorts import Ind
 from logic.core.substitutions import unify_formulas, UnificationError
 from logic.config import SolverConfig
 from logic.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError, SolverError
-from logic.prover.clausifier import Clause, Literal, to_cnf, negate_and_clausify
+from logic.prover.clausifier import Clause, Literal, to_cnf, negate_and_clausify, PredicateApp
 from logic.prover.rules import resolve_clauses, factor_clause, paramodulate
 from logic.prover.proof import ProofDAG, ProofStep
 from logic.prover.reconstruction import reconstruct_proof
@@ -26,6 +28,28 @@ class ResolutionStep:
     substitution: Dict[Variable, Term] = field(default_factory=dict)
     parent_literals: Optional[Tuple[Literal, Literal]] = None
     original_formula: Optional[Formula] = None
+
+
+def _clause_predicate_key(clause: Clause) -> frozenset:
+    """Extracts a predicate signature key for indexing (set of (pred_name, positive) pairs)."""
+    key_parts: Set[Tuple] = set()
+    for lit in clause.literals:
+        if isinstance(lit.atom, PredicateApp):
+            pred_id = lit.atom.pred if isinstance(lit.atom.pred, str) else str(lit.atom.pred)
+            key_parts.add((pred_id, lit.positive))
+        elif isinstance(lit.atom, Equality):
+            key_parts.add(("=", lit.positive))
+    return frozenset(key_parts)
+
+
+def _clause_structural_weight(c: Clause) -> int:
+    """Computes clause priority weight using AST size (no string formatting)."""
+    weight = len(c.literals) * 10
+    for lit in c.literals:
+        weight += formula_size(lit.atom)
+    if c.is_unit:
+        weight -= 5
+    return weight
 
 
 class TheoremProver:
@@ -68,11 +92,17 @@ class TheoremProver:
         trace_records: Dict[str, ResolutionStep] = {}
         clause_to_step_id: Dict[Clause, str] = {}
 
-        passive_queue: List[Tuple[int, Clause]] = []
+        # Heap-based priority queue: (weight, insertion_order, clause)
+        passive_heap: List[Tuple[int, int, Clause]] = []
+        insert_counter = 0
+
         active_clauses: List[Clause] = []
+        active_clause_set: Set[Clause] = set()
+        # Predicate signature index for faster subsumption candidate lookup
+        active_index: DefaultDict[frozenset, List[Clause]] = defaultdict(list)
 
         def add_initial_step(clause: Clause, rule_name: str, orig_fmt: Optional[Formula]) -> None:
-            nonlocal step_counter
+            nonlocal step_counter, insert_counter
             step_id = f"res_{step_counter}"
             step_counter += 1
             step = ResolutionStep(
@@ -84,8 +114,33 @@ class TheoremProver:
             )
             trace_records[step_id] = step
             clause_to_step_id[clause] = step_id
-            weight = self._clause_weight(clause)
-            passive_queue.append((weight, clause))
+            weight = _clause_structural_weight(clause)
+            heapq.heappush(passive_heap, (weight, insert_counter, clause))
+            insert_counter += 1
+
+        def add_derived_step(clause: Clause, rule_name: str, premise_ids: List[str],
+                             subst: Dict[Variable, Term] = None,
+                             parent_lits: Optional[Tuple[Literal, Literal]] = None) -> Optional[str]:
+            """Add a derived clause step. Returns step_id if added, None if duplicate/tautology."""
+            nonlocal step_counter, insert_counter
+            if clause in clause_to_step_id or clause.is_tautology:
+                return None
+            step_id = f"res_{step_counter}"
+            step_counter += 1
+            res_step = ResolutionStep(
+                id=step_id,
+                rule_name=rule_name,
+                premise_ids=premise_ids,
+                clause=clause,
+                substitution=subst or {},
+                parent_literals=parent_lits
+            )
+            trace_records[step_id] = res_step
+            clause_to_step_id[clause] = step_id
+            weight = _clause_structural_weight(clause)
+            heapq.heappush(passive_heap, (weight, insert_counter, clause))
+            insert_counter += 1
+            return step_id
 
         # Always include reflexivity of equality as an initial axiom step
         v_refl = Variable(999, sort=Ind)
@@ -122,13 +177,13 @@ class TheoremProver:
         empty_clause_step_id: Optional[str] = None
 
         # Check if an initial clause is already empty
-        for _, c in passive_queue:
+        for _, _, c in passive_heap:
             if c.is_empty:
                 empty_clause_step_id = clause_to_step_id[c]
                 break
 
         step_count = 0
-        while passive_queue and not empty_clause_step_id:
+        while passive_heap and not empty_clause_step_id:
             if time.monotonic() - start_time > timeout_sec:
                 raise ProofTimeoutError(
                     f"Theorem prover timed out after {timeout_sec:.4f}s ({step_count} steps)."
@@ -141,39 +196,29 @@ class TheoremProver:
 
             step_count += 1
 
-            passive_queue.sort(key=lambda item: item[0])
-            _, given_clause = passive_queue.pop(0)
+            _, _, given_clause = heapq.heappop(passive_heap)
 
             if given_clause.is_empty:
                 empty_clause_step_id = clause_to_step_id[given_clause]
                 break
 
-            if self._is_subsumed(given_clause, active_clauses):
+            if self._is_subsumed(given_clause, active_clauses, active_index):
                 continue
 
             active_clauses.append(given_clause)
+            active_clause_set.add(given_clause)
+            pred_key = _clause_predicate_key(given_clause)
+            active_index[pred_key].append(given_clause)
             given_step_id = clause_to_step_id[given_clause]
 
             # Generate Factoring Inferences
             for factored_c, subst in factor_clause(given_clause):
                 if time.monotonic() - start_time > timeout_sec:
                     raise ProofTimeoutError(f"Theorem prover timed out after {timeout_sec:.4f}s.")
-                if factored_c not in clause_to_step_id and not factored_c.is_tautology:
-                    step_id = f"res_{step_counter}"
-                    step_counter += 1
-                    res_step = ResolutionStep(
-                        id=step_id,
-                        rule_name="factoring",
-                        premise_ids=[given_step_id],
-                        clause=factored_c,
-                        substitution=subst
-                    )
-                    trace_records[step_id] = res_step
-                    clause_to_step_id[factored_c] = step_id
-                    passive_queue.append((self._clause_weight(factored_c), factored_c))
-                    if factored_c.is_empty:
-                        empty_clause_step_id = step_id
-                        break
+                sid = add_derived_step(factored_c, "factoring", [given_step_id], subst)
+                if sid and factored_c.is_empty:
+                    empty_clause_step_id = sid
+                    break
 
             if empty_clause_step_id:
                 break
@@ -187,44 +232,21 @@ class TheoremProver:
 
                 # Binary Resolution
                 for resolvent_c, subst, (l1, l2) in resolve_clauses(given_clause, active_c):
-                    if resolvent_c not in clause_to_step_id and not resolvent_c.is_tautology:
-                        step_id = f"res_{step_counter}"
-                        step_counter += 1
-                        res_step = ResolutionStep(
-                            id=step_id,
-                            rule_name="resolution",
-                            premise_ids=[given_step_id, active_step_id],
-                            clause=resolvent_c,
-                            substitution=subst,
-                            parent_literals=(l1, l2)
-                        )
-                        trace_records[step_id] = res_step
-                        clause_to_step_id[resolvent_c] = step_id
-                        passive_queue.append((self._clause_weight(resolvent_c), resolvent_c))
-                        if resolvent_c.is_empty:
-                            empty_clause_step_id = step_id
-                            break
+                    sid = add_derived_step(resolvent_c, "resolution",
+                                           [given_step_id, active_step_id], subst, (l1, l2))
+                    if sid and resolvent_c.is_empty:
+                        empty_clause_step_id = sid
+                        break
                 if empty_clause_step_id:
                     break
 
                 # Paramodulation
                 for param_c, subst in paramodulate(given_clause, active_c):
-                    if param_c not in clause_to_step_id and not param_c.is_tautology:
-                        step_id = f"res_{step_counter}"
-                        step_counter += 1
-                        res_step = ResolutionStep(
-                            id=step_id,
-                            rule_name="paramodulation",
-                            premise_ids=[given_step_id, active_step_id],
-                            clause=param_c,
-                            substitution=subst
-                        )
-                        trace_records[step_id] = res_step
-                        clause_to_step_id[param_c] = step_id
-                        passive_queue.append((self._clause_weight(param_c), param_c))
-                        if param_c.is_empty:
-                            empty_clause_step_id = step_id
-                            break
+                    sid = add_derived_step(param_c, "paramodulation",
+                                           [given_step_id, active_step_id], subst)
+                    if sid and param_c.is_empty:
+                        empty_clause_step_id = sid
+                        break
                 if empty_clause_step_id:
                     break
 
@@ -248,16 +270,8 @@ class TheoremProver:
 
         return reconstruct_proof(resolution_trace, original_target=target, premises=premises)
 
-    def _clause_weight(self, c: Clause) -> int:
-        """Computes clause priority weight (fewer literals and smaller terms preferred)."""
-        weight = len(c.literals) * 10
-        for lit in c.literals:
-            weight += len(lit.to_string())
-        if c.is_unit:
-            weight -= 5
-        return weight
-
-    def _is_subsumed(self, c: Clause, active_clauses: List[Clause]) -> bool:
+    def _is_subsumed(self, c: Clause, active_clauses: List[Clause],
+                     active_index: DefaultDict[frozenset, List[Clause]]) -> bool:
         """True if c is subsumed by an existing active clause."""
         for active_c in active_clauses:
             if len(active_c.literals) > len(c.literals):

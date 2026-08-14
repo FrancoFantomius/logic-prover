@@ -41,10 +41,19 @@ def reset_skolem_counters() -> None:
     _standardize_var_counter = itertools.count(1000)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Literal:
     atom: Union[PredicateApp, Equality]
     positive: bool = True
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+    _free_vars: FrozenSet[Variable] = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.atom, self.positive)))
+        object.__setattr__(self, '_free_vars', frozenset(free_variables(self.atom)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
     def negate(self) -> Literal:
         """Returns the complementary literal."""
@@ -52,7 +61,7 @@ class Literal:
 
     def free_variables(self) -> Set[Variable]:
         """Returns all free variables in the literal atom."""
-        return free_variables(self.atom)
+        return set(self._free_vars)
 
     def substitute(self, subst: Dict[Variable, Term]) -> Literal:
         """Applies variable substitution to the literal atom."""
@@ -74,9 +83,27 @@ class Literal:
         return self.to_string()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Clause:
     literals: FrozenSet[Literal] = field(default_factory=frozenset)
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+    _is_tautology: bool = field(init=False, repr=False, compare=False, hash=False)
+    _free_vars: FrozenSet[Variable] = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.literals)))
+        # Pre-compute tautology check
+        positives = {lit.atom for lit in self.literals if lit.positive}
+        negatives = {lit.atom for lit in self.literals if not lit.positive}
+        object.__setattr__(self, '_is_tautology', bool(positives & negatives))
+        # Pre-compute free variables
+        fvs: Set[Variable] = set()
+        for lit in self.literals:
+            fvs.update(lit._free_vars)
+        object.__setattr__(self, '_free_vars', frozenset(fvs))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
 
     @property
     def is_empty(self) -> bool:
@@ -86,9 +113,7 @@ class Clause:
     @property
     def is_tautology(self) -> bool:
         """True if clause contains both L and ¬L."""
-        positives = {lit.atom for lit in self.literals if lit.positive}
-        negatives = {lit.atom for lit in self.literals if not lit.positive}
-        return bool(positives & negatives)
+        return self._is_tautology
 
     @property
     def is_unit(self) -> bool:
@@ -97,10 +122,7 @@ class Clause:
 
     def free_variables(self) -> Set[Variable]:
         """Returns all free variables across all literals in the clause."""
-        res: Set[Variable] = set()
-        for lit in self.literals:
-            res.update(lit.free_variables())
-        return res
+        return set(self._free_vars)
 
     def substitute(self, subst: Dict[Variable, Term]) -> Clause:
         """Applies variable substitution to all literals in the clause."""

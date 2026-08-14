@@ -13,7 +13,7 @@ from logic.core.substitutions import substitute_term, substitute_formula
 from logic.core.exceptions import RewriteDivergenceError, ValidationError
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RewriteRule:
     """Oriented rewrite rule lhs -> rhs with optional side condition."""
     lhs: Union[Term, Formula]

@@ -25,7 +25,7 @@ class Sort(ABC):
         return self.name
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PrimitiveSort(Sort):
     """Represents an atomic sort (e.g. Ind, Nat, Bool)."""
 
@@ -40,7 +40,7 @@ class PrimitiveSort(Sort):
         return self.sort_name
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ParameterizedSort(Sort):
     """Represents a composite parameterized sort (e.g., Set(Nat), Pair(Nat, Bool))."""
 
@@ -59,7 +59,7 @@ class ParameterizedSort(Sort):
         return f"{self.constructor}({args_str})"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FunctionSort(Sort):
     """Represents a function sort (domain sorts -> codomain sort). Reserved for SOL extensions."""
 

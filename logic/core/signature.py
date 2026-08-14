@@ -8,7 +8,7 @@ from logic.core.exceptions import ValidationError
 from logic.core.sorts import Sort, Ind
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FunctionDecl:
     """Declaration of a function symbol in a logical signature.
 
@@ -33,7 +33,7 @@ class FunctionDecl:
             )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PredicateDecl:
     """Declaration of a predicate symbol in a logical signature."""
 

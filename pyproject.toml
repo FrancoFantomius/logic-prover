@@ -4,12 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logic"
-version = "0.1.2"
+version = "0.1.3"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
-authors = [
-    { name = "Franco Fantomius", email = "mail@francofantomius.com" }
-]
+authors = [{ name = "Franco Fantomius", email = "mail@francofantomius.com" }]
 license = { text = "Proprietary" }
 requires-python = ">=3.10"
 classifiers = [
@@ -21,15 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
-    "lark>=1.1.0",
-    "tomli>=2.0.0; python_version < '3.11'",
-]
+dependencies = ["lark>=1.1.0", "tomli>=2.0.0; python_version < '3.11'"]
 
 [project.optional-dependencies]
-vis = [
-    "jinja2>=3.0.0",
-]
+vis = ["jinja2>=3.0.0"]
 dev = [
     "pytest>=7.2.0",
     "pytest-cov>=4.0.0",
@@ -49,16 +42,12 @@ include = ["logic*"]
 minversion = "7.0"
 testpaths = ["tests"]
 addopts = "--cov=logic --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
-filterwarnings = [
-    "ignore::DeprecationWarning",
-]
+filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
 source = ["logic"]
 branch = true
-omit = [
-    "logic/__main__.py",
-]
+omit = ["logic/__main__.py"]
 
 [tool.coverage.report]
 show_missing = true
