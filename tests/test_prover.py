@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 import time
 from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
@@ -21,6 +21,7 @@ class TestProver(unittest.TestCase):
         self.sig.register_predicate("PropQ", 0, ())
         self.sig.register_constant("a", Ind)
         self.sig.register_constant("b", Ind)
+        self.sig.register_function("f", 1, (Ind,), Ind)
         self.prover = TheoremProver(signature=self.sig)
 
     def test_propositional_tautology_p_or_not_p(self):
@@ -99,9 +100,15 @@ class TestProver(unittest.TestCase):
         self.assertTrue(proof.is_valid())
 
     def test_proof_timeout_exception(self):
-        p = PredicateApp(pred="P", arity=1, args=(Constant("a", sort=Ind),))
+        x = Variable(id=0, sort=Ind)
+        p_x = PredicateApp(pred="P", arity=1, args=(x,))
+        p_fx = PredicateApp(pred="P", arity=1, args=(FunctionApp("f", 1, (x,), return_sort=Ind),))
+        premise1 = Forall(variable=x, body=Implies(left=p_x, right=p_fx))
+        premise2 = PredicateApp(pred="P", arity=1, args=(Constant("a", sort=Ind),))
+        target = PredicateApp(pred="Q", arity=1, args=(Constant("a", sort=Ind),))
+
         with self.assertRaises(ProofTimeoutError):
-            self.prover.prove(target=p, premises=[], timeout_sec=0.000001)
+            self.prover.prove(target=target, premises=[premise1, premise2], timeout_sec=0.01, max_steps=1000000)
 
     def test_proof_search_exhausted_exception(self):
         p = PredicateApp(pred="P", arity=1, args=(Constant("a", sort=Ind),))
