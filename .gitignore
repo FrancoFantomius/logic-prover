@@ -45,3 +45,9 @@ Desktop.ini
 *~
 .env
 .env.*
+
+# Node / VitePress documentation build
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+

@@ -6,7 +6,7 @@ on:
     paths:
       - "logic_prover/**"
       - "docs/**"
-      - "mkdocs.yml"
+      - "package.json"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -40,7 +40,7 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[docs,vis]"
@@ -58,9 +58,19 @@ jobs:
           commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           file_pattern: "docs/**"
 
-      - name: Build MkDocs Site
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install Node dependencies
         run: |
-          mkdocs build --strict
+          npm install
+
+      - name: Build VitePress Site
+        run: |
+          npm run docs:build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -68,7 +78,7 @@ jobs:
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: docs/.vitepress/dist
 
       - name: Deploy to GitHub Pages
         id: deployment

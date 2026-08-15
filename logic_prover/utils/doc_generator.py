@@ -524,23 +524,42 @@ def build_markdown_docs(source_dir: str = "logic_prover", output_docs_dir: str =
         results[str(group_file)] = final_text
         group_summaries.append((group, f"api/{group}.md", total_classes, total_functions))
 
-    # Generate docs/index.md
+    # Generate docs/index.md with VitePress layout
     index_lines: List[str] = [
-        "# Logic Documentation Portal",
+        "---",
+        "layout: home",
         "",
-        "Welcome to the formal logic theorem prover, explorer, and deducer library documentation.",
+        "hero:",
+        '  name: "Logic Prover"',
+        '  text: "Logic Documentation Portal & Theorem Prover"',
+        "  tagline: High-performance automated reasoning engine, formula generator, and proof reconstructor in Python.",
+        "  actions:",
+        "    - theme: brand",
+        "      text: Explore API Reference",
+        "      link: /api/core",
+        "    - theme: alt",
+        "      text: GitHub Repository",
+        "      link: https://github.com/FrancoFantomius/logic-prover",
         "",
-        "## Submodule API Reference",
-        "",
-        "| Module Group | Documentation Link | Documented Classes | Documented Functions |",
-        "| :--- | :--- | :--- | :--- |",
-    ]
-
-    for gname, glink, ncls, nfn in group_summaries:
-        index_lines.append(f"| `{gname}` | [{gname}]({glink}) | {ncls} | {nfn} |")
-
-    index_lines.extend([
-        "",
+        "features:",
+        "  - title: Resolution Theorem Prover",
+        "    details: Complete first-order resolution prover with clause subsumption, heuristics, and proof DAG reconstruction.",
+        "    link: /api/prover",
+        "  - title: Formula Explorer",
+        "    details: Novel candidate generator with heuristic ranking, diversity metrics, and anti-unification.",
+        "    link: /api/explorer",
+        "  - title: Hypothesis Deducer",
+        "    details: Dependency analysis, minimal premise subsets, and equivalence class computation.",
+        "    link: /api/deducer",
+        "  - title: Lean 4 & Graph Exporters",
+        "    details: Translate proven theorems directly into verified Lean 4 code or interactive HTML DAG visualizations.",
+        "    link: /api/exporters",
+        "  - title: Foundational Knowledge Bases",
+        "    details: Built-in axiom libraries spanning propositional logic, equality, Peano arithmetic, sets, and groups.",
+        "    link: /api/kb",
+        "  - title: Second-Order Logic (SOL)",
+        "    details: Extensions for second-order quantification, predicate variables, and higher-order schema instantiation.",
+        "    link: /api/sol",
         "---",
         "",
         "## Architecture Overview",
@@ -554,10 +573,17 @@ def build_markdown_docs(source_dir: str = "logic_prover", output_docs_dir: str =
         "- **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.",
         "- **`logic_prover.utils`**: Central logging subsystem and automated documentation generator.",
         "",
-    ])
+        "## Submodule API Reference",
+        "",
+        "| Module Group | Documentation Link | Documented Classes | Documented Functions |",
+        "| :--- | :--- | :--- | :--- |",
+    ]
+
+    for gname, glink, ncls, nfn in group_summaries:
+        index_lines.append(f"| `{gname}` | [{gname} →]({glink}) | {ncls} | {nfn} |")
 
     index_file = output_path / "index.md"
-    index_text = "\n".join(index_lines)
+    index_text = "\n".join(index_lines) + "\n"
     index_file.write_text(index_text, encoding="utf-8")
     results[str(index_file)] = index_text
 
