@@ -1,8 +1,8 @@
 # API Reference: `utils`
 
-# Module `solver.utils.doc_generator`
+# Module `logic_prover.utils.doc_generator`
 
-Automated reflection and AST documentation generator for the solver library.
+Automated reflection and AST documentation generator for the logic library.
 
 Extracts docstrings, type annotations, and signatures from Python source modules
 and formats them into Markdown documentation files.
@@ -63,7 +63,7 @@ Inspects docstrings and signatures from a Python module file using AST and refle
 **Parameters:**
 | Name | Type | Description |
 | :--- | :--- | :--- |
-| `module_path` | `str` | Absolute or relative file path to a .py file (e.g. 'solver/core/ast.py'). |
+| `module_path` | `str` | Absolute or relative file path to a .py file (e.g. 'logic_prover/core/ast.py'). |
 
 **Returns:** `ModuleDoc` — ModuleDoc containing parsed classes, functions, signatures, and docstring sections.
 
@@ -93,7 +93,7 @@ Generates:
 **Parameters:**
 | Name | Type | Description |
 | :--- | :--- | :--- |
-| `source_dir` | `str` | Root package directory to scan (default 'solver'). |
+| `source_dir` | `str` | Root package directory to scan (default 'logic_prover'). |
 | `output_docs_dir` | `str` | Target output directory for markdown files (default 'docs'). |
 
 **Returns:** `Dict[str, str]` — Dictionary mapping created file paths to rendered content length.
@@ -101,12 +101,12 @@ Generates:
 
 ---
 
-# Module `solver.utils.logging`
+# Module `logic_prover.utils.logging`
 
-Logging subsystem for the solver library.
+Logging subsystem for the logic library.
 
 Provides centralized logger setup, log level configuration, custom output formatting,
-and hierarchical logger retrieval scoped under the 'solver' namespace.
+and hierarchical logger retrieval scoped under the 'logic' namespace.
 
 ---
 
@@ -120,10 +120,10 @@ and hierarchical logger retrieval scoped under the 'solver' namespace.
 
 ### `class SolverLogFormatter(logging.Formatter)`
 
-Custom log formatter for the solver library providing structured output.
+Custom log formatter for the logic library providing structured output.
 
 Formats:
-- Standard: "[2026-08-01 15:30:00] [INFO] [solver.prover.engine]: Proof found in 4 steps."
+- Standard: "[2026-08-01 15:30:00] [INFO] [logic.prover.engine]: Proof found in 4 steps."
 - Debug: Include line numbers and thread identifiers when debug mode is enabled.
 
 #### Methods
@@ -145,7 +145,7 @@ Initializes the custom log formatter.
 
 ### `def setup_logging(config: Optional[SolverConfig], log_level: Optional[Union[str, int]], log_file: Optional[str], stream: Optional[TextIO]) -> None`
 
-Configures the root logger for the solver library ('solver').
+Configures the root logger for the logic library ('logic').
 
 **Parameters:**
 | Name | Type | Description |
@@ -162,14 +162,14 @@ Configures the root logger for the solver library ('solver').
 
 ### `def get_logger(name: str) -> logging.Logger`
 
-Retrieves a logger instance scoped under the 'solver' namespace.
+Retrieves a logger instance scoped under the 'logic_prover' namespace.
 
 **Parameters:**
 | Name | Type | Description |
 | :--- | :--- | :--- |
-| `name` | `str` | Sub-module name (e.g. 'prover.engine' or 'solver.core.ast'). |
+| `name` | `str` | Sub-module name (e.g. 'prover.engine' or 'logic_prover.core.ast'). |
 
-**Returns:** `logging.Logger` — logging.Logger configured to bubble events up to root 'solver' logger.
+**Returns:** `logging.Logger` — logging.Logger configured to bubble events up to root 'logic_prover' logger.
 
 
 ---

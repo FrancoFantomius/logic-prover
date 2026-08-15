@@ -6,14 +6,6 @@ Welcome to the formal logic theorem prover, explorer, and deducer library docume
 
 | Module Group | Documentation Link | Documented Classes | Documented Functions |
 | :--- | :--- | :--- | :--- |
-| `config` | [config](api/config.md) | 1 | 0 |
-| `core` | [core](api/core.md) | 45 | 31 |
-| `deducer` | [deducer](api/deducer.md) | 1 | 4 |
-| `explorer` | [explorer](api/explorer.md) | 4 | 7 |
-| `exporters` | [exporters](api/exporters.md) | 2 | 0 |
-| `kb` | [kb](api/kb.md) | 0 | 17 |
-| `prover` | [prover](api/prover.md) | 8 | 23 |
-| `sol` | [sol](api/sol.md) | 6 | 15 |
 | `utils` | [utils](api/utils.md) | 7 | 6 |
 
 ---
