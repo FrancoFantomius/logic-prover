@@ -2,12 +2,14 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/logic-prover.svg)](https://pypi.org/project/logic-prover/)
 [![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/Docs-API_Reference-blue.svg)](docs/index.md)
+[![Docs](https://img.shields.io/badge/Docs-francofantomius.com-blue.svg)](https://francofantomius.com/logic-prover/)
 [![Changelog](https://img.shields.io/badge/Changelog-Keep_a_Changelog-orange.svg)](CHANGELOG.md)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/logic-prover.svg)](https://pypi.org/project/logic-prover/)
 
 `logic-prover` is a formal logic theorem prover, explorer, deducer, and Lean 4 exporter in Python with optional Cython acceleration.
+
+📚 **Full Documentation & API Reference**: [https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)
 
 ---
 
@@ -120,6 +122,21 @@ proof_dag = prover.prove(target=conclusion, premises=[hypothesis])
 print(f"Proof Found for target: {to_string(proof_dag.conclusion)}")
 for step in proof_dag.topological_order():
     print(f"  [{step.id}] {step.rule}: {to_string(step.conclusion)}")
+```
+
+---
+
+## Documentation
+
+Full interactive documentation, API reference, architecture deep dives, and tutorials are available at:
+
+🌐 **[https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)**
+
+You can also build the documentation locally using MkDocs:
+
+```bash
+pip install "logic-prover[docs]"
+mkdocs serve
 ```
 
 ---

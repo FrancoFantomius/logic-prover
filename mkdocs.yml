@@ -1,0 +1,78 @@
+site_name: Logic Prover Documentation
+site_description: A formal logic theorem prover, explorer, deducer, and Lean 4 exporter in Python.
+site_author: Franco Fantomius
+site_url: https://francofantomius.com/logic-prover/
+
+repo_name: FrancoFantomius/logic-prover
+repo_url: https://github.com/FrancoFantomius/logic-prover
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  palette:
+    # Palette toggle for automatic / light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture & Modules:
+      - Core AST & Rewriting: api/core.md
+      - Resolution Prover: api/prover.md
+      - Formula Explorer: api/explorer.md
+      - Deducer & Equivalence: api/deducer.md
+      - Exporters & Visualizers: api/exporters.md
+      - Knowledge Bases: api/kb.md
+      - Second-Order Logic: api/sol.md
+      - Configuration: api/config.md
+      - Utilities & Doc Generator: api/utils.md

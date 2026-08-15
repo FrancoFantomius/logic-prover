@@ -39,12 +39,17 @@ dependencies = ["lark>=1.1.0", "tomli>=2.0.0; python_version < '3.11'"]
 [project.urls]
 Homepage = "https://github.com/FrancoFantomius/logic-prover"
 Repository = "https://github.com/FrancoFantomius/logic-prover.git"
-Documentation = "https://github.com/FrancoFantomius/logic-prover#documentation"
+Documentation = "https://francofantomius.com/logic-prover/"
 Issues = "https://github.com/FrancoFantomius/logic-prover/issues"
 Changelog = "https://github.com/FrancoFantomius/logic-prover/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 vis = ["jinja2>=3.0.0"]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "pymdown-extensions>=10.0",
+]
 dev = [
     "cython>=3.0.0",
     "pytest>=7.2.0",
@@ -54,6 +59,9 @@ dev = [
     "ruff>=0.1.0",
     "build>=1.0.0",
     "twine>=4.0.0",
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "pymdown-extensions>=10.0",
 ]
 
 [project.scripts]
