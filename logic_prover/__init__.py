@@ -4,7 +4,7 @@ logic-prover: A formal logic theorem prover, explorer, deducer, and Lean 4 expor
 
 from __future__ import annotations
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Franco Fantomius"
 
 from logic_prover.config import SolverConfig

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logic-prover"
-version = "0.1.4"
+version = "0.1.5"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
 authors = [{ name = "Franco Fantomius", email = "mail@francofantomius.com" }]
@@ -16,7 +16,7 @@ classifiers = [
     "Intended Audience :: Education",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Software Development :: Interpreters",
-    "License :: Free For Non-Commercial Use",
+    "License :: Free for non-commercial use",
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
