@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Test Suite with Pytest
         run: |
-          pytest
+          pytest --cov=logic_prover --cov-report=term-missing --cov-fail-under=85
 
       - name: Verify Documentation Generation
         run: |
