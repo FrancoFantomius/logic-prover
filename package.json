@@ -12,6 +12,6 @@
     "esbuild@0.21.5": true
   },
   "devDependencies": {
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.3"
   }
 }
