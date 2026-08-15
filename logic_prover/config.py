@@ -1,4 +1,4 @@
-"""Configuration management module for the logic library."""
+﻿"""Configuration management module for the logic library."""
 
 from __future__ import annotations
 import json
@@ -7,7 +7,7 @@ from dataclasses import dataclass, fields, asdict
 from pathlib import Path
 from typing import Dict, Any, Union
 
-from logic.core.exceptions import SolverError
+from logic_prover.core.exceptions import SolverError
 
 if sys.version_info >= (3, 11):
     import tomllib

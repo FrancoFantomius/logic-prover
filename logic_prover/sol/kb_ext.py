@@ -1,15 +1,15 @@
-"""Second-Order Logic knowledge base extensions (induction schemas, comprehension axioms)."""
+﻿"""Second-Order Logic knowledge base extensions (induction schemas, comprehension axioms)."""
 
 from __future__ import annotations
 from typing import List, Tuple, Optional
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
     Forall, Implies, And, Iff, Exists, Equality
 )
-from logic.core.sorts import Ind, Nat
-from logic.sol.ast_ext import PredicateVariable, FunctionVariable, ForallPred, ExistsPred, ForallFunc
-from logic.core.substitutions import substitute_formula
+from logic_prover.core.sorts import Ind, Nat
+from logic_prover.sol.ast_ext import PredicateVariable, FunctionVariable, ForallPred, ExistsPred, ForallFunc
+from logic_prover.core.substitutions import substitute_formula
 
 
 def get_sol_axioms() -> List[Tuple[str, Formula]]:

@@ -1,11 +1,11 @@
-import unittest
-from logic.core.ast import Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, Or, Iff
-from logic.core.sorts import Nat, Ind
-from logic.core.signature import Signature
-from logic.prover.engine import TheoremProver
-from logic.sol.ast_ext import PredicateVariable, ExistsPred
-from logic.sol.kb_ext import instantiate_induction, instantiate_comprehension, get_sol_axioms
-from logic.prover.rules import SOLInstantiateRule
+﻿import unittest
+from logic_prover.core.ast import Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, Or, Iff
+from logic_prover.core.sorts import Nat, Ind
+from logic_prover.core.signature import Signature
+from logic_prover.prover.engine import TheoremProver
+from logic_prover.sol.ast_ext import PredicateVariable, ExistsPred
+from logic_prover.sol.kb_ext import instantiate_induction, instantiate_comprehension, get_sol_axioms
+from logic_prover.prover.rules import SOLInstantiateRule
 
 
 class TestSOLProver(unittest.TestCase):

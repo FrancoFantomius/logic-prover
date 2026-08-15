@@ -1,6 +1,13 @@
-# Logic
+# Logic Prover (`logic-prover`)
 
-`logic` is a Python library for formal logic, featuring First-Order Logic (FOL) AST manipulation, term rewriting, automated resolution theorem proving, formula exploration, dependency graph deduction, higher-order logic extensions, and Lean 4 export.
+[![PyPI version](https://img.shields.io/pypi/v/logic-prover.svg)](https://pypi.org/project/logic-prover/)
+[![CI](https://github.com/FrancoFantomius/logic/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/Docs-API_Reference-blue.svg)](docs/index.md)
+[![Changelog](https://img.shields.io/badge/Changelog-Keep_a_Changelog-orange.svg)](CHANGELOG.md)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/logic-prover.svg)](https://pypi.org/project/logic-prover/)
+
+`logic-prover` is a formal logic theorem prover, explorer, deducer, and Lean 4 exporter in Python with optional Cython acceleration.
 
 ---
 
@@ -11,24 +18,33 @@
 - **Deducer**: Network-level minimal hypothesis detection and equivalence classification.
 - **Lean 4 Export**: High-fidelity translation of formulas, statements, and tactic proofs into Lean 4 code.
 - **Interactive HTML Graphs**: Proof DAG and dependency graph visualizer.
+- **Optional Cython Acceleration**: Core AST, substitutions, and resolution engine compiled to native C extensions for high performance.
 - **Automated Documentation & Logging**: Structured logging subsystem and Reflection/AST documentation generator.
 
 ---
 
 ## Installation
 
-### From GitHub via `pip`
+### From PyPI
 
-You can install `logic` directly from GitHub using `pip`:
+Install the latest release from [PyPI](https://pypi.org/project/logic-prover/):
+
+```bash
+pip install logic-prover
+```
+
+To install with visualization support (interactive HTML graphs with Jinja2):
+
+```bash
+pip install "logic-prover[vis]"
+```
+
+### From GitHub
+
+You can also install the latest development version directly from GitHub:
 
 ```bash
 pip install git+https://github.com/FrancoFantomius/logic.git
-```
-
-To install with optional visualization features:
-
-```bash
-pip install "logic[vis] @ git+https://github.com/FrancoFantomius/logic.git"
 ```
 
 ### From Source (Development)
@@ -38,12 +54,6 @@ Clone the repository and install in editable mode:
 ```bash
 git clone https://github.com/FrancoFantomius/logic.git
 cd logic
-pip install -e .
-```
-
-To install with development and visualization dependencies:
-
-```bash
 pip install -e ".[dev,vis]"
 ```
 
@@ -55,37 +65,40 @@ pip install -e ".[dev,vis]"
 
 ```bash
 # Initialize Knowledge Database
-python -m logic init --reset
+logic-prover init --reset
 
 # Prove a Theorem
-python -m logic prove "(forall v0 (P(v0) => Q(v0))) => ((forall v0 P(v0)) => (forall v0 Q(v0)))"
+logic-prover prove "(forall v0 (P(v0) => Q(v0))) => ((forall v0 P(v0)) => (forall v0 Q(v0)))"
 
 # Explore Candidate Formulas
-python -m logic explore --strategy mixed --count 20 --top-k 5
+logic-prover explore --strategy mixed --count 20 --top-k 5
 
 # Analyze Network Dependencies
-python -m logic analyze
+logic-prover analyze
 
 # Export to Lean 4
-python -m logic export lean --output theorem.lean --stubs-only
+logic-prover export lean --output theorem.lean --stubs-only
 
 # Export Interactive Proof Graph
-python -m logic export graph --type dependency --output network.html
+logic-prover export graph --type dependency --output network.html
 
 # Generate API Documentation
-python -m logic docs --output-dir docs
+logic-prover docs --output-dir docs
 ```
+
+*(You can also invoke via `python -m logic_prover`)*
 
 ---
 
 ## Python API Example
 
 ```python
-from logic.kb import get_combined_signature
-from logic.core.parser import parse_formula, to_string
-from logic.prover.engine import TheoremProver
-from logic.config import SolverConfig
-from logic.utils.logging import setup_logging
+import logic_prover
+from logic_prover.kb import get_combined_signature
+from logic_prover.core.parser import parse_formula, to_string
+from logic_prover.prover.engine import TheoremProver
+from logic_prover.config import SolverConfig
+from logic_prover.utils.logging import setup_logging
 
 # Configure structured logging
 setup_logging(log_level="INFO")
@@ -114,7 +127,7 @@ for step in proof_dag.topological_order():
 ## Project Architecture
 
 ```
-logic/
+logic_prover/
 ├── core/         # AST, Sorts, Signature, Parser, Substitutions, Rewriting, Database
 ├── kb/           # Foundational mathematical knowledge bases (Logic, Equality, Numbers, Sets, Groups)
 ├── prover/       # Resolution Prover, Clausification, Proof Reconstruction
@@ -129,8 +142,39 @@ logic/
 
 ## Testing
 
-Run unit tests via Python's standard `unittest`:
+Run unit tests via `pytest`:
+
+```bash
+pytest
+```
+
+or with Python's built-in `unittest`:
 
 ```bash
 python -m unittest discover -s tests
 ```
+
+---
+
+## Contributing & Community
+
+We welcome contributions to `logic-prover`! Please check out the following resources:
+
+- **[Contributing Guidelines](CONTRIBUTING.md)**: Setup instructions, code style, testing, and PR workflow.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)**: Community standards and enforcement policies.
+- **[Security Policy](SECURITY.md)**: How to report vulnerabilities securely.
+- **[Changelog](CHANGELOG.md)**: Release history and version migration notes.
+
+---
+
+## License & Commercial Use
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)**. See the [LICENSE](LICENSE) file for the full legal text.
+
+### Key Terms:
+- **Attribution**: You must give appropriate credit to the author (**Franco Fantomius**), provide a link to the license, and indicate if changes were made.
+- **Non-Commercial**: You may freely use, modify, and distribute this software for academic, research, personal, and non-commercial purposes.
+- **Commercial Use / Dual Licensing**: Any commercial use, including incorporating this software into commercial software, hosted commercial services, or revenue-generating products, requires **prior written permission and a commercial license agreement** from the author.
+
+For commercial inquiries and licensing agreements, please contact:
+**Franco Fantomius** &lt;[mail@francofantomius.com](mailto:mail@francofantomius.com)&gt;

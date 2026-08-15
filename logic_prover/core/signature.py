@@ -1,11 +1,11 @@
-"""Logical signature definition module for declaring function, predicate, and constant symbols."""
+﻿"""Logical signature definition module for declaring function, predicate, and constant symbols."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Set
 
-from logic.core.exceptions import ValidationError
-from logic.core.sorts import Sort, Ind
+from logic_prover.core.exceptions import ValidationError
+from logic_prover.core.sorts import Sort, Ind
 
 
 @dataclass(frozen=True, slots=True)

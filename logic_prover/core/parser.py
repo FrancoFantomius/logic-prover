@@ -1,4 +1,4 @@
-"""Lexer, parser, and string serializer for First-Order Logic terms and formulas."""
+﻿"""Lexer, parser, and string serializer for First-Order Logic terms and formulas."""
 
 from __future__ import annotations
 import re
@@ -6,16 +6,16 @@ from enum import Enum, auto
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Union
 
-from logic.core.exceptions import ParseError
-from logic.core.ast import (
+from logic_prover.core.exceptions import ParseError
+from logic_prover.core.ast import (
     Term, Variable, Constant, FunctionApp, VariableKind,
     Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool
-from logic.core.signature import Signature
+from logic_prover.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool
+from logic_prover.core.signature import Signature
 
 
-from logic.sol.ast_ext import (
+from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc
 )
@@ -528,6 +528,6 @@ def to_string(node: Union[Term, Formula], notation: str = "infix") -> str:
     """Serializes a Term or Formula AST to a string representation.
     Supported notations: 'infix' (default), 'prefix', 'latex'.
     """
-    from logic.core.visitors import ExportVisitor
+    from logic_prover.core.visitors import ExportVisitor
     visitor = ExportVisitor(notation=notation)
     return visitor.visit(node)

@@ -1,4 +1,4 @@
-"""Resolution theorem prover engine implementing given-clause resolution and superposition loops."""
+﻿"""Resolution theorem prover engine implementing given-clause resolution and superposition loops."""
 
 from __future__ import annotations
 import heapq
@@ -7,15 +7,15 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Set, Optional, Tuple, DefaultDict
 from collections import defaultdict
 
-from logic.core.ast import Formula, Variable, Term, Not, Equality, Forall, free_variables, formula_size
-from logic.core.sorts import Ind
-from logic.core.substitutions import unify_formulas, UnificationError
-from logic.config import SolverConfig
-from logic.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError, SolverError
-from logic.prover.clausifier import Clause, Literal, to_cnf, negate_and_clausify, PredicateApp
-from logic.prover.rules import resolve_clauses, factor_clause, paramodulate
-from logic.prover.proof import ProofDAG, ProofStep
-from logic.prover.reconstruction import reconstruct_proof
+from logic_prover.core.ast import Formula, Variable, Term, Not, Equality, Forall, free_variables, formula_size
+from logic_prover.core.sorts import Ind
+from logic_prover.core.substitutions import unify_formulas, UnificationError
+from logic_prover.config import SolverConfig
+from logic_prover.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError, SolverError
+from logic_prover.prover.clausifier import Clause, Literal, to_cnf, negate_and_clausify, PredicateApp
+from logic_prover.prover.rules import resolve_clauses, factor_clause, paramodulate
+from logic_prover.prover.proof import ProofDAG, ProofStep
+from logic_prover.prover.reconstruction import reconstruct_proof
 
 
 @dataclass(frozen=True)
@@ -148,9 +148,9 @@ class TheoremProver:
         add_initial_step(refl_clause, "axiom", Forall(variable=v_refl, body=Equality(left=v_refl, right=v_refl)))
 
         # Clausify Premises
-        from logic.sol.ast_ext import ForallPred, ExistsPred, ForallFunc, ExistsFunc
-        from logic.sol.kb_ext import get_sol_axioms
-        from logic.prover.rules import SOLInstantiateRule
+        from logic_prover.sol.ast_ext import ForallPred, ExistsPred, ForallFunc, ExistsFunc
+        from logic_prover.sol.kb_ext import get_sol_axioms
+        from logic_prover.prover.rules import SOLInstantiateRule
 
         sol_rule = SOLInstantiateRule()
         all_sol_candidates = list(premises) + [fmt for _, fmt in get_sol_axioms()]

@@ -1,11 +1,11 @@
-import unittest
+﻿import unittest
 from typing import Dict
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Ind, Nat
-from logic.core.visitors import (
+from logic_prover.core.sorts import Ind, Nat
+from logic_prover.core.visitors import (
     ASTVisitor, ASTTransformer, DepthVisitor, SizeVisitor,
     FreeVariableCollector, SubstitutionTransformer, ExportVisitor
 )

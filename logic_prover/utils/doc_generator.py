@@ -210,7 +210,7 @@ def extract_docstrings_from_module(module_path: str) -> ModuleDoc:
     Inspects docstrings and signatures from a Python module file using AST and reflection.
 
     Args:
-        module_path: Absolute or relative file path to a .py file (e.g. 'logic/core/ast.py').
+        module_path: Absolute or relative file path to a .py file (e.g. 'logic_prover/core/ast.py').
 
     Returns:
         ModuleDoc containing parsed classes, functions, signatures, and docstring sections.
@@ -230,11 +230,19 @@ def extract_docstrings_from_module(module_path: str) -> ModuleDoc:
     mod_summary, mod_desc, _, _, _ = parse_google_docstring(raw_mod_doc)
 
     mod_name = path_obj.stem
-    # Convert file path to module dotted path if inside logic
+    # Convert file path to module dotted path if inside logic_prover or logic
     parts = list(path_obj.parts)
-    if "logic" in parts:
+    if "logic_prover" in parts:
+        pkg_idx = parts.index("logic_prover")
+        mod_parts = list(parts[pkg_idx:])
+        if mod_parts[-1].endswith(".py"):
+            mod_parts[-1] = mod_parts[-1][:-3]
+        if mod_parts[-1] == "__init__":
+            mod_parts = mod_parts[:-1]
+        mod_name = ".".join(mod_parts)
+    elif "logic" in parts:
         pkg_idx = parts.index("logic")
-        mod_parts = parts[pkg_idx:]
+        mod_parts = list(parts[pkg_idx:])
         if mod_parts[-1].endswith(".py"):
             mod_parts[-1] = mod_parts[-1][:-3]
         if mod_parts[-1] == "__init__":
@@ -455,7 +463,7 @@ def render_markdown_module(module_doc: ModuleDoc) -> str:
     return "\n".join(lines)
 
 
-def build_markdown_docs(source_dir: str = "logic", output_docs_dir: str = "docs") -> Dict[str, str]:
+def build_markdown_docs(source_dir: str = "logic_prover", output_docs_dir: str = "docs") -> Dict[str, str]:
     """
     Scans the source codebase, extracts docstrings from all modules, and writes Markdown documentation.
 
@@ -464,7 +472,7 @@ def build_markdown_docs(source_dir: str = "logic", output_docs_dir: str = "docs"
     - docs/index.md (Landing page with module links and summary tables)
 
     Args:
-        source_dir: Root package directory to scan (default 'logic').
+        source_dir: Root package directory to scan (default 'logic_prover').
         output_docs_dir: Target output directory for markdown files (default 'docs').
 
     Returns:
@@ -537,14 +545,14 @@ def build_markdown_docs(source_dir: str = "logic", output_docs_dir: str = "docs"
         "",
         "## Architecture Overview",
         "",
-        "- **`logic.core`**: AST definitions, sort systems, signatures, parser, substitution, rewriting.",
-        "- **`logic.prover`**: Resolution theorem prover engine, clause generation, proof DAG reconstruction.",
-        "- **`logic.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.",
-        "- **`logic.deducer`**: Network dependency analysis and hypothesis minimal subset detection.",
-        "- **`logic.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.",
-        "- **`logic.kb`**: Knowledge database interface and foundational mathematical axioms.",
-        "- **`logic.sol`**: Second-Order Logic (SOL) extensions.",
-        "- **`logic.utils`**: Central logging subsystem and automated documentation generator.",
+        "- **`logic_prover.core`**: AST definitions, sort systems, signatures, parser, substitution, rewriting.",
+        "- **`logic_prover.prover`**: Resolution theorem prover engine, clause generation, proof DAG reconstruction.",
+        "- **`logic_prover.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.",
+        "- **`logic_prover.deducer`**: Network dependency analysis and hypothesis minimal subset detection.",
+        "- **`logic_prover.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.",
+        "- **`logic_prover.kb`**: Knowledge database interface and foundational mathematical axioms.",
+        "- **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.",
+        "- **`logic_prover.utils`**: Central logging subsystem and automated documentation generator.",
         "",
     ])
 

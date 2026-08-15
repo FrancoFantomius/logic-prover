@@ -1,28 +1,28 @@
-"""Formula generator engine implementing diverse candidate exploration strategies."""
+﻿"""Formula generator engine implementing diverse candidate exploration strategies."""
 
 from __future__ import annotations
 import random
 from typing import List, Dict, Set, Optional, Tuple, Any
-from logic.config import SolverConfig
-from logic.core.ast import (
+from logic_prover.config import SolverConfig
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists,
     free_variables, bound_variables, canonicalize_bound_variables, formula_depth
 )
-from logic.core.sorts import Sort, Ind
-from logic.core.signature import Signature
-from logic.core.validator import is_well_formed, validate_formula
-from logic.core.substitutions import substitute_formula, substitute_term
-from logic.core.database import KnowledgeDatabase, _dict_to_formula
-from logic.core.rewriter import RewriteRule, rewrite_all
-from logic.prover.engine import TheoremProver
-from logic.prover.proof import ProofDAG, ProofStep
-from logic.prover.clausifier import to_cnf, Clause, Literal
-from logic.prover.rules import get_resolution_rules, resolve_clauses, paramodulate, factor_clause
-from logic.explorer.heuristics import (
+from logic_prover.core.sorts import Sort, Ind
+from logic_prover.core.signature import Signature
+from logic_prover.core.validator import is_well_formed, validate_formula
+from logic_prover.core.substitutions import substitute_formula, substitute_term
+from logic_prover.core.database import KnowledgeDatabase, _dict_to_formula
+from logic_prover.core.rewriter import RewriteRule, rewrite_all
+from logic_prover.prover.engine import TheoremProver
+from logic_prover.prover.proof import ProofDAG, ProofStep
+from logic_prover.prover.clausifier import to_cnf, Clause, Literal
+from logic_prover.prover.rules import get_resolution_rules, resolve_clauses, paramodulate, factor_clause
+from logic_prover.explorer.heuristics import (
     calculate_diversity_scores, composite_interestingness, is_redundant_structure, DiversityMetrics
 )
-from logic.explorer.filter import FormulaFilter
+from logic_prover.explorer.filter import FormulaFilter
 
 
 # --- First-Order Anti-Unification Helper Functions ---

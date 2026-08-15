@@ -1,13 +1,13 @@
-"""Dependency graph data structure for formula dependency networks."""
+﻿"""Dependency graph data structure for formula dependency networks."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple, Optional, Any
 import json
 
-from logic.core.ast import Formula
-from logic.core.parser import to_string
-from logic.prover.proof import ProofDAG
+from logic_prover.core.ast import Formula
+from logic_prover.core.parser import to_string
+from logic_prover.prover.proof import ProofDAG
 
 
 @dataclass

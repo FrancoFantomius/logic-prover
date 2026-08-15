@@ -1,4 +1,4 @@
-"""Optional Cython extension compilation setup script for logic library."""
+﻿"""Optional Cython extension compilation setup script for logic library."""
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -25,12 +25,12 @@ class OptionalBuildExt(build_ext):
 ext_modules = []
 if USE_CYTHON:
     hotspot_files = [
-        "logic/core/ast.py",
-        "logic/core/substitutions.py",
-        "logic/core/visitors.py",
-        "logic/prover/clausifier.py",
-        "logic/prover/rules.py",
-        "logic/prover/engine.py",
+        "logic_prover/core/ast.py",
+        "logic_prover/core/substitutions.py",
+        "logic_prover/core/visitors.py",
+        "logic_prover/prover/clausifier.py",
+        "logic_prover/prover/rules.py",
+        "logic_prover/prover/engine.py",
     ]
     # Filter files that exist
     valid_files = [f for f in hotspot_files if os.path.exists(f)]

@@ -1,4 +1,4 @@
-"""Utility script to remove all __pycache__ directories recursively."""
+﻿"""Utility script to remove all __pycache__ directories recursively."""
 
 import os
 import shutil
@@ -16,7 +16,7 @@ def clean_pycache(start_dir: Path | str | None = None) -> list[Path]:
         List of Path objects representing deleted __pycache__ directories.
     """
     if start_dir is None:
-        # Default to project root (two levels up from logic/utils)
+        # Default to project root (two levels up from logic_prover/utils)
         start_dir = Path(__file__).resolve().parent.parent.parent
     else:
         start_dir = Path(start_dir).resolve()

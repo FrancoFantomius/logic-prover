@@ -1,13 +1,13 @@
-"""Naive set theory axioms (extensionality, subset, union, intersection, empty set)."""
+﻿"""Naive set theory axioms (extensionality, subset, union, intersection, empty set)."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Implies, And, Or, Not, Iff
 )
-from logic.core.sorts import PrimitiveSort, ParameterizedSort, SetSort, Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import PrimitiveSort, ParameterizedSort, SetSort, Ind
+from logic_prover.core.signature import Signature
 
 ElemSort: PrimitiveSort = PrimitiveSort("Elem")
 SetType: ParameterizedSort = SetSort(ElemSort)

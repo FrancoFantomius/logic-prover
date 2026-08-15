@@ -1,16 +1,16 @@
-"""Term rewriting system for applying directional rewrite rules and normalizations."""
+﻿"""Term rewriting system for applying directional rewrite rules and normalizations."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import is_compatible
-from logic.core.substitutions import substitute_term, substitute_formula
-from logic.core.exceptions import RewriteDivergenceError, ValidationError
+from logic_prover.core.sorts import is_compatible
+from logic_prover.core.substitutions import substitute_term, substitute_formula
+from logic_prover.core.exceptions import RewriteDivergenceError, ValidationError
 
 
 @dataclass(frozen=True, slots=True)

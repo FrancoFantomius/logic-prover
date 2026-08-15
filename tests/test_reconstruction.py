@@ -1,9 +1,9 @@
-import unittest
-from logic.core.ast import PredicateApp, Not
-from logic.prover.clausifier import Clause, Literal
-from logic.prover.engine import ResolutionStep
-from logic.prover.proof import ProofStep, ProofDAG
-from logic.prover.reconstruction import reconstruct_proof, simplify_proof
+﻿import unittest
+from logic_prover.core.ast import PredicateApp, Not
+from logic_prover.prover.clausifier import Clause, Literal
+from logic_prover.prover.engine import ResolutionStep
+from logic_prover.prover.proof import ProofStep, ProofDAG
+from logic_prover.prover.reconstruction import reconstruct_proof, simplify_proof
 
 class TestReconstruction(unittest.TestCase):
 

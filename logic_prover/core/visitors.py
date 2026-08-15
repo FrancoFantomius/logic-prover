@@ -1,17 +1,17 @@
-"""AST Visitor pattern implementations for traversal, size computation, and serialization."""
+﻿"""AST Visitor pattern implementations for traversal, size computation, and serialization."""
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Union, Any, Set, Dict, Optional, Tuple, List
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Variable, Constant, FunctionApp,
     Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.sol.ast_ext import (
+from logic_prover.sol.ast_ext import (
     ForallPred, ExistsPred, ForallFunc, ExistsFunc, PredicateVariable, FunctionVariable
 )
-from logic.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool
+from logic_prover.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool
 
 T = TypeVar("T")
 

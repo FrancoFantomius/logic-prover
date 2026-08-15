@@ -1,18 +1,18 @@
-"""Knowledge base module providing foundational logic, arithmetic, group, relation, order, set, and function axioms."""
+﻿"""Knowledge base module providing foundational logic, arithmetic, group, relation, order, set, and function axioms."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import Formula
-from logic.core.signature import Signature
-from logic.kb.equality import get_equality_axioms, get_equality_signature
-from logic.kb.logic import get_fol_axioms, get_fol_signature
-from logic.kb.numbers import get_peano_axioms, get_peano_signature
-from logic.kb.groups import get_group_axioms, get_group_signature
-from logic.kb.relations import get_relation_axioms, get_relation_signature
-from logic.kb.orders import get_partial_order_axioms, get_total_order_axioms, get_order_signature
-from logic.kb.sets import get_set_theory_axioms, get_set_signature
-from logic.kb.functions import get_function_axioms, get_function_signature
+from logic_prover.core.ast import Formula
+from logic_prover.core.signature import Signature
+from logic_prover.kb.equality import get_equality_axioms, get_equality_signature
+from logic_prover.kb.logic import get_fol_axioms, get_fol_signature
+from logic_prover.kb.numbers import get_peano_axioms, get_peano_signature
+from logic_prover.kb.groups import get_group_axioms, get_group_signature
+from logic_prover.kb.relations import get_relation_axioms, get_relation_signature
+from logic_prover.kb.orders import get_partial_order_axioms, get_total_order_axioms, get_order_signature
+from logic_prover.kb.sets import get_set_theory_axioms, get_set_signature
+from logic_prover.kb.functions import get_function_axioms, get_function_signature
 
 
 def get_extended_axioms() -> List[Tuple[str, Formula, str]]:

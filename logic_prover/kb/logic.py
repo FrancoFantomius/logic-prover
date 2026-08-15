@@ -1,13 +1,13 @@
-"""First-Order Logic foundational axioms and tautologies."""
+﻿"""First-Order Logic foundational axioms and tautologies."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, PredicateApp, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import Ind
+from logic_prover.core.signature import Signature
 
 
 def get_fol_signature() -> Signature:

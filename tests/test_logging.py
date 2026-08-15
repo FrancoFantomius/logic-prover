@@ -9,16 +9,16 @@ import os
 import tempfile
 import unittest
 
-from logic.config import SolverConfig
-from logic.utils.logging import SolverLogFormatter, setup_logging, get_logger
+from logic_prover.config import SolverConfig
+from logic_prover.utils.logging import SolverLogFormatter, setup_logging, get_logger
 
 
 class TestSolverLogging(unittest.TestCase):
     """Test suite for logging configuration, formatting, and scoping."""
 
     def tearDown(self) -> None:
-        """Reset root logic logger handlers after each test."""
-        logger = logging.getLogger("logic")
+        """Reset root logic_prover logger handlers after each test."""
+        logger = logging.getLogger("logic_prover")
         for h in list(logger.handlers):
             h.close()
             logger.removeHandler(h)
@@ -27,7 +27,7 @@ class TestSolverLogging(unittest.TestCase):
     def test_setup_logging_levels(self) -> None:
         """Test setting valid log levels via setup_logging."""
         setup_logging(log_level="DEBUG")
-        logger = logging.getLogger("logic")
+        logger = logging.getLogger("logic_prover")
         self.assertEqual(logger.level, logging.DEBUG)
 
         setup_logging(log_level="WARNING")
@@ -40,7 +40,7 @@ class TestSolverLogging(unittest.TestCase):
         """Test setting log level via SolverConfig."""
         config = SolverConfig(log_level="DEBUG")
         setup_logging(config=config)
-        logger = logging.getLogger("logic")
+        logger = logging.getLogger("logic_prover")
         self.assertEqual(logger.level, logging.DEBUG)
 
     def test_setup_logging_invalid_level(self) -> None:
@@ -55,7 +55,7 @@ class TestSolverLogging(unittest.TestCase):
         """Test SolverLogFormatter standard formatting mode."""
         formatter = SolverLogFormatter(debug_mode=False)
         record = logging.LogRecord(
-            name="logic.test",
+            name="logic_prover.test",
             level=logging.INFO,
             pathname="test.py",
             lineno=42,
@@ -65,7 +65,7 @@ class TestSolverLogging(unittest.TestCase):
         )
         formatted = formatter.format(record)
         self.assertIn("[INFO]", formatted)
-        self.assertIn("[logic.test]", formatted)
+        self.assertIn("[logic_prover.test]", formatted)
         self.assertIn("Hello world", formatted)
         self.assertNotIn("test.py", formatted)
         self.assertNotIn(":42]", formatted)
@@ -74,7 +74,7 @@ class TestSolverLogging(unittest.TestCase):
         """Test SolverLogFormatter debug formatting mode."""
         formatter = SolverLogFormatter(debug_mode=True)
         record = logging.LogRecord(
-            name="logic.test",
+            name="logic_prover.test",
             level=logging.DEBUG,
             pathname="test.py",
             lineno=42,
@@ -84,19 +84,19 @@ class TestSolverLogging(unittest.TestCase):
         )
         formatted = formatter.format(record)
         self.assertIn("[DEBUG]", formatted)
-        self.assertIn("[logic.test:42]", formatted)
+        self.assertIn("[logic_prover.test:42]", formatted)
         self.assertIn("Debug trace", formatted)
 
     def test_get_logger_scoping(self) -> None:
         """Test logger namespace prefixing in get_logger."""
         log1 = get_logger("prover.engine")
-        self.assertEqual(log1.name, "logic.prover.engine")
+        self.assertEqual(log1.name, "logic_prover.prover.engine")
 
-        log2 = get_logger("logic.core.ast")
-        self.assertEqual(log2.name, "logic.core.ast")
+        log2 = get_logger("logic_prover.core.ast")
+        self.assertEqual(log2.name, "logic_prover.core.ast")
 
-        log3 = get_logger("logic")
-        self.assertEqual(log3.name, "logic")
+        log3 = get_logger("logic_prover")
+        self.assertEqual(log3.name, "logic_prover")
 
     def test_logging_stream_output(self) -> None:
         """Test logging output captured in stream."""
@@ -108,7 +108,7 @@ class TestSolverLogging(unittest.TestCase):
 
         output = stream.getvalue()
         self.assertIn("[INFO]", output)
-        self.assertIn("[logic.test_module]", output)
+        self.assertIn("[logic_prover.test_module]", output)
         self.assertIn("Test message stream", output)
 
     def test_logging_file_output(self) -> None:
@@ -122,16 +122,16 @@ class TestSolverLogging(unittest.TestCase):
             logger.info("Message for file")
 
             # Flush and close handlers so file lock is released on Windows
-            for h in list(logging.getLogger("logic").handlers):
+            for h in list(logging.getLogger("logic_prover").handlers):
                 h.flush()
                 h.close()
-                logging.getLogger("logic").removeHandler(h)
+                logging.getLogger("logic_prover").removeHandler(h)
 
             with open(tmp_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             self.assertIn("Message for file", content)
-            self.assertIn("[logic.file_test]", content)
+            self.assertIn("[logic_prover.file_test]", content)
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)

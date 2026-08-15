@@ -1,24 +1,24 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists, VariableKind
 )
-from logic.core.sorts import (
+from logic_prover.core.sorts import (
     PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool, SetSort
 )
-from logic.core.database import KnowledgeDatabase
-from logic.prover.proof import ProofStep, ProofDAG
-from logic.prover.rules import InferenceRule
-from logic.deducer.graph import DependencyGraph
-from logic.exporters.lean_exporter import LeanExporter
-from logic.exporters.graph_exporter import GraphExporter
-from logic.__main__ import main, build_cli_parser
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.prover.proof import ProofStep, ProofDAG
+from logic_prover.prover.rules import InferenceRule
+from logic_prover.deducer.graph import DependencyGraph
+from logic_prover.exporters.lean_exporter import LeanExporter
+from logic_prover.exporters.graph_exporter import GraphExporter
+from logic_prover.__main__ import main, build_cli_parser
 
 
 class TestLeanExporter(unittest.TestCase):

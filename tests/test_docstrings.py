@@ -11,13 +11,13 @@ import inspect
 import pkgutil
 import unittest
 
-import logic
+import logic_prover
 
 
 def get_all_logic_modules():
-    """Recursively retrieves all public modules in the logic package."""
+    """Recursively retrieves all public modules in the logic_prover package."""
     modules = []
-    for importer, modname, ispkg in pkgutil.walk_packages(logic.__path__, logic.__name__ + "."):
+    for importer, modname, ispkg in pkgutil.walk_packages(logic_prover.__path__, logic_prover.__name__ + "."):
         if "__main__" in modname:
             continue
         try:

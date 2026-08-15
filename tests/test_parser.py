@@ -1,12 +1,12 @@
-import unittest
+﻿import unittest
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Ind, Nat, ParameterizedSort
-from logic.core.signature import Signature
-from logic.core.exceptions import ParseError
-from logic.core.parser import tokenize, TokenType, parse_formula, parse_term, to_string
+from logic_prover.core.sorts import Ind, Nat, ParameterizedSort
+from logic_prover.core.signature import Signature
+from logic_prover.core.exceptions import ParseError
+from logic_prover.core.parser import tokenize, TokenType, parse_formula, parse_term, to_string
 
 
 class TestParser(unittest.TestCase):

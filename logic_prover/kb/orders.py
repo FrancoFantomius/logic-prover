@@ -1,13 +1,13 @@
-"""Order theory axioms (partial orders, total orders, strict orders)."""
+﻿"""Order theory axioms (partial orders, total orders, strict orders)."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, PredicateApp, Equality, Forall, Implies, And, Or, Not, Iff
 )
-from logic.core.sorts import PrimitiveSort, Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import PrimitiveSort, Ind
+from logic_prover.core.signature import Signature
 
 OrderElem: PrimitiveSort = PrimitiveSort("OrderElem")
 

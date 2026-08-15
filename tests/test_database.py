@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import json
 import os
 import sqlite3
@@ -6,16 +6,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from logic.config import SolverConfig
-from logic.core.ast import (
+from logic_prover.config import SolverConfig
+from logic_prover.core.ast import (
     Formula, Variable, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Ind, Nat
-from logic.core.exceptions import DatabaseError, SolverError
-from logic.core.validator import is_well_formed
-from logic.core.database import KnowledgeDatabase
-from logic.kb import get_all_axioms, get_combined_signature
-from logic.__main__ import main
+from logic_prover.core.sorts import Ind, Nat
+from logic_prover.core.exceptions import DatabaseError, SolverError
+from logic_prover.core.validator import is_well_formed
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.__main__ import main
 
 
 class TestSolverConfig(unittest.TestCase):

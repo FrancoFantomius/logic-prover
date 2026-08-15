@@ -1,11 +1,11 @@
-"""Group theory axioms (associativity, identity, inverse, commutativity)."""
+﻿"""Group theory axioms (associativity, identity, inverse, commutativity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import Formula, Variable, Constant, FunctionApp, Equality, Forall
-from logic.core.sorts import PrimitiveSort
-from logic.core.signature import Signature
+from logic_prover.core.ast import Formula, Variable, Constant, FunctionApp, Equality, Forall
+from logic_prover.core.sorts import PrimitiveSort
+from logic_prover.core.signature import Signature
 
 GroupElem: PrimitiveSort = PrimitiveSort("GroupElem")
 

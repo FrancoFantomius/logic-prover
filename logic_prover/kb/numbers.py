@@ -1,14 +1,14 @@
-"""Peano arithmetic axioms and natural number signature definitions."""
+﻿"""Peano arithmetic axioms and natural number signature definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import PrimitiveSort, Nat, Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import PrimitiveSort, Nat, Ind
+from logic_prover.core.signature import Signature
 
 
 def get_peano_signature() -> Signature:

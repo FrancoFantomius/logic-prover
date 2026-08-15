@@ -1,4 +1,4 @@
-"""Interactive HTML visualizer for proof DAGs and theorem dependency networks."""
+﻿"""Interactive HTML visualizer for proof DAGs and theorem dependency networks."""
 
 from __future__ import annotations
 import json
@@ -6,10 +6,10 @@ import html
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from logic.core.parser import to_string
-from logic.prover.proof import ProofDAG, ProofStep
-from logic.deducer.graph import DependencyGraph
-from logic.core.exceptions import SolverError
+from logic_prover.core.parser import to_string
+from logic_prover.prover.proof import ProofDAG, ProofStep
+from logic_prover.deducer.graph import DependencyGraph
+from logic_prover.core.exceptions import SolverError
 
 
 class GraphExporter:

@@ -1,15 +1,15 @@
-"""AST extensions for Second-Order Logic (predicate/function variables and quantifiers)."""
+﻿"""AST extensions for Second-Order Logic (predicate/function variables and quantifiers)."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple, Set, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Sort, Ind
-from logic.core.exceptions import InvalidFormulaError
+from logic_prover.core.sorts import Sort, Ind
+from logic_prover.core.exceptions import InvalidFormulaError
 
 
 @dataclass(frozen=True, slots=True)

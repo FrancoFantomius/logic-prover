@@ -1,16 +1,16 @@
-"""Natural deduction proof reconstruction from resolution trace logs."""
+﻿"""Natural deduction proof reconstruction from resolution trace logs."""
 
 from __future__ import annotations
 from typing import List, Dict, Set, Optional, Tuple, TYPE_CHECKING
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Not, Implies, And, Or, Forall, Exists, PredicateApp, Equality
 )
-from logic.core.parser import to_string
-from logic.prover.proof import ProofDAG, ProofStep
+from logic_prover.core.parser import to_string
+from logic_prover.prover.proof import ProofDAG, ProofStep
 
 if TYPE_CHECKING:
-    from logic.prover.engine import ResolutionStep
-    from logic.prover.clausifier import Clause, Literal
+    from logic_prover.prover.engine import ResolutionStep
+    from logic_prover.prover.clausifier import Clause, Literal
 
 
 def _literal_to_formula(lit: Literal) -> Formula:

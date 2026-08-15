@@ -1,8 +1,8 @@
-import unittest
+﻿import unittest
 
-from logic.core.exceptions import ValidationError
-from logic.core.sorts import Ind, Nat, Bool
-from logic.core.signature import Signature, FunctionDecl, PredicateDecl
+from logic_prover.core.exceptions import ValidationError
+from logic_prover.core.sorts import Ind, Nat, Bool
+from logic_prover.core.signature import Signature, FunctionDecl, PredicateDecl
 
 
 class TestSignature(unittest.TestCase):

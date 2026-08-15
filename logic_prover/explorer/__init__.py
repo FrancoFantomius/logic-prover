@@ -1,16 +1,16 @@
-"""Formula explorer subsystem for candidate generation, diversity filtering, and heuristic ranking."""
+﻿"""Formula explorer subsystem for candidate generation, diversity filtering, and heuristic ranking."""
 
 from __future__ import annotations
 
-from logic.explorer.heuristics import (
+from logic_prover.explorer.heuristics import (
     DiversityMetrics,
     calculate_symbol_entropy,
     calculate_diversity_scores,
     composite_interestingness,
     is_redundant_structure
 )
-from logic.explorer.filter import FormulaFilter
-from logic.explorer.generator import (
+from logic_prover.explorer.filter import FormulaFilter
+from logic_prover.explorer.generator import (
     FormulaExplorer,
     anti_unify_terms,
     anti_unify_formulas

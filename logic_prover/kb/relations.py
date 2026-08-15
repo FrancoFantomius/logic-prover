@@ -1,13 +1,13 @@
-"""Binary relation theory axioms (reflexivity, symmetry, transitivity, irreflexivity)."""
+﻿"""Binary relation theory axioms (reflexivity, symmetry, transitivity, irreflexivity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, PredicateApp, Equality, Forall, Implies, And, Not
 )
-from logic.core.sorts import PrimitiveSort
-from logic.core.signature import Signature
+from logic_prover.core.sorts import PrimitiveSort
+from logic_prover.core.signature import Signature
 
 RelElem: PrimitiveSort = PrimitiveSort("RelElem")
 

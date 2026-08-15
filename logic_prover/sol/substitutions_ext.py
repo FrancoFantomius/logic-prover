@@ -1,20 +1,20 @@
-"""Higher-order pattern unification and beta-reduction algorithms for SOL."""
+﻿"""Higher-order pattern unification and beta-reduction algorithms for SOL."""
 
 from __future__ import annotations
 from typing import Dict, Tuple, Set, Optional, Union, Any
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists, free_variables
 )
-from logic.sol.ast_ext import (
+from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc,
     free_predicate_variables, free_function_variables
 )
-from logic.core.substitutions import substitute_formula, substitute_term, unify_terms, unify_formulas
-from logic.core.exceptions import UnificationError
-from logic.core.sorts import Ind
+from logic_prover.core.substitutions import substitute_formula, substitute_term, unify_terms, unify_formulas
+from logic_prover.core.exceptions import UnificationError
+from logic_prover.core.sorts import Ind
 
 
 def is_ho_pattern(

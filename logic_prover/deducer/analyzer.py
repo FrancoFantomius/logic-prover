@@ -1,14 +1,14 @@
-"""Network dependency analyzer and minimal hypothesis deduction algorithms."""
+﻿"""Network dependency analyzer and minimal hypothesis deduction algorithms."""
 
 from __future__ import annotations
 from typing import List, Tuple, Set, Optional, Dict
 import logging
 
-from logic.core.ast import Formula, canonicalize_bound_variables
-from logic.prover.engine import TheoremProver
-from logic.prover.proof import ProofDAG
-from logic.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError
-from logic.deducer.graph import DependencyGraph
+from logic_prover.core.ast import Formula, canonicalize_bound_variables
+from logic_prover.prover.engine import TheoremProver
+from logic_prover.prover.proof import ProofDAG
+from logic_prover.core.exceptions import ProofTimeoutError, ProofSearchExhaustedError
+from logic_prover.deducer.graph import DependencyGraph
 
 logger = logging.getLogger(__name__)
 

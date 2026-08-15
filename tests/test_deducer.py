@@ -1,24 +1,24 @@
-import unittest
+﻿import unittest
 import tempfile
 import json
 from pathlib import Path
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Variable, Constant, PredicateApp, Not, Or, Implies, And, Forall
 )
-from logic.core.sorts import Ind
-from logic.core.signature import Signature
-from logic.prover.engine import TheoremProver
-from logic.prover.proof import ProofDAG, ProofStep
-from logic.deducer.graph import DependencyGraph
-from logic.deducer.analyzer import (
+from logic_prover.core.sorts import Ind
+from logic_prover.core.signature import Signature
+from logic_prover.prover.engine import TheoremProver
+from logic_prover.prover.proof import ProofDAG, ProofStep
+from logic_prover.deducer.graph import DependencyGraph
+from logic_prover.deducer.analyzer import (
     analyze_dependencies,
     find_minimal_hypotheses,
     detect_redundant_hypotheses,
     compute_equivalence_classes,
 )
-from logic.core.database import KnowledgeDatabase
-from logic.__main__ import main
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.__main__ import main
 
 
 class TestDeducer(unittest.TestCase):

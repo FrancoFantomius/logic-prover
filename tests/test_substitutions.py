@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 try:
     from hypothesis import given, strategies as st
@@ -8,7 +8,7 @@ except ImportError:
     given = lambda *args, **kwargs: (lambda f: f)
     st = None
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Variable,
     Constant,
     FunctionApp,
@@ -24,9 +24,9 @@ from logic.core.ast import (
     free_variables,
     bound_variables,
 )
-from logic.core.sorts import Ind, Nat, Bool, PrimitiveSort
-from logic.core.exceptions import UnificationError, SortMismatchError
-from logic.core.substitutions import (
+from logic_prover.core.sorts import Ind, Nat, Bool, PrimitiveSort
+from logic_prover.core.exceptions import UnificationError, SortMismatchError
+from logic_prover.core.substitutions import (
     substitute_term,
     substitute_formula,
     apply_substitution,

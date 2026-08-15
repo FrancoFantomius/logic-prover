@@ -1,19 +1,19 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 import os
 import tempfile
 import unittest
 
-from logic.config import SolverConfig
-from logic.core.ast import (
+from logic_prover.config import SolverConfig
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Ind, Nat
-from logic.core.signature import Signature
-from logic.core.validator import validate_formula, is_well_formed
-from logic.core.database import KnowledgeDatabase
-from logic.kb import get_all_axioms, get_combined_signature
-from logic.explorer import (
+from logic_prover.core.sorts import Ind, Nat
+from logic_prover.core.signature import Signature
+from logic_prover.core.validator import validate_formula, is_well_formed
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.explorer import (
     DiversityMetrics,
     calculate_symbol_entropy,
     calculate_diversity_scores,
@@ -24,7 +24,7 @@ from logic.explorer import (
     anti_unify_terms,
     anti_unify_formulas
 )
-from logic.__main__ import main
+from logic_prover.__main__ import main
 
 
 class TestExplorerHeuristics(unittest.TestCase):

@@ -1,17 +1,17 @@
-"""Inference rules for resolution, factoring, paramodulation, and SOL instantiation."""
+﻿"""Inference rules for resolution, factoring, paramodulation, and SOL instantiation."""
 
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional, Callable, Any, Set, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Variable, FunctionApp, Formula, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists, free_variables
 )
-from logic.core.substitutions import (
+from logic_prover.core.substitutions import (
     unify_formulas, unify_terms, UnificationError, substitute_formula, substitute_term
 )
-from logic.prover.clausifier import Clause, Literal
+from logic_prover.prover.clausifier import Clause, Literal
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,10 +252,10 @@ class SOLInstantiateRule(InferenceRule):
         signature: Any = None
     ) -> List[Clause]:
         """Matches second-order logic templates against target goals and instantiates clauses."""
-        from logic.sol.ast_ext import ForallPred, ExistsPred, PredicateVariable
-        from logic.sol.substitutions_ext import ho_pattern_unify, substitute_predicate
-        from logic.sol.kb_ext import instantiate_induction
-        from logic.prover.clausifier import to_cnf
+        from logic_prover.sol.ast_ext import ForallPred, ExistsPred, PredicateVariable
+        from logic_prover.sol.substitutions_ext import ho_pattern_unify, substitute_predicate
+        from logic_prover.sol.kb_ext import instantiate_induction
+        from logic_prover.prover.clausifier import to_cnf
 
         clauses: List[Clause] = []
 

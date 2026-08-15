@@ -1,15 +1,15 @@
-"""Congruence closure algorithms for tracking ground term equivalences and function congruences."""
+﻿"""Congruence closure algorithms for tracking ground term equivalences and function congruences."""
 
 from __future__ import annotations
 from typing import Dict, List, Optional, Set, Tuple, Union
 from collections import deque
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import is_compatible
-from logic.core.exceptions import ValidationError
+from logic_prover.core.sorts import is_compatible
+from logic_prover.core.exceptions import ValidationError
 
 
 class CongruenceClosure:

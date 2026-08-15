@@ -1,13 +1,13 @@
-"""
+﻿"""
 Prover module for resolution refutation search, clausification, proof DAG validation,
 and natural deduction proof reconstruction.
 """
 
-from logic.prover.clausifier import Literal, Clause, to_cnf, negate_and_clausify
-from logic.prover.rules import InferenceRule, resolve_clauses, factor_clause, paramodulate
-from logic.prover.proof import ProofStep, ProofDAG
-from logic.prover.engine import ResolutionStep, TheoremProver
-from logic.prover.reconstruction import reconstruct_proof, simplify_proof
+from logic_prover.prover.clausifier import Literal, Clause, to_cnf, negate_and_clausify
+from logic_prover.prover.rules import InferenceRule, resolve_clauses, factor_clause, paramodulate
+from logic_prover.prover.proof import ProofStep, ProofDAG
+from logic_prover.prover.engine import ResolutionStep, TheoremProver
+from logic_prover.prover.reconstruction import reconstruct_proof, simplify_proof
 
 __all__ = [
     "Literal",

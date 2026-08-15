@@ -3,23 +3,45 @@ requires = ["setuptools>=61.0", "wheel", "cython>=3.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "logic"
+name = "logic-prover"
 version = "0.1.4"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
 authors = [{ name = "Franco Fantomius", email = "mail@francofantomius.com" }]
-license = { text = "Proprietary" }
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
     "Topic :: Scientific/Engineering :: Mathematics",
-    "License :: Other/Proprietary License",
+    "Topic :: Software Development :: Interpreters",
+    "License :: Free For Non-Commercial Use",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = [
+    "theorem-prover",
+    "automated-reasoning",
+    "formal-logic",
+    "first-order-logic",
+    "lean4",
+    "cython",
+    "resolution-prover",
+    "mathematics",
 ]
 dependencies = ["lark>=1.1.0", "tomli>=2.0.0; python_version < '3.11'"]
+
+[project.urls]
+Homepage = "https://github.com/FrancoFantomius/logic"
+Repository = "https://github.com/FrancoFantomius/logic.git"
+Documentation = "https://github.com/FrancoFantomius/logic#documentation"
+Issues = "https://github.com/FrancoFantomius/logic/issues"
+Changelog = "https://github.com/FrancoFantomius/logic/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 vis = ["jinja2>=3.0.0"]
@@ -30,25 +52,29 @@ dev = [
     "hypothesis>=6.70.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
 
 [project.scripts]
-logic = "logic.__main__:main"
+logic-prover = "logic_prover.__main__:main"
+logic_prover = "logic_prover.__main__:main"
+logic = "logic_prover.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["logic*"]
+include = ["logic_prover*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
-addopts = "--cov=logic --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
+addopts = "--cov=logic_prover --cov-report=term-missing --cov-report=html --cov-fail-under=85 -v"
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.coverage.run]
-source = ["logic"]
+source = ["logic_prover"]
 branch = true
-omit = ["logic/__main__.py"]
+omit = ["logic_prover/__main__.py"]
 
 [tool.coverage.report]
 show_missing = true

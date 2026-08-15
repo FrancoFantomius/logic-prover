@@ -1,13 +1,13 @@
-"""Equality axioms and congruence signature definitions."""
+﻿"""Equality axioms and congruence signature definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, Equality, Not, And, Or, Implies, Iff, Forall, Exists, FunctionApp, PredicateApp
 )
-from logic.core.sorts import Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import Ind
+from logic_prover.core.signature import Signature
 
 
 def get_equality_signature() -> Signature:

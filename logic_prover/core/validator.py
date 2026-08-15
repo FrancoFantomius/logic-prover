@@ -1,19 +1,19 @@
-"""Validation engine for checking AST sort and signature consistency."""
+﻿"""Validation engine for checking AST sort and signature consistency."""
 
 from __future__ import annotations
 from typing import List, Set, Union, Optional
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp,
     PredicateApp, Equality, Not, And, Or, Implies, Iff,
     Forall, Exists, VariableKind
 )
-from logic.core.sorts import Sort, Ind, is_compatible
-from logic.core.signature import Signature
-from logic.core.exceptions import ValidationError
+from logic_prover.core.sorts import Sort, Ind, is_compatible
+from logic_prover.core.signature import Signature
+from logic_prover.core.exceptions import ValidationError
 
 
-from logic.sol.ast_ext import (
+from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc
 )

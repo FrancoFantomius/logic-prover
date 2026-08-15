@@ -1,4 +1,4 @@
-"""
+﻿"""
 Integration tests for the logic CLI entry point (logic/__main__.py).
 """
 
@@ -8,10 +8,10 @@ import shutil
 import tempfile
 import unittest
 
-from logic.__main__ import main
-from logic.core.database import KnowledgeDatabase
-from logic.core.parser import parse_formula
-from logic.kb import get_combined_signature
+from logic_prover.__main__ import main
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.core.parser import parse_formula
+from logic_prover.kb import get_combined_signature
 
 
 class TestSolverCLI(unittest.TestCase):

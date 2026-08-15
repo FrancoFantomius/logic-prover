@@ -1,17 +1,17 @@
-"""Lean 4 exporter for translating terms, formulas, and proof DAGs to formal Lean 4 code."""
+﻿"""Lean 4 exporter for translating terms, formulas, and proof DAGs to formal Lean 4 code."""
 
 from __future__ import annotations
 import re
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Set, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term, Variable, Constant, FunctionApp, Formula, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind
-from logic.prover.proof import ProofDAG, ProofStep
-from logic.core.exceptions import SolverError, ValidationError
+from logic_prover.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind
+from logic_prover.prover.proof import ProofDAG, ProofStep
+from logic_prover.core.exceptions import SolverError, ValidationError
 
 
 class LeanExporter:

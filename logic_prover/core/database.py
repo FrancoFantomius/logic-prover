@@ -1,4 +1,4 @@
-"""SQLite database persistence engine for logic formulas, axioms, and theorems."""
+﻿"""SQLite database persistence engine for logic formulas, axioms, and theorems."""
 
 from __future__ import annotations
 import sqlite3
@@ -7,14 +7,14 @@ import hashlib
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any, Union, Set
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
     Equality, Not, And, Or, Implies, Iff, Forall, Exists, VariableKind,
     canonicalize_bound_variables, free_variables, formula_depth, formula_size
 )
-from logic.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind
-from logic.core.parser import to_string
-from logic.core.exceptions import DatabaseError
+from logic_prover.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind
+from logic_prover.core.parser import to_string
+from logic_prover.core.exceptions import DatabaseError
 
 # Type hint alias for ProofDAG until prover module is created
 ProofDAG = Any
@@ -51,7 +51,7 @@ def _dict_to_sort(d: Dict[str, Any]) -> Sort:
         raise DatabaseError(f"Invalid sort dictionary structure: {d}")
 
 
-from logic.sol.ast_ext import (
+from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc
 )
@@ -549,7 +549,7 @@ class KnowledgeDatabase:
             return proof_json
 
         try:
-            from logic.prover.proof import ProofDAG as RealProofDAG
+            from logic_prover.prover.proof import ProofDAG as RealProofDAG
             if hasattr(RealProofDAG, "from_dict") and isinstance(data, dict):
                 return RealProofDAG.from_dict(data)
         except Exception:

@@ -1,16 +1,16 @@
-"""Proof Directed Acyclic Graph (DAG) representation and validation data structures."""
+﻿"""Proof Directed Acyclic Graph (DAG) representation and validation data structures."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Optional, Any, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, Term, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
 )
-from logic.core.signature import Signature
-from logic.core.validator import validate_formula
-from logic.core.substitutions import substitute_formula
-from logic.core.database import _formula_to_dict, _dict_to_formula, _term_to_dict, _dict_to_term
+from logic_prover.core.signature import Signature
+from logic_prover.core.validator import validate_formula
+from logic_prover.core.substitutions import substitute_formula
+from logic_prover.core.database import _formula_to_dict, _dict_to_formula, _term_to_dict, _dict_to_term
 
 
 @dataclass(frozen=True)

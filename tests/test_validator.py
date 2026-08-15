@@ -1,13 +1,13 @@
-import unittest
+﻿import unittest
 
-from logic.core.exceptions import ValidationError
-from logic.core.sorts import Ind, Nat, Bool, SetSort
-from logic.core.ast import (
+from logic_prover.core.exceptions import ValidationError
+from logic_prover.core.sorts import Ind, Nat, Bool, SetSort
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, And, Or, Implies, Iff, Forall, Exists, VariableKind
 )
-from logic.core.signature import Signature
-from logic.core.validator import validate_term, validate_formula, is_well_formed
+from logic_prover.core.signature import Signature
+from logic_prover.core.validator import validate_term, validate_formula, is_well_formed
 
 
 class TestValidator(unittest.TestCase):

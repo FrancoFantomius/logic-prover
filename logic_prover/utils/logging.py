@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import sys
 from typing import Optional, TextIO, Union
-from logic.config import SolverConfig
+from logic_prover.config import SolverConfig
 
 
 class SolverLogFormatter(logging.Formatter):
@@ -70,7 +70,7 @@ def setup_logging(
     else:
         raise ValueError(f"Invalid log level type: {type(effective_level)}")
 
-    logger = logging.getLogger("logic")
+    logger = logging.getLogger("logic_prover")
     logger.setLevel(numeric_level)
 
     # Clear existing handlers to allow reconfiguration without duplication
@@ -95,17 +95,18 @@ def setup_logging(
 
 def get_logger(name: str) -> logging.Logger:
     """
-    Retrieves a logger instance scoped under the 'logic' namespace.
+    Retrieves a logger instance scoped under the 'logic_prover' namespace.
 
     Args:
-        name: Sub-module name (e.g. 'prover.engine' or 'logic.core.ast').
+        name: Sub-module name (e.g. 'prover.engine' or 'logic_prover.core.ast').
 
     Returns:
-        logging.Logger configured to bubble events up to root 'logic' logger.
+        logging.Logger configured to bubble events up to root 'logic_prover' logger.
     """
-    if name == "logic":
-        return logging.getLogger("logic")
-    elif name.startswith("logic."):
+    if name == "logic_prover":
+        return logging.getLogger("logic_prover")
+    elif name.startswith("logic_prover."):
         return logging.getLogger(name)
     else:
-        return logging.getLogger(f"logic.{name}")
+        return logging.getLogger(f"logic_prover.{name}")
+

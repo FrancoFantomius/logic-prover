@@ -1,9 +1,9 @@
-"""Substitutions and term/formula unification algorithms."""
+﻿"""Substitutions and term/formula unification algorithms."""
 
 from __future__ import annotations
 from typing import Dict, Set, Optional, Union, Callable, cast
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term,
     Variable,
     Constant,
@@ -16,9 +16,9 @@ from logic.core.ast import (
     free_variables,
     bound_variables,
 )
-from logic.core.sorts import is_compatible, sort_of_term
-from logic.core.visitors import ASTTransformer
-from logic.core.exceptions import UnificationError, SortMismatchError
+from logic_prover.core.sorts import is_compatible, sort_of_term
+from logic_prover.core.visitors import ASTTransformer
+from logic_prover.core.exceptions import UnificationError, SortMismatchError
 
 
 class SubstitutionTransformer(ASTTransformer):

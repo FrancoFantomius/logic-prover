@@ -1,8 +1,8 @@
-import unittest
-from logic.core.ast import Variable, Constant, FunctionApp, PredicateApp, Forall, And, Equality
-from logic.core.sorts import Ind, Nat
-from logic.core.exceptions import InvalidFormulaError
-from logic.sol.ast_ext import (
+﻿import unittest
+from logic_prover.core.ast import Variable, Constant, FunctionApp, PredicateApp, Forall, And, Equality
+from logic_prover.core.sorts import Ind, Nat
+from logic_prover.core.exceptions import InvalidFormulaError
+from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc,
     free_predicate_variables, bound_predicate_variables,

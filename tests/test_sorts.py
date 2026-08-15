@@ -1,8 +1,8 @@
-import unittest
+﻿import unittest
 from dataclasses import FrozenInstanceError
 
-from logic.core.exceptions import InvalidFormulaError
-from logic.core.sorts import (
+from logic_prover.core.exceptions import InvalidFormulaError
+from logic_prover.core.sorts import (
     Sort,
     PrimitiveSort,
     ParameterizedSort,
@@ -16,7 +16,7 @@ from logic.core.sorts import (
     is_compatible,
     sort_of_term,
 )
-from logic.core.ast import Variable, Constant, FunctionApp
+from logic_prover.core.ast import Variable, Constant, FunctionApp
 
 
 class TestSorts(unittest.TestCase):

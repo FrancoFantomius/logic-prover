@@ -1,13 +1,13 @@
-"""Function theory axioms (injective, surjective, bijective, identity)."""
+﻿"""Function theory axioms (injective, surjective, bijective, identity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Variable, Constant, FunctionApp, PredicateApp, Equality, Forall, Exists, Implies, And, Iff
 )
-from logic.core.sorts import PrimitiveSort, Ind
-from logic.core.signature import Signature
+from logic_prover.core.sorts import PrimitiveSort, Ind
+from logic_prover.core.signature import Signature
 
 Dom: PrimitiveSort = PrimitiveSort("Dom")
 Codom: PrimitiveSort = PrimitiveSort("Codom")

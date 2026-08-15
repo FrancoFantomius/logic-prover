@@ -1,10 +1,10 @@
-"""Custom exception hierarchy for the logic library."""
+﻿"""Custom exception hierarchy for the logic library."""
 
 from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from logic.core.sorts import Sort
+    from logic_prover.core.sorts import Sort
 
 
 class SolverError(Exception):

@@ -19,17 +19,17 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from logic.config import SolverConfig
-from logic.core.database import KnowledgeDatabase
-from logic.core.exceptions import SolverError, ParseError, ProofTimeoutError
-from logic.core.parser import parse_formula, to_string
-from logic.deducer import analyze_dependencies, compute_equivalence_classes
-from logic.explorer import FormulaExplorer, calculate_diversity_scores, composite_interestingness
-from logic.exporters import LeanExporter, GraphExporter
-from logic.kb import get_all_axioms, get_combined_signature
-from logic.prover import TheoremProver
-from logic.utils.doc_generator import build_markdown_docs
-from logic.utils.logging import setup_logging, get_logger
+from logic_prover.config import SolverConfig
+from logic_prover.core.database import KnowledgeDatabase
+from logic_prover.core.exceptions import SolverError, ParseError, ProofTimeoutError
+from logic_prover.core.parser import parse_formula, to_string
+from logic_prover.deducer import analyze_dependencies, compute_equivalence_classes
+from logic_prover.explorer import FormulaExplorer, calculate_diversity_scores, composite_interestingness
+from logic_prover.exporters import LeanExporter, GraphExporter
+from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.prover import TheoremProver
+from logic_prover.utils.doc_generator import build_markdown_docs
+from logic_prover.utils.logging import setup_logging, get_logger
 
 logger = get_logger("cli")
 
@@ -372,7 +372,7 @@ def cmd_export_graph(args: argparse.Namespace, config: SolverConfig) -> int:
 def cmd_docs(args: argparse.Namespace, config: SolverConfig) -> int:
     """Executes the 'docs' command."""
     output_dir = args.output_dir or "docs"
-    docs_created = build_markdown_docs(source_dir="logic", output_docs_dir=output_dir)
+    docs_created = build_markdown_docs(source_dir="logic_prover", output_docs_dir=output_dir)
     print(f"Successfully generated {len(docs_created)} documentation files under '{output_dir}/'.")
     logger.info(f"Generated {len(docs_created)} documentation files under '{output_dir}/'.")
     return 0

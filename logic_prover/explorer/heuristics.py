@@ -1,16 +1,16 @@
-"""Diversity metrics and formula interestingness heuristic scoring."""
+﻿"""Diversity metrics and formula interestingness heuristic scoring."""
 
 from __future__ import annotations
 import math
 from dataclasses import dataclass
 from typing import Dict, Set, Optional, Tuple, Any, List
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp,
     PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
     free_variables, bound_variables, formula_size, formula_depth
 )
-from logic.core.visitors import ASTVisitor
+from logic_prover.core.visitors import ASTVisitor
 
 
 @dataclass(frozen=True, slots=True)

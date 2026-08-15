@@ -1,10 +1,10 @@
-import unittest
-from logic.core.ast import (
+﻿import unittest
+from logic_prover.core.ast import (
     Variable, Constant, FunctionApp, PredicateApp, Equality, Not
 )
-from logic.core.sorts import Ind
-from logic.prover.clausifier import Literal, Clause
-from logic.prover.rules import (
+from logic_prover.core.sorts import Ind
+from logic_prover.prover.clausifier import Literal, Clause
+from logic_prover.prover.rules import (
     standardize_clause_variables, resolve_clauses, factor_clause,
     paramodulate, get_resolution_rules, get_reconstruction_rules
 )

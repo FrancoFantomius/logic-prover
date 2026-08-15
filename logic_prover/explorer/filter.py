@@ -1,12 +1,12 @@
-"""Diversity filter and Bloom-style formula deduplication filter."""
+﻿"""Diversity filter and Bloom-style formula deduplication filter."""
 
 from __future__ import annotations
 import json
 import hashlib
 import os
 from typing import Set, Optional, Dict, Any
-from logic.core.ast import Formula, canonicalize_bound_variables
-from logic.core.exceptions import SolverError, DatabaseError
+from logic_prover.core.ast import Formula, canonicalize_bound_variables
+from logic_prover.core.exceptions import SolverError, DatabaseError
 
 
 class FormulaFilter:

@@ -1,4 +1,4 @@
-"""Abstract Syntax Tree (AST) definitions for First-Order Logic terms and formulas."""
+﻿"""Abstract Syntax Tree (AST) definitions for First-Order Logic terms and formulas."""
 
 from __future__ import annotations
 from abc import ABC
@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Tuple, FrozenSet, Set, Union, Dict, Optional, Any
 
-from logic.core.sorts import Sort, Ind
-from logic.core.exceptions import InvalidFormulaError
+from logic_prover.core.sorts import Sort, Ind
+from logic_prover.core.exceptions import InvalidFormulaError
 
 
 class VariableKind(Enum):

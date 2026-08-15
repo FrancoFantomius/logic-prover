@@ -1,11 +1,11 @@
-"""Clausification pipeline for translating First-Order Logic formulas to Conjunctive Normal Form (CNF)."""
+﻿"""Clausification pipeline for translating First-Order Logic formulas to Conjunctive Normal Form (CNF)."""
 
 from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from typing import List, Set, FrozenSet, Dict, Tuple, Optional, Union
 
-from logic.core.ast import (
+from logic_prover.core.ast import (
     Term,
     Variable,
     Constant,
@@ -23,9 +23,9 @@ from logic.core.ast import (
     free_variables,
     bound_variables,
 )
-from logic.core.sorts import Sort, Ind
-from logic.core.signature import Signature
-from logic.core.substitutions import substitute_formula, substitute_term
+from logic_prover.core.sorts import Sort, Ind
+from logic_prover.core.signature import Signature
+from logic_prover.core.substitutions import substitute_formula, substitute_term
 
 
 _skolem_constant_counter = itertools.count(0)

@@ -1,14 +1,14 @@
-"""Sort system hierarchy for primitive, parameterized, and function sorts."""
+﻿"""Sort system hierarchy for primitive, parameterized, and function sorts."""
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Tuple, Optional, Dict, TYPE_CHECKING
 
-from logic.core.exceptions import InvalidFormulaError
+from logic_prover.core.exceptions import InvalidFormulaError
 
 if TYPE_CHECKING:
-    from logic.core.ast import Term
+    from logic_prover.core.ast import Term
 
 
 @dataclass(frozen=True)
@@ -136,7 +136,7 @@ def sort_of_term(term: Term, context: Optional[Dict[str, Sort]] = None) -> Sort:
     - Constant: term.sort or lookup in context if context provided
     - FunctionApp: term.return_sort or lookup function return sort in context
     """
-    from logic.core.ast import Variable, Constant, FunctionApp
+    from logic_prover.core.ast import Variable, Constant, FunctionApp
 
     if isinstance(term, Variable):
         return term.sort
