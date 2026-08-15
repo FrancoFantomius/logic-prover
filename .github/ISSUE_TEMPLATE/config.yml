@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
-  - name: "📖 Documentation & API Reference"
-    url: "https://github.com/FrancoFantomius/logic#documentation"
+  - name: "Documentation & API Reference"
+    url: "https://github.com/FrancoFantomius/logic-prover#documentation"
     about: "Please review the project documentation for API usage and examples."
-  - name: "💬 Questions & Discussions"
-    url: "https://github.com/FrancoFantomius/logic/discussions"
+  - name: "Questions & Discussions"
+    url: "https://github.com/FrancoFantomius/logic-prover/discussions"
     about: "Ask questions, share workflows, and discuss theorem proving ideas."
-  - name: "🔒 Security Vulnerability"
-    url: "https://github.com/FrancoFantomius/logic/security/advisories/new"
+  - name: "Security Vulnerability"
+    url: "https://github.com/FrancoFantomius/logic-prover/security/advisories/new"
     about: "Report security issues privately to the maintainers."

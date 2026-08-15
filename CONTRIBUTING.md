@@ -22,8 +22,8 @@ All contributors and maintainers are expected to adhere to our [Code of Conduct]
 
 1. **Fork and clone** the repository:
    ```bash
-   git clone https://github.com/<your-username>/logic.git
-   cd logic
+   git clone https://github.com/<your-username>/logic-prover.git
+   cd logic-prover
    ```
 
 2. **Create and activate a virtual environment**:

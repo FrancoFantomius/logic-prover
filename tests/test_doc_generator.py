@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import logic_prover
+
 from logic_prover.utils.doc_generator import (
     parse_google_docstring,
     extract_docstrings_from_module,
@@ -125,8 +127,9 @@ def sample_function(param: int) -> bool:
     def test_build_markdown_docs(self) -> None:
         """Test scanning codebase and writing Markdown documentation portal."""
         tmp_dir = tempfile.mkdtemp()
+        source_dir = str(Path(logic_prover.__file__).parent)
         try:
-            docs = build_markdown_docs(source_dir="logic_prover", output_docs_dir=tmp_dir)
+            docs = build_markdown_docs(source_dir=source_dir, output_docs_dir=tmp_dir)
             self.assertTrue(len(docs) > 0)
             index_path = Path(tmp_dir) / "index.md"
             self.assertTrue(index_path.exists())

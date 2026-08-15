@@ -18,7 +18,7 @@ The `logic-prover` maintainers take the security of this project seriously. If y
 ### How to Report
 
 1. **Email**: Send an email with vulnerability details to [mail@francofantomius.com](mailto:mail@francofantomius.com).
-2. **GitHub Security Advisory**: Alternatively, submit a report via [GitHub Private Vulnerability Reporting](https://github.com/FrancoFantomius/logic/security/advisories/new).
+2. **GitHub Security Advisory**: Alternatively, submit a report via [GitHub Private Vulnerability Reporting](https://github.com/FrancoFantomius/logic-prover/security/advisories/new).
 
 ### What to Include in Your Report
 

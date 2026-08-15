@@ -37,11 +37,11 @@ keywords = [
 dependencies = ["lark>=1.1.0", "tomli>=2.0.0; python_version < '3.11'"]
 
 [project.urls]
-Homepage = "https://github.com/FrancoFantomius/logic"
-Repository = "https://github.com/FrancoFantomius/logic.git"
-Documentation = "https://github.com/FrancoFantomius/logic#documentation"
-Issues = "https://github.com/FrancoFantomius/logic/issues"
-Changelog = "https://github.com/FrancoFantomius/logic/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/FrancoFantomius/logic-prover"
+Repository = "https://github.com/FrancoFantomius/logic-prover.git"
+Documentation = "https://github.com/FrancoFantomius/logic-prover#documentation"
+Issues = "https://github.com/FrancoFantomius/logic-prover/issues"
+Changelog = "https://github.com/FrancoFantomius/logic-prover/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 vis = ["jinja2>=3.0.0"]

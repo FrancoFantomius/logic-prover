@@ -1,7 +1,7 @@
 # Logic Prover (`logic-prover`)
 
 [![PyPI version](https://img.shields.io/pypi/v/logic-prover.svg)](https://pypi.org/project/logic-prover/)
-[![CI](https://github.com/FrancoFantomius/logic/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic/actions/workflows/ci.yml)
+[![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/Docs-API_Reference-blue.svg)](docs/index.md)
 [![Changelog](https://img.shields.io/badge/Changelog-Keep_a_Changelog-orange.svg)](CHANGELOG.md)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
@@ -44,7 +44,7 @@ pip install "logic-prover[vis]"
 You can also install the latest development version directly from GitHub:
 
 ```bash
-pip install git+https://github.com/FrancoFantomius/logic.git
+pip install git+https://github.com/FrancoFantomius/logic-prover.git
 ```
 
 ### From Source (Development)
@@ -52,8 +52,8 @@ pip install git+https://github.com/FrancoFantomius/logic.git
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/FrancoFantomius/logic.git
-cd logic
+git clone https://github.com/FrancoFantomius/logic-prover.git
+cd logic-prover
 pip install -e ".[dev,vis]"
 ```
 
