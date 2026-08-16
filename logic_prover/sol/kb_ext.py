@@ -111,6 +111,14 @@ def instantiate_comprehension(
     """
     Constructs an explicit instance of the Second-Order Comprehension Schema for a given body formula φ(x_1, ..., x_k):
     ∃P. ∀x_1 ... ∀x_k. (P(x_1, ..., x_k) ⇔ φ(x_1, ..., x_k))
+
+    Args:
+        pred_var: The template PredicateVariable whose index/arity informs the new bound variable.
+        params: The individual variables quantified over in the schema instance.
+        body: The defining formula φ(x_1, ..., x_k).
+
+    Returns:
+        The comprehension schema instance as a Formula.
     """
     p_bound = PredicateVariable(index=pred_var.index + 100, arity=len(params))
     inner: Formula = Iff(
@@ -131,6 +139,15 @@ def instantiate_induction(
     """
     Instantiates the Second-Order Peano Induction Principle for a specific property formula φ(n):
     (φ(0) ∧ ∀n. (φ(n) ⇒ φ(S(n)))) ⇒ ∀n. φ(n)
+
+    Args:
+        property_formula: The property formula φ(n) to induct over.
+        bound_var: The variable n used in the induction step and universal conclusion.
+        zero_term: Optional term to substitute for the base case; defaults to Constant("zero").
+        succ_func_name: Name of the successor function symbol; defaults to "succ".
+
+    Returns:
+        The induction principle instance as a Formula.
     """
     if zero_term is None:
         zero_term = Constant("zero", sort=bound_var.sort)

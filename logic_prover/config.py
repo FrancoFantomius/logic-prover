@@ -34,7 +34,21 @@ class SolverConfig:
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> SolverConfig:
-        """Loads configuration settings from a JSON or TOML file."""
+        """Loads configuration settings from a JSON or TOML file.
+
+        Unknown keys present in the file are silently ignored.
+
+        Args:
+            path: Filesystem path to the .json or .toml configuration file.
+
+        Returns:
+            A SolverConfig instance populated from the file contents.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            SolverError: If TOML is unsupported, the extension is unsupported,
+                or the file does not contain a mapping object.
+        """
         file_path = Path(path)
         if not file_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {path}")
@@ -63,7 +77,13 @@ class SolverConfig:
         return asdict(self)
 
     def save(self, path: Union[str, Path]) -> None:
-        """Saves configuration settings to a JSON file."""
+        """Saves configuration settings to a JSON file.
+
+        Creates the parent directory if it does not exist.
+
+        Args:
+            path: Filesystem path where the JSON configuration should be written.
+        """
         file_path = Path(path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:

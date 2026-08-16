@@ -83,7 +83,15 @@ _WS_RE = re.compile(r"\s+")
 
 def tokenize(text: str) -> List[Token]:
     """Scans text into a list of Token objects with line and column tracking.
-    Raises ParseError on unrecognized character sequences.
+
+    Args:
+        text: Raw input string to tokenize.
+
+    Returns:
+        List of Token objects ending with an EOF token.
+
+    Raises:
+        ParseError: On unrecognized character sequences.
     """
     tokens: List[Token] = []
     pos = 0
@@ -131,17 +139,43 @@ class _Parser:
     """Internal Pratt parser state machine supporting infix, prefix, and quantifier notation."""
 
     def __init__(self, tokens: List[Token], signature: Signature) -> None:
+        """Initializes the parser state machine with a token stream.
+
+        Args:
+            tokens: List of tokens produced by tokenize().
+            signature: Logical signature used to resolve function, predicate,
+                and constant symbols.
+        """
         self.tokens = tokens
         self.signature = signature
         self.idx = 0
 
     def peek(self, offset: int = 0) -> Token:
+        """Returns the token at the given offset without consuming it.
+
+        Args:
+            offset: Lookahead distance from the current position (default 0).
+
+        Returns:
+            The token at that position, or the EOF token if past the end.
+        """
         pos = self.idx + offset
         if pos < len(self.tokens):
             return self.tokens[pos]
         return self.tokens[-1]
 
     def consume(self, expected_type: Optional[TokenType] = None) -> Token:
+        """Consumes and returns the current token, optionally checking its type.
+
+        Args:
+            expected_type: If provided, the consumed token must match this type.
+
+        Returns:
+            The consumed token.
+
+        Raises:
+            ParseError: If the token type does not match expected_type.
+        """
         tok = self.peek()
         if expected_type is not None and tok.type != expected_type:
             raise ParseError(
@@ -152,6 +186,17 @@ class _Parser:
         return tok
 
     def parse_formula(self, min_prec: int = 0) -> Formula:
+        """Parses a formula using Pratt-style precedence climbing.
+
+        Args:
+            min_prec: Minimum infix precedence to accept (used for recursion).
+
+        Returns:
+            The parsed Formula AST node.
+
+        Raises:
+            ParseError: On syntax errors or undeclared symbols.
+        """
         tok = self.peek()
 
         # Handle SOL quantifiers
@@ -429,6 +474,14 @@ class _Parser:
         raise ParseError(f"Unexpected token '{tok.value}' when expecting formula at line {tok.line}, col {tok.col}")
 
     def parse_term(self) -> Term:
+        """Parses a term (variable, constant, or function application).
+
+        Returns:
+            The parsed Term AST node.
+
+        Raises:
+            ParseError: On syntax errors or undeclared symbols.
+        """
         tok = self.peek()
         if tok.type == TokenType.FUNC_VAR:
             func_tok = self.consume(TokenType.FUNC_VAR)
@@ -496,7 +549,16 @@ class _Parser:
 
 def parse_formula(text: str, signature: Signature) -> Formula:
     """Parses text into a Formula AST object using signature context.
-    Raises ParseError on syntax error or symbol mismatch.
+
+    Args:
+        text: Formula string to parse.
+        signature: Logical signature resolving symbols used in the formula.
+
+    Returns:
+        The parsed Formula AST node.
+
+    Raises:
+        ParseError: On syntax error or symbol mismatch.
     """
     tokens = tokenize(text)
     parser = _Parser(tokens, signature)
@@ -511,7 +573,16 @@ def parse_formula(text: str, signature: Signature) -> Formula:
 
 def parse_term(text: str, signature: Signature) -> Term:
     """Parses text into a Term AST object using signature context.
-    Raises ParseError on syntax error or symbol mismatch.
+
+    Args:
+        text: Term string to parse.
+        signature: Logical signature resolving symbols used in the term.
+
+    Returns:
+        The parsed Term AST node.
+
+    Raises:
+        ParseError: On syntax error or symbol mismatch.
     """
     tokens = tokenize(text)
     parser = _Parser(tokens, signature)
@@ -526,7 +597,16 @@ def parse_term(text: str, signature: Signature) -> Term:
 
 def to_string(node: Union[Term, Formula], notation: str = "infix") -> str:
     """Serializes a Term or Formula AST to a string representation.
-    Supported notations: 'infix' (default), 'prefix', 'latex'.
+
+    Args:
+        node: The Term or Formula AST node to serialize.
+        notation: Output notation, one of 'infix' (default), 'prefix', or 'latex'.
+
+    Returns:
+        The serialized string representation of the node.
+
+    Raises:
+        ValueError: If notation is not one of the supported values.
     """
     from logic_prover.core.visitors import ExportVisitor
     visitor = ExportVisitor(notation=notation)

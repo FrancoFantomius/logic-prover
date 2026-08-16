@@ -129,7 +129,19 @@ build_cli_parser = build_parser
 
 
 def cmd_init(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'init' command."""
+    """
+    Executes the 'init' command: creates the database (optionally resetting it) and
+    populates it with all foundational axioms from the knowledge base.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.db_path` (falling back to
+            `config.db_path`) as the SQLite file path and `args.reset` to force
+            re-creation of the database.
+        config: Global SolverConfig providing the default database path.
+
+    Returns:
+        Exit code 0 on success.
+    """
     db_path = args.db_path or config.db_path
     if args.reset and Path(db_path).exists():
         try:
@@ -154,7 +166,21 @@ def cmd_init(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_explore(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'explore' command."""
+    """
+    Executes the 'explore' command: generates novel candidate formulas with the
+    FormulaExplorer and prints the top-ranked candidates with their interestingness scores.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.db_path` (falling back to
+            `config.db_path`) for the database, `args.strategy` for the generation
+            strategy, `args.depth` and `args.count` for candidate generation limits,
+            `args.top_k` for the number of displayed results, and `args.filter_file`
+            for the persistent filter state path.
+        config: Global SolverConfig passed to the FormulaExplorer.
+
+    Returns:
+        Exit code 0 on success.
+    """
     db_path = args.db_path or config.db_path
     db = KnowledgeDatabase(db_path=db_path)
     signature = get_combined_signature()
@@ -197,7 +223,22 @@ def cmd_explore(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_prove(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'prove' command."""
+    """
+    Executes the 'prove' command: attempts a resolution proof of the target formula
+    from the given premises and prints success/failure information, optionally saving
+    the proved theorem to the database.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.target_pos` or `args.target`
+            as the target formula string, `args.premises` as the premise formula
+            strings, `args.stubs_only` for syntax-only checking, `args.max_steps` and
+            `args.timeout` for prover limits, `args.save` to store the theorem, and
+            `args.db_path` (falling back to `config.db_path`) for the database.
+        config: Global SolverConfig passed to the TheoremProver.
+
+    Returns:
+        Exit code 0 on success, 1 on failure or missing target.
+    """
     target_str = args.target_pos or args.target
     if not target_str:
         print("Error: Target formula string is required.")
@@ -240,7 +281,21 @@ def cmd_prove(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_analyze(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'analyze' command."""
+    """
+    Executes the 'analyze' command: performs dependency analysis and equivalence class
+    computation over the theorems in the database and prints a summary, optionally
+    exporting the dependency graph to a JSON file.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.db_path` (falling back to
+            `args.db` and then `config.db_path`) for the database, `args.category` to
+            filter theorems, `args.pairwise` to enable O(n^2) pairwise implication
+            proofs, and `args.output` for the JSON export path.
+        config: Global SolverConfig passed to the TheoremProver.
+
+    Returns:
+        Exit code 0 on success.
+    """
     db_path = args.db_path or (args.db if args.db != "logic_data.db" or Path("logic_data.db").exists() else config.db_path)
     if not Path(db_path).exists():
         print(f"No theorems found in database '{db_path}'.")
@@ -283,7 +338,20 @@ def cmd_analyze(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_export_lean(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'export lean' command."""
+    """
+    Executes the 'export lean' command: exports theorems (with optional proofs) from
+    the database to a Lean 4 formal proof file, or emits a preamble if none are found.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.db_path` (falling back to
+            `config.db_path`) for the database, `args.theorems` to select specific
+            theorem names, `args.stubs_only` to emit sorry stubs, and `args.output`
+            for the target .lean file path.
+        config: Global SolverConfig providing the default database path.
+
+    Returns:
+        Exit code 0 on success.
+    """
     db_path = args.db_path or config.db_path
     exporter = LeanExporter()
     theorems_to_export = []
@@ -317,7 +385,20 @@ def cmd_export_lean(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_export_graph(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'export graph' command."""
+    """
+    Executes the 'export graph' command: exports either a proof DAG or a theorem
+    dependency network to an interactive HTML visualization.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.db_path` (falling back to
+            `config.db_path`) for the database, `args.type` ('proof' or 'dependency')
+            to select the visualization, `args.theorem` for the target theorem name,
+            and `args.output` for the target .html file path.
+        config: Global SolverConfig providing the default database path.
+
+    Returns:
+        Exit code 0 on success, 1 on error.
+    """
     db_path = args.db_path or config.db_path
     exporter = GraphExporter()
     output_path = args.output or "graph.html"
@@ -370,7 +451,18 @@ def cmd_export_graph(args: argparse.Namespace, config: SolverConfig) -> int:
 
 
 def cmd_docs(args: argparse.Namespace, config: SolverConfig) -> int:
-    """Executes the 'docs' command."""
+    """
+    Executes the 'docs' command: regenerates the static Markdown API documentation
+    from source docstrings using the doc generator.
+
+    Args:
+        args: Parsed command-line arguments. Uses `args.output_dir` (falling back to
+            'docs') as the target output directory for the generated Markdown files.
+        config: Global SolverConfig (unused, kept for a consistent command signature).
+
+    Returns:
+        Exit code 0 on success.
+    """
     output_dir = args.output_dir or "docs"
     docs_created = build_markdown_docs(source_dir="logic_prover", output_docs_dir=output_dir)
     print(f"Successfully generated {len(docs_created)} documentation files under '{output_dir}/'.")

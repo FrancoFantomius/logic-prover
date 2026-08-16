@@ -251,7 +251,14 @@ def _dict_to_formula(d: Dict[str, Any]) -> Formula:
 
 
 def extract_predicates(formula: Formula) -> Set[str]:
-    """Extracts all predicate symbol names from a formula."""
+    """Extracts all predicate symbol names from a formula.
+
+    Args:
+        formula: The Formula AST node to scan for predicate symbols.
+
+    Returns:
+        Set of predicate name strings found in the formula.
+    """
     preds: Set[str] = set()
     if isinstance(formula, PredicateApp):
         preds.add(formula.pred.name if isinstance(formula.pred, PredicateVariable) else str(formula.pred))
@@ -268,7 +275,14 @@ def extract_predicates(formula: Formula) -> Set[str]:
 
 
 def extract_functions(node: Union[Formula, Term]) -> Set[str]:
-    """Extracts all function symbol names from a formula or term."""
+    """Extracts all function symbol names from a formula or term.
+
+    Args:
+        node: The Formula or Term AST node to scan for function symbols.
+
+    Returns:
+        Set of function name strings found in the node.
+    """
     funcs: Set[str] = set()
     if isinstance(node, FunctionApp):
         funcs.add(node.func.name if isinstance(node.func, FunctionVariable) else str(node.func))
@@ -296,7 +310,12 @@ class KnowledgeDatabase:
     """SQLite persistent storage engine for AST formulas, axioms, proved theorems, and proof DAGs."""
 
     def __init__(self, db_path: Union[str, Path] = "logic_data.db") -> None:
-        """Initializes the database connection and schema tables."""
+        """Initializes the database connection and schema tables.
+
+        Args:
+            db_path: Filesystem path to the SQLite database file, or ':memory:'
+                for an in-memory database. Defaults to 'logic_data.db'.
+        """
         self.db_path = str(db_path)
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -416,7 +435,16 @@ class KnowledgeDatabase:
         return cursor.lastrowid
 
     def add_axiom(self, name: str, formula: Formula, category: str = "general") -> None:
-        """Registers a named axiom in database. Raises DatabaseError on duplicate name."""
+        """Registers a named axiom in database. Raises DatabaseError on duplicate name.
+
+        Args:
+            name: Unique string name for the axiom.
+            formula: The Formula AST node to store.
+            category: Optional classification label for the axiom (default 'general').
+
+        Raises:
+            DatabaseError: If the axiom name is already registered or storage fails.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -446,7 +474,17 @@ class KnowledgeDatabase:
         proof: Optional[ProofDAG] = None,
         category: str = "general"
     ) -> None:
-        """Registers a proved theorem and optional proof DAG."""
+        """Registers a proved theorem and optional proof DAG.
+
+        Args:
+            name: Unique string name for the theorem.
+            formula: The Formula AST node to store.
+            proof: Optional proof object (ProofDAG, dict, or JSON string) to persist.
+            category: Optional classification label for the theorem (default 'general').
+
+        Raises:
+            DatabaseError: If the theorem name is already registered or storage fails.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -494,7 +532,17 @@ class KnowledgeDatabase:
             raise
 
     def get_axioms(self, category: Optional[str] = None) -> List[Tuple[str, Formula]]:
-        """Retrieves axioms, optionally filtered by category."""
+        """Retrieves axioms, optionally filtered by category.
+
+        Args:
+            category: Optional category name to filter axioms by.
+
+        Returns:
+            List of (name, Formula) tuples for the retrieved axioms.
+
+        Raises:
+            DatabaseError: If the database connection is closed.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -513,7 +561,17 @@ class KnowledgeDatabase:
         return [(name, self._json_to_formula(json_str)) for name, json_str in rows]
 
     def get_theorems(self, category: Optional[str] = None) -> List[Tuple[str, Formula]]:
-        """Retrieves theorems, optionally filtered by category."""
+        """Retrieves theorems, optionally filtered by category.
+
+        Args:
+            category: Optional category name to filter theorems by.
+
+        Returns:
+            List of (name, Formula) tuples for the retrieved theorems.
+
+        Raises:
+            DatabaseError: If the database connection is closed.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -532,7 +590,18 @@ class KnowledgeDatabase:
         return [(name, self._json_to_formula(json_str)) for name, json_str in rows]
 
     def get_proof(self, theorem_name: str) -> Optional[ProofDAG]:
-        """Retrieves proof DAG for named theorem."""
+        """Retrieves proof DAG for named theorem.
+
+        Args:
+            theorem_name: Name of the theorem whose proof should be retrieved.
+
+        Returns:
+            The proof DAG object, a raw JSON string if deserialization is not
+            possible, or None if no proof is stored.
+
+        Raises:
+            DatabaseError: If the database connection is closed.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -558,7 +627,17 @@ class KnowledgeDatabase:
         return data
 
     def contains_formula(self, formula: Formula) -> bool:
-        """Checks if formula (or an alpha-equivalent variant) exists in database."""
+        """Checks if formula (or an alpha-equivalent variant) exists in database.
+
+        Args:
+            formula: The Formula AST node to look up.
+
+        Returns:
+            True if an alpha-equivalent formula is stored, False otherwise.
+
+        Raises:
+            DatabaseError: If the database connection is closed.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 
@@ -574,7 +653,20 @@ class KnowledgeDatabase:
         max_size: Optional[int] = None,
         category: Optional[str] = None
     ) -> List[Formula]:
-        """Queries formulas using indexed structural attributes."""
+        """Queries formulas using indexed structural attributes.
+
+        Args:
+            predicate_name: Optional predicate symbol name to filter by.
+            max_depth: Optional maximum formula depth to include.
+            max_size: Optional maximum formula size to include.
+            category: Optional category name to filter by.
+
+        Returns:
+            List of Formula nodes matching all provided filters.
+
+        Raises:
+            DatabaseError: If the database connection is closed.
+        """
         if self._conn is None:
             raise DatabaseError("Database connection is closed.")
 

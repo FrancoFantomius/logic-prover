@@ -10,10 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Automated documentation generation workflow on changes to `main`.
-- Community health templates for bug reports, feature requests, and pull requests.
-- Multi-platform continuous integration testing matrix across Python 3.10–3.13.
-
+- 
 ---
 
 ## [0.1.4] - 2026-08-15

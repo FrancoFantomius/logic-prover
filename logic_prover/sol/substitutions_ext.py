@@ -27,6 +27,13 @@ def is_ho_pattern(
     2. All argument expressions are individual Variable instances.
     3. The argument variables are pairwise distinct.
     4. All argument variables belong to the current bound_vars scope (if specified).
+
+    Args:
+        app: The PredicateApp or FunctionApp node to check.
+        bound_vars: Optional set of bound variables that pattern arguments must belong to.
+
+    Returns:
+        True if the application is a valid higher-order pattern, False otherwise.
     """
     head = app.pred if isinstance(app, PredicateApp) else app.func
     if not isinstance(head, (PredicateVariable, FunctionVariable)):
@@ -53,6 +60,17 @@ def beta_reduce_predicate(
     """
     Applies arguments to a predicate formula template φ(x_1, ..., x_k).
     Performs parameter substitution [x_i ↦ t_i] with full capture avoidance.
+
+    Args:
+        template: The predicate formula template to instantiate.
+        params: The parameter variables of the template.
+        args: The argument terms to substitute for the parameters.
+
+    Returns:
+        The template formula with each parameter replaced by its corresponding argument.
+
+    Raises:
+        UnificationError: If the number of params does not match the number of args.
     """
     if len(params) != len(args):
         raise UnificationError(
@@ -70,6 +88,17 @@ def beta_reduce_function(
     """
     Applies arguments to a function term template t(x_1, ..., x_k).
     Performs parameter substitution [x_i ↦ t_i] with full capture avoidance.
+
+    Args:
+        template: The function term template to instantiate.
+        params: The parameter variables of the template.
+        args: The argument terms to substitute for the parameters.
+
+    Returns:
+        The template term with each parameter replaced by its corresponding argument.
+
+    Raises:
+        UnificationError: If the number of params does not match the number of args.
     """
     if len(params) != len(args):
         raise UnificationError(
@@ -87,6 +116,16 @@ def substitute_predicate(
     """
     Substitutes occurrences of PredicateApp(pred=P, args=(t1, ..., tk)) where P in mapping
     with the corresponding formula template φ, performing beta-reduction [x_i ↦ t_i].
+
+    Args:
+        formula: The formula to transform.
+        mapping: Maps each PredicateVariable to either a plain Formula or a
+            (params, template) tuple giving explicit template parameters.
+        params_mapping: Optional per-variable parameter tuples used when the mapping
+            value is a bare Formula.
+
+    Returns:
+        The transformed formula with predicate variable applications substituted.
     """
     if isinstance(formula, PredicateApp):
         new_args = tuple(
@@ -168,6 +207,16 @@ def substitute_function(
     """
     Substitutes occurrences of FunctionApp(func=F, args=(t1, ..., tk)) where F in mapping
     with the corresponding term template t, performing beta-reduction [x_i ↦ t_i].
+
+    Args:
+        node: The formula or term to transform.
+        mapping: Maps each FunctionVariable to either a plain Term or a
+            (params, template) tuple giving explicit template parameters.
+        params_mapping: Optional per-variable parameter tuples used when the mapping
+            value is a bare Term.
+
+    Returns:
+        The transformed node with function variable applications substituted.
     """
     if isinstance(node, FunctionApp):
         new_args = tuple(
@@ -232,7 +281,16 @@ def substitute_function(
 
 
 def apply_subst(node: Union[Formula, Term], subst: Dict[Any, Any]) -> Union[Formula, Term]:
-    """Applies a combined substitution mapping (Variable, PredicateVariable, FunctionVariable)."""
+    """Applies a combined substitution mapping (Variable, PredicateVariable, FunctionVariable).
+
+    Args:
+        node: The formula or term to substitute into.
+        subst: Dictionary whose keys are Variable, PredicateVariable, or FunctionVariable
+            instances and whose values are their replacements.
+
+    Returns:
+        The substituted formula or term.
+    """
     res = node
     pred_subst = {k: v for k, v in subst.items() if isinstance(k, PredicateVariable)}
     if pred_subst and isinstance(res, Formula):
@@ -250,7 +308,18 @@ def apply_subst(node: Union[Formula, Term], subst: Dict[Any, Any]) -> Union[Form
 
 
 def compose_subst(subst1: Dict[Any, Any], subst2: Dict[Any, Any]) -> Dict[Any, Any]:
-    """Composes two substitution dictionaries: subst1 o subst2."""
+    """Composes two substitution dictionaries: subst1 o subst2.
+
+    Values in subst1 are themselves substituted through subst2, and any keys
+    in subst2 not present in subst1 are carried over unchanged.
+
+    Args:
+        subst1: The outer substitution dictionary.
+        subst2: The inner substitution dictionary applied to subst1's values.
+
+    Returns:
+        The composed substitution dictionary.
+    """
     res = {}
     for k, v in subst1.items():
         if isinstance(v, tuple) and len(v) == 2 and isinstance(v[0], tuple):
@@ -279,6 +348,15 @@ def ho_pattern_unify(
     - Variable -> Term
 
     Returns None if unification fails or nodes are not in pattern form.
+
+    Args:
+        node1: The first formula or term to unify.
+        node2: The second formula or term to unify.
+        bound_vars: Optional set of bound variables used for scope and pattern checks.
+
+    Returns:
+        A unified substitution dictionary mapping PredicateVariable, FunctionVariable,
+        and Variable keys to their instantiations, or None if unification fails.
     """
     b_vars = set(bound_vars) if bound_vars is not None else set()
 

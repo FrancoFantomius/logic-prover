@@ -63,7 +63,12 @@ class TheoremProver:
         signature: Signature,
         config: Optional[SolverConfig] = None
     ) -> None:
-        """Initializes TheoremProver with signature and configuration."""
+        """Initializes TheoremProver with signature and configuration.
+
+        Args:
+            signature: The logical signature context for symbol resolution.
+            config: Optional SolverConfig overriding prover limits (defaults to SolverConfig()).
+        """
         self.signature = signature
         self.config = config or SolverConfig()
 
@@ -80,7 +85,19 @@ class TheoremProver:
         2. Executes Otter given-clause loop with forward subsumption.
         3. On empty clause derivation, extracts resolution trace.
         4. Reconstructs natural deduction ProofDAG.
-        Raises ProofTimeoutError or ProofSearchExhaustedError if proof is not found within limits.
+
+        Args:
+            target: The Formula to prove.
+            premises: Optional list of premise Formulas to use.
+            max_steps: Optional cap on the number of given-clause loop iterations.
+            timeout_sec: Optional wall-clock timeout in seconds.
+
+        Returns:
+            A ProofDAG object reconstructing the proof of target from premises.
+
+        Raises:
+            ProofTimeoutError: If the search exceeds the time limit.
+            ProofSearchExhaustedError: If the search space is exhausted without a contradiction.
         """
         max_steps = max_steps if max_steps is not None else self.config.prover_max_steps
         timeout_sec = timeout_sec if timeout_sec is not None else self.config.prover_timeout_sec
@@ -102,6 +119,13 @@ class TheoremProver:
         active_index: DefaultDict[frozenset, List[Clause]] = defaultdict(list)
 
         def add_initial_step(clause: Clause, rule_name: str, orig_fmt: Optional[Formula]) -> None:
+            """Registers an initial (axiom or negated goal) clause as a trace step.
+
+            Args:
+                clause: The clause to register.
+                rule_name: Rule label for the step (e.g. 'axiom', 'negated_goal').
+                orig_fmt: Original formula associated with the step, if any.
+            """
             nonlocal step_counter, insert_counter
             step_id = f"res_{step_counter}"
             step_counter += 1
@@ -121,7 +145,18 @@ class TheoremProver:
         def add_derived_step(clause: Clause, rule_name: str, premise_ids: List[str],
                              subst: Dict[Variable, Term] = None,
                              parent_lits: Optional[Tuple[Literal, Literal]] = None) -> Optional[str]:
-            """Add a derived clause step. Returns step_id if added, None if duplicate/tautology."""
+            """Add a derived clause step.
+
+            Args:
+                clause: The derived clause to register.
+                rule_name: Inference rule used ('resolution', 'factoring', 'paramodulation').
+                premise_ids: List of step ids that served as premises.
+                subst: Substitution used by the inference.
+                parent_lits: Pair of literals resolved/paramodulated upon, if any.
+
+            Returns:
+                step_id if added, None if the clause is a duplicate or tautology.
+            """
             nonlocal step_counter, insert_counter
             if clause in clause_to_step_id or clause.is_tautology:
                 return None
@@ -258,6 +293,11 @@ class TheoremProver:
         needed_ids: Set[str] = set()
 
         def collect_trace(sid: str) -> None:
+            """Recursively marks all steps reachable from a given step as needed.
+
+            Args:
+                sid: The step id to start collecting from.
+            """
             if sid in needed_ids:
                 return
             needed_ids.add(sid)
@@ -289,6 +329,15 @@ class TheoremProver:
         lits2 = list(c2.literals)
 
         def match_literals(idx: int, current_subst: Dict[Variable, Term]) -> bool:
+            """Backtracking search matching each literal of c1 to a literal of c2.
+
+            Args:
+                idx: Current index into the c1 literal list.
+                current_subst: Accumulated substitution from matched literals.
+
+            Returns:
+                True if all literals of c1 can be matched to literals of c2.
+            """
             if idx == len(lits1):
                 return True
             lit1 = lits1[idx]

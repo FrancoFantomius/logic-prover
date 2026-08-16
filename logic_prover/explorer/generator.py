@@ -38,6 +38,15 @@ def anti_unify_terms(
     - If t1 == t2: returns t1
     - If t1 = f(s1...sk) and t2 = f(u1...uk) with same func symbol: returns f(anti_unify(s1, u1)...)
     - Otherwise: assigns or reuses fresh Variable for pair (t1, t2)
+
+    Args:
+        t1: First term to generalize.
+        t2: Second term to generalize.
+        bindings: Dictionary caching pairs to their fresh generalization variables.
+        var_counter: Mutable counter (single-element list) tracking the next fresh variable id.
+
+    Returns:
+        The Most Specific Generalization term.
     """
     if t1 == t2:
         return t1
@@ -73,6 +82,15 @@ def anti_unify_formulas(
     - If structural connectives/predicates match: anti-unifies recursively.
     - Universally quantifies all fresh generalization variables introduced.
     Returns generalized closed formula, or None if structural mismatch is irreconcilable.
+
+    Args:
+        f1: First formula to generalize.
+        f2: Second formula to generalize.
+        bindings: Optional cache of pairs to fresh generalization variables.
+        var_counter: Optional mutable counter for the next fresh variable id.
+
+    Returns:
+        The generalized closed formula, or None on structural mismatch.
     """
     if bindings is None:
         bindings = {}
@@ -82,6 +100,15 @@ def anti_unify_formulas(
         var_counter = [max_id + 1]
 
     def recurse(g1: Formula, g2: Formula) -> Optional[Formula]:
+        """Recursively anti-unifies two formula structures.
+
+        Args:
+            g1: First subformula.
+            g2: Second subformula.
+
+        Returns:
+            The generalized subformula, or None on structural mismatch.
+        """
         if isinstance(g1, PredicateApp) and isinstance(g2, PredicateApp):
             if g1.pred == g2.pred and g1.arity == g2.arity:
                 gen_args = tuple(
@@ -175,7 +202,15 @@ class FormulaExplorer:
         prover: Optional[TheoremProver] = None,
         filter_path: Optional[str] = None
     ) -> None:
-        """Initializes the candidate formula explorer with database, signature, config, and prover components."""
+        """Initializes the candidate formula explorer with database, signature, config, and prover components.
+
+        Args:
+            db: KnowledgeDatabase providing axioms and theorems as seeds.
+            signature: Logical signature for formula validation.
+            config: SolverConfig controlling exploration limits.
+            prover: Optional TheoremProver used for proof-frontier strategies.
+            filter_path: Optional path for the formula deduplication filter state.
+        """
         self.db = db
         self.signature = signature
         self.config = config
@@ -197,6 +232,17 @@ class FormulaExplorer:
         - 'saturation': Bounded resolution/paramodulation inference on seed axioms.
         - 'lemma_combination': Linking lemmas via implication, conjunction, quantifiers.
         - 'mixed': Proportionally mixes all strategies.
+
+        Args:
+            strategy: Generation strategy to use (default 'mixed').
+            max_depth: Optional maximum formula depth for generated candidates.
+            count: Optional number of raw candidates to generate.
+
+        Returns:
+            List of valid, well-formed candidate formulas.
+
+        Raises:
+            ValueError: If strategy is not recognized.
         """
         depth_limit = max_depth or self.config.explorer_max_depth
         target_count = count or self.config.explorer_batch_size
@@ -245,6 +291,13 @@ class FormulaExplorer:
         Ranks candidate formulas by multi-metric diversity scores and composite
         interestingness, filtering out previously seen formulas from FormulaFilter.
         Adds selected top candidates to the filter state.
+
+        Args:
+            candidates: List of candidate formulas to rank.
+            top_k: Optional number of top candidates to select.
+
+        Returns:
+            List of the top-k unseen candidate formulas.
         """
         k = top_k or self.config.explorer_top_k
         unseen_candidates: List[Formula] = []

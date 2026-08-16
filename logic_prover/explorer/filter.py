@@ -17,7 +17,11 @@ class FormulaFilter:
     """
 
     def __init__(self, storage_path: Optional[str] = None) -> None:
-        """Initializes the formula deduplication filter and optionally loads state from storage."""
+        """Initializes the formula deduplication filter and optionally loads state from storage.
+
+        Args:
+            storage_path: Optional filesystem path to a persisted filter state JSON file.
+        """
         self.seen_hashes: Set[str] = set()
         self.storage_path: Optional[str] = storage_path
         if self.storage_path and os.path.exists(self.storage_path):
@@ -34,18 +38,36 @@ class FormulaFilter:
         return hashlib.sha256(canonical_repr.encode("utf-8")).hexdigest()
 
     def add(self, formula: Formula) -> None:
-        """Adds formula's canonical hash to the seen filter set."""
+        """Adds formula's canonical hash to the seen filter set.
+
+        Args:
+            formula: The Formula whose hash should be marked as seen.
+        """
         h = self._compute_hash(formula)
         self.seen_hashes.add(h)
 
     def is_seen(self, formula: Formula) -> bool:
-        """Returns True if formula (or an alpha-equivalent variant) has been seen."""
+        """Returns True if formula (or an alpha-equivalent variant) has been seen.
+
+        Args:
+            formula: The Formula to check against the seen set.
+
+        Returns:
+            True if the formula's canonical hash is already registered.
+        """
         h = self._compute_hash(formula)
         return h in self.seen_hashes
 
     def save_state(self, filepath: Optional[str] = None) -> None:
         """
         Persists seen hashes and metadata to disk in JSON format.
+
+        Args:
+            filepath: Target file path. Defaults to self.storage_path if omitted.
+
+        Raises:
+            SolverError: If no storage path is available.
+            DatabaseError: If writing the file fails.
         """
         target_path = filepath or self.storage_path
         if not target_path:
@@ -70,6 +92,12 @@ class FormulaFilter:
     def load_state(self, filepath: str) -> None:
         """
         Loads seen hashes from a persisted JSON state file.
+
+        Args:
+            filepath: Path to the filter state JSON file to load.
+
+        Raises:
+            DatabaseError: If the file is missing or cannot be parsed.
         """
         if not os.path.exists(filepath):
             raise DatabaseError(f"Filter state file not found: '{filepath}'")

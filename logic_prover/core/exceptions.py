@@ -11,7 +11,11 @@ class SolverError(Exception):
     """Base exception for all errors raised by the logic library."""
 
     def __init__(self, message: str) -> None:
-        """Initializes a SolverError exception instance."""
+        """Initializes a SolverError exception instance.
+
+        Args:
+            message: Human-readable error description.
+        """
         super().__init__(message)
         self.message = message
 
@@ -37,7 +41,13 @@ class SortMismatchError(UnificationError):
         expected_sort: Optional[Sort] = None,
         actual_sort: Optional[Sort] = None,
     ) -> None:
-        """Initializes a SortMismatchError exception instance."""
+        """Initializes a SortMismatchError exception instance.
+
+        Args:
+            message: Human-readable error description.
+            expected_sort: The sort that was expected for the offending term.
+            actual_sort: The sort actually assigned to the offending term.
+        """
         super().__init__(message)
         self.expected_sort = expected_sort
         self.actual_sort = actual_sort

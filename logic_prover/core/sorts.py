@@ -37,6 +37,7 @@ class PrimitiveSort(Sort):
 
     @property
     def name(self) -> str:
+        """Returns the raw name of this primitive sort."""
         return self.sort_name
 
 
@@ -55,6 +56,7 @@ class ParameterizedSort(Sort):
 
     @property
     def name(self) -> str:
+        """Renders the sort as ``Constructor(arg1, arg2, ...)``."""
         args_str = ", ".join(arg.name for arg in self.args)
         return f"{self.constructor}({args_str})"
 
@@ -68,6 +70,7 @@ class FunctionSort(Sort):
 
     @property
     def name(self) -> str:
+        """Renders the sort as ``(arg1, ..., argN) -> return_sort``."""
         args_str = ", ".join(arg.name for arg in self.arg_sorts)
         return f"({args_str}) -> {self.return_sort.name}"
 
@@ -80,17 +83,39 @@ Bool: PrimitiveSort = PrimitiveSort("Bool")
 
 # Helper constructors for parameterized sorts
 def SetSort(element_sort: Sort) -> ParameterizedSort:
-    """Helper constructing a Set parameterized sort for element_sort."""
+    """Helper constructing a Set parameterized sort for element_sort.
+
+    Args:
+        element_sort: Sort of the elements contained in the Set.
+
+    Returns:
+        A ParameterizedSort of the form Set(element_sort).
+    """
     return ParameterizedSort("Set", (element_sort,))
 
 
 def ListSort(element_sort: Sort) -> ParameterizedSort:
-    """Helper constructing a List parameterized sort for element_sort."""
+    """Helper constructing a List parameterized sort for element_sort.
+
+    Args:
+        element_sort: Sort of the elements contained in the List.
+
+    Returns:
+        A ParameterizedSort of the form List(element_sort).
+    """
     return ParameterizedSort("List", (element_sort,))
 
 
 def PairSort(sort_a: Sort, sort_b: Sort) -> ParameterizedSort:
-    """Helper constructing a Pair parameterized sort for sort_a and sort_b."""
+    """Helper constructing a Pair parameterized sort for sort_a and sort_b.
+
+    Args:
+        sort_a: Sort of the first component of the Pair.
+        sort_b: Sort of the second component of the Pair.
+
+    Returns:
+        A ParameterizedSort of the form Pair(sort_a, sort_b).
+    """
     return ParameterizedSort("Pair", (sort_a, sort_b))
 
 
@@ -103,6 +128,13 @@ def is_compatible(s1: Sort, s2: Sort) -> bool:
     3. Primitive: Two PrimitiveSorts must match names or involve Ind.
     4. Parameterized: Same constructor, same arity, and recursively compatible arguments.
     5. FunctionSort: Same argument arity, recursively compatible argument sorts and return sorts.
+
+    Args:
+        s1: First sort to compare.
+        s2: Second sort to compare.
+
+    Returns:
+        True if the sorts are compatible, False otherwise.
     """
     if s1 == s2:
         return True
@@ -135,6 +167,17 @@ def sort_of_term(term: Term, context: Optional[Dict[str, Sort]] = None) -> Sort:
     - Variable: term.sort
     - Constant: term.sort or lookup in context if context provided
     - FunctionApp: term.return_sort or lookup function return sort in context
+
+    Args:
+        term: The Term AST node whose sort should be inferred.
+        context: Optional mapping of symbol names to sorts, used to resolve
+            constants and function return sorts when the node lacks an explicit sort.
+
+    Returns:
+        The inferred Sort for the given term.
+
+    Raises:
+        InvalidFormulaError: If the term type is not recognized.
     """
     from logic_prover.core.ast import Variable, Constant, FunctionApp
 

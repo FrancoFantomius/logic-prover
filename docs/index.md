@@ -49,4 +49,19 @@ features:
 
 | Module Group | Documentation Link | Documented Classes | Documented Functions |
 | :--- | :--- | :--- | :--- |
-| `utils` | [utils →](api/utils.md) | 7 | 6 |
+| `utils` | [utils →](api/utils.md) | 7 | 7 |
+
+## Examples
+
+Ready-to-run scripts are collected on the [Examples page](examples.md). Each file is self-contained, commented, and can be executed directly:
+
+| Example | Description |
+| :--- | :--- |
+| `01_formula_construction.py` | Example 01: Build, parse, and inspect logic formulas. |
+| `02_theorem_proving.py` | Example 02: Prove theorems with the resolution prover. |
+| `03_knowledge_base.py` | Example 03: Store and query formulas in the SQLite knowledge base. |
+| `04_formula_explorer.py` | Example 04: Generate and rank novel formulas with the FormulaExplorer. |
+| `05_dependency_deducer.py` | Example 05: Analyze dependencies and deduce minimal hypotheses. |
+| `06_exporters.py` | Example 06: Export theorems to Lean 4 and interactive HTML graphs. |
+| `07_second_order_logic.py` | Example 07: Second-order logic — predicate variables and schemas. |
+| `08_cli_usage.py` | Example 08: Drive the full pipeline through the CLI entry point. |

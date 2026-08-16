@@ -53,53 +53,141 @@ class SymbolCollectorVisitor(ASTVisitor[None]):
         self.total_symbols += 1
 
     def visit_variable(self, node: Variable) -> None:
+        """Handles visitation of a Variable node.
+
+        Args:
+            node: The Variable AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol(f"Var_{node.id}")
         self.variable_references += 1
 
     def visit_constant(self, node: Constant) -> None:
+        """Handles visitation of a Constant node.
+
+        Args:
+            node: The Constant AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol(f"Const_{node.name}")
 
     def visit_function_app(self, node: FunctionApp) -> None:
+        """Handles visitation of a FunctionApp node.
+
+        Args:
+            node: The FunctionApp AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol(f"Func_{node.func}")
         for arg in node.args:
             self.visit(arg)
 
     def visit_predicate_app(self, node: PredicateApp) -> None:
+        """Handles visitation of a PredicateApp node.
+
+        Args:
+            node: The PredicateApp AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol(f"Pred_{node.pred}")
         self.predicates.add(node.pred)
         for arg in node.args:
             self.visit(arg)
 
     def visit_equality(self, node: Equality) -> None:
+        """Handles visitation of a Equality node.
+
+        Args:
+            node: The Equality AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Eq")
         self.visit(node.left)
         self.visit(node.right)
 
     def visit_not(self, node: Not) -> None:
+        """Handles visitation of a Not node.
+
+        Args:
+            node: The Not AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Not")
         self.visit(node.operand)
 
     def visit_and(self, node: And) -> None:
+        """Handles visitation of a And node.
+
+        Args:
+            node: The And AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_And")
         self.visit(node.left)
         self.visit(node.right)
 
     def visit_or(self, node: Or) -> None:
+        """Handles visitation of a Or node.
+
+        Args:
+            node: The Or AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Or")
         self.visit(node.left)
         self.visit(node.right)
 
     def visit_implies(self, node: Implies) -> None:
+        """Handles visitation of a Implies node.
+
+        Args:
+            node: The Implies AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Implies")
         self.visit(node.left)
         self.visit(node.right)
 
     def visit_iff(self, node: Iff) -> None:
+        """Handles visitation of a Iff node.
+
+        Args:
+            node: The Iff AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Iff")
         self.visit(node.left)
         self.visit(node.right)
 
     def visit_forall(self, node: Forall) -> None:
+        """Handles visitation of a Forall node.
+
+        Args:
+            node: The Forall AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Forall")
         self.quantifier_depth += 1
         if self.quantifier_depth > self.max_quantifier_depth:
@@ -109,6 +197,14 @@ class SymbolCollectorVisitor(ASTVisitor[None]):
         self.quantifier_depth -= 1
 
     def visit_exists(self, node: Exists) -> None:
+        """Handles visitation of a Exists node.
+
+        Args:
+            node: The Exists AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         self._record_symbol("Op_Exists")
         self.quantifier_depth += 1
         if self.quantifier_depth > self.max_quantifier_depth:
@@ -124,6 +220,12 @@ def calculate_symbol_entropy(formula: Formula) -> float:
     H(F) = - sum_{s} p(s) * log2(p(s))
     where p(s) = count(s) / total_symbols.
     High entropy indicates rich, non-repetitive symbol distribution.
+
+    Args:
+        formula: The formula to measure.
+
+    Returns:
+        The Shannon entropy score (0.0 for an empty or single-symbol formula).
     """
     collector = SymbolCollectorVisitor()
     collector.visit(formula)
@@ -146,12 +248,25 @@ def calculate_subtree_penalty(formula: Formula) -> float:
     Applies an exponential penalty sum for each repeated subtree:
     penalty = sum_{sub, count > 1} (count - 1) * 0.5 * log2(size)
     Uses a single pass to collect sizes and counts together.
+
+    Args:
+        formula: The formula to scan for repeated subtrees.
+
+    Returns:
+        The accumulated repeated-subtree penalty score.
     """
     subtree_counts: Dict[Formula, int] = {}
     size_cache: Dict[int, int] = {}  # id(node) -> size
 
     def collect_subtrees(node: Formula) -> int:
-        """Returns the formula_size of node, caching and counting as we go."""
+        """Returns the formula_size of node, caching and counting as we go.
+
+        Args:
+            node: The formula subtree to measure.
+
+        Returns:
+            The computed size of the subtree.
+        """
         node_id = id(node)
         if node_id in size_cache:
             return size_cache[node_id]
@@ -189,6 +304,13 @@ def calculate_diversity_scores(
 ) -> DiversityMetrics:
     """
     Calculates multi-metric diversity scores for a candidate formula.
+
+    Args:
+        formula: The candidate formula to score.
+        proof_distance: Optional distance to a known proof, used as an extra metric.
+
+    Returns:
+        A DiversityMetrics instance holding all computed scores.
     """
     collector = SymbolCollectorVisitor()
     collector.visit(formula)
@@ -230,6 +352,13 @@ def composite_interestingness(
           + w_reuse * log(variable_reuse) 
           - w_penalty * repeated_subtree_penalty
           + size_bonus - size_penalty
+
+    Args:
+        metrics: The DiversityMetrics instance for the formula.
+        weights: Optional dictionary overriding default metric weights.
+
+    Returns:
+        The normalized composite interestingness score.
     """
     default_weights = {
         "entropy": 2.5,
@@ -273,6 +402,12 @@ def is_redundant_structure(formula: Formula) -> bool:
     5. Direct contradiction conjunct: A ∧ ¬A
     6. Double negation: ¬¬A
     7. Vacuous quantification: ∀x A or ∃x A where x not free in A
+
+    Args:
+        formula: The formula to inspect.
+
+    Returns:
+        True if the formula has a redundant structure, False otherwise.
     """
     if isinstance(formula, Equality):
         if formula.left == formula.right:

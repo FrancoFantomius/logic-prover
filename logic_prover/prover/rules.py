@@ -25,7 +25,13 @@ class InferenceRule:
 def standardize_clause_variables(c1: Clause, c2: Clause) -> Tuple[Clause, Clause, Dict[Variable, Variable]]:
     """
     Renames free variables in c2 so their variable IDs do not overlap with c1.
-    Returns (c1, renamed_c2, variable_renaming_map).
+
+    Args:
+        c1: First clause (kept unchanged).
+        c2: Second clause, whose variables may be renamed.
+
+    Returns:
+        Tuple (c1, renamed_c2, variable_renaming_map).
     """
     c1_vars = c1.free_variables()
     c2_vars = c2.free_variables()
@@ -56,7 +62,13 @@ def resolve_clauses(
     Binary Resolution Rule:
     Given c1 containing L1 and c2 containing L2 where L1.positive != L2.positive:
     Standardizes variables apart, unifies L1.atom and L2.atom with MGU σ.
-    Returns list of tuples: (resolvent_clause, MGU_substitution, (L1, L2)).
+
+    Args:
+        c1: First input clause.
+        c2: Second input clause.
+
+    Returns:
+        List of tuples (resolvent_clause, MGU_substitution, (L1, L2)).
     """
     c1_std, c2_std, _ = standardize_clause_variables(c1, c2)
     results: List[Tuple[Clause, Dict[Variable, Term], Tuple[Literal, Literal]]] = []
@@ -85,7 +97,12 @@ def factor_clause(
     Factoring Rule:
     Given c containing L1 and L2 with same polarity:
     Unifies L1.atom and L2.atom with MGU σ.
-    Returns list of tuples: (factored_clause, MGU_substitution).
+
+    Args:
+        c: The clause to factor.
+
+    Returns:
+        List of tuples (factored_clause, MGU_substitution).
     """
     results: List[Tuple[Clause, Dict[Variable, Term]]] = []
     seen: Set[Clause] = set()
@@ -107,7 +124,14 @@ def factor_clause(
 
 
 def extract_subterms(term: Term) -> List[Term]:
-    """Recursively collects all subterms of a term."""
+    """Recursively collects all subterms of a term.
+
+    Args:
+        term: The term to traverse.
+
+    Returns:
+        List of all subterms including the term itself.
+    """
     subterms = [term]
     if isinstance(term, FunctionApp):
         for arg in term.args:
@@ -116,7 +140,14 @@ def extract_subterms(term: Term) -> List[Term]:
 
 
 def extract_atom_subterms(atom: Union[PredicateApp, Equality]) -> List[Term]:
-    """Collects all term subterms from a predicate application or equality atom."""
+    """Collects all term subterms from a predicate application or equality atom.
+
+    Args:
+        atom: The atom to traverse.
+
+    Returns:
+        List of all term subterms found in the atom.
+    """
     subterms: List[Term] = []
     if isinstance(atom, PredicateApp):
         for arg in atom.args:
@@ -128,7 +159,16 @@ def extract_atom_subterms(atom: Union[PredicateApp, Equality]) -> List[Term]:
 
 
 def replace_subterm(term: Term, target: Term, replacement: Term) -> List[Term]:
-    """Replaces occurrences of target subterm with replacement in term."""
+    """Replaces occurrences of target subterm with replacement in term.
+
+    Args:
+        term: The term in which to replace subterms.
+        target: The subterm to locate.
+        replacement: The term to substitute in place of target.
+
+    Returns:
+        List of distinct terms obtained by replacing one occurrence of target.
+    """
     results: List[Term] = []
     if term == target:
         results.append(replacement)
@@ -142,7 +182,16 @@ def replace_subterm(term: Term, target: Term, replacement: Term) -> List[Term]:
 
 
 def replace_atom_subterm(atom: Union[PredicateApp, Equality], target: Term, replacement: Term) -> List[Union[PredicateApp, Equality]]:
-    """Replaces occurrences of target subterm with replacement in atom."""
+    """Replaces occurrences of target subterm with replacement in atom.
+
+    Args:
+        atom: The atom in which to replace subterms.
+        target: The subterm to locate.
+        replacement: The term to substitute in place of target.
+
+    Returns:
+        List of distinct atoms obtained by replacing one occurrence of target.
+    """
     results: List[Union[PredicateApp, Equality]] = []
     if isinstance(atom, PredicateApp):
         for i, arg in enumerate(atom.args):
@@ -167,6 +216,13 @@ def paramodulate(
     Given c1 containing positive equality literal (t1 = t2) [or (t2 = t1)],
     and c2 containing literal L[s] with subterm s unifiable with t1 via MGU σ:
     Derives paramodulant σ((c1 \ {t1=t2}) ∪ (c2 with s replaced by t2)).
+
+    Args:
+        c1: First clause (source of equality literal).
+        c2: Second clause (target of rewriting).
+
+    Returns:
+        List of tuples (paramodulant_clause, MGU_substitution).
     """
     results: List[Tuple[Clause, Dict[Variable, Term]]] = []
     seen: Set[Clause] = set()
@@ -238,6 +294,7 @@ class SOLInstantiateRule(InferenceRule):
     """
 
     def __init__(self) -> None:
+        """Constructs the SOL instantiation rule with its metadata and apply function."""
         super().__init__(
             name="SOLInstantiate",
             description="Second-order logic template instantiation via higher-order pattern matching",
@@ -251,7 +308,16 @@ class SOLInstantiateRule(InferenceRule):
         target_goal: Formula,
         signature: Any = None
     ) -> List[Clause]:
-        """Matches second-order logic templates against target goals and instantiates clauses."""
+        """Matches second-order logic templates against target goals and instantiates clauses.
+
+        Args:
+            sol_axiom: The SOL quantified axiom to instantiate.
+            target_goal: The target formula to match the template against.
+            signature: Optional Signature for validating instantiated clauses.
+
+        Returns:
+            List of Clause objects derived by instantiating the axiom.
+        """
         from logic_prover.sol.ast_ext import ForallPred, ExistsPred, PredicateVariable
         from logic_prover.sol.substitutions_ext import ho_pattern_unify, substitute_predicate
         from logic_prover.sol.kb_ext import instantiate_induction
@@ -295,5 +361,14 @@ def apply_rule(
     premises: List[Any],
     context: Optional[Dict[str, Any]] = None
 ) -> List[Any]:
-    """Applies an inference rule to premises with optional context parameters."""
+    """Applies an inference rule to premises with optional context parameters.
+
+    Args:
+        rule: The inference rule to apply.
+        premises: Positional arguments passed to the rule's apply function.
+        context: Optional keyword arguments passed to the rule's apply function.
+
+    Returns:
+        List of results produced by the rule's apply function.
+    """
     return rule.apply(*premises, **(context or {}))

@@ -60,7 +60,14 @@ class Signature:
         constants: Optional[Dict[str, Sort]] = None,
         sort_constructors: Optional[Dict[str, int]] = None,
     ) -> None:
-        """Initializes a new Signature instance with optional predefined declarations."""
+        """Initializes a new Signature instance with optional predefined declarations.
+
+        Args:
+            functions: Optional mapping of function names to FunctionDecl objects.
+            predicates: Optional mapping of predicate names to PredicateDecl objects.
+            constants: Optional mapping of constant names to their Sort.
+            sort_constructors: Optional mapping of sort constructor names to arities.
+        """
         self.functions: Dict[str, FunctionDecl] = dict(functions) if functions else {}
         self.predicates: Dict[str, PredicateDecl] = dict(predicates) if predicates else {}
         self.constants: Dict[str, Sort] = dict(constants) if constants else {}
@@ -74,6 +81,12 @@ class Signature:
         return_sort: Sort = Ind,
     ) -> None:
         """Register a function symbol in the signature.
+
+        Args:
+            name: Name of the function symbol to register.
+            arity: Number of expected arguments (must be >= 0).
+            arg_sorts: Tuple of sorts for each function argument.
+            return_sort: Sort of the function result (defaults to Ind).
 
         Raises:
             ValidationError: If symbol name collides with another predicate/constant or incompatible function decl.
@@ -101,6 +114,11 @@ class Signature:
     ) -> None:
         """Register a predicate symbol in the signature.
 
+        Args:
+            name: Name of the predicate symbol to register.
+            arity: Number of expected arguments (must be >= 0).
+            arg_sorts: Tuple of sorts for each predicate argument.
+
         Raises:
             ValidationError: If symbol name collides with another function/constant or incompatible predicate decl.
         """
@@ -122,6 +140,10 @@ class Signature:
     def register_constant(self, name: str, sort: Sort = Ind) -> None:
         """Register a constant symbol in the signature.
 
+        Args:
+            name: Name of the constant symbol to register.
+            sort: Sort assigned to the constant (defaults to Ind).
+
         Raises:
             ValidationError: If symbol name collides with a function/predicate or incompatible constant declaration.
         """
@@ -140,7 +162,16 @@ class Signature:
         self.constants[name] = sort
 
     def register_sort_constructor(self, name: str, arity: int) -> None:
-        """Register a parameterized sort constructor (e.g. Set -> 1, Pair -> 2)."""
+        """Register a parameterized sort constructor (e.g. Set -> 1, Pair -> 2).
+
+        Args:
+            name: Name of the sort constructor to register.
+            arity: Number of sort arguments the constructor accepts (must be >= 0).
+
+        Raises:
+            ValueError: If arity is negative.
+            ValidationError: If the constructor is already registered with a different arity.
+        """
         if arity < 0:
             raise ValueError(f"Sort constructor arity cannot be negative: {arity}")
         if name in self.sort_constructors:
@@ -154,27 +185,68 @@ class Signature:
         self.sort_constructors[name] = arity
 
     def lookup_function(self, name: str) -> Optional[FunctionDecl]:
-        """Retrieve function declaration by name."""
+        """Retrieve function declaration by name.
+
+        Args:
+            name: Name of the function symbol to look up.
+
+        Returns:
+            The FunctionDecl if found, None otherwise.
+        """
         return self.functions.get(name)
 
     def lookup_predicate(self, name: str) -> Optional[PredicateDecl]:
-        """Retrieve predicate declaration by name."""
+        """Retrieve predicate declaration by name.
+
+        Args:
+            name: Name of the predicate symbol to look up.
+
+        Returns:
+            The PredicateDecl if found, None otherwise.
+        """
         return self.predicates.get(name)
 
     def lookup_constant(self, name: str) -> Optional[Sort]:
-        """Retrieve constant sort by name."""
+        """Retrieve constant sort by name.
+
+        Args:
+            name: Name of the constant symbol to look up.
+
+        Returns:
+            The constant Sort if found, None otherwise.
+        """
         return self.constants.get(name)
 
     def lookup_sort_constructor(self, name: str) -> Optional[int]:
-        """Retrieve sort constructor arity by name."""
+        """Retrieve sort constructor arity by name.
+
+        Args:
+            name: Name of the sort constructor to look up.
+
+        Returns:
+            The constructor arity if found, None otherwise.
+        """
         return self.sort_constructors.get(name)
 
     def has_symbol(self, name: str) -> bool:
-        """Check if symbol name is declared as constant, function, or predicate."""
+        """Check if symbol name is declared as constant, function, or predicate.
+
+        Args:
+            name: Symbol name to check.
+
+        Returns:
+            True if the name is declared, False otherwise.
+        """
         return (name in self.functions) or (name in self.predicates) or (name in self.constants)
 
     def merge(self, other: Signature) -> Signature:
         """Merge two signatures into a new combined Signature.
+
+        Args:
+            other: The Signature whose declarations should be merged into a copy of this one.
+
+        Returns:
+            A new Signature containing the merged declarations.
 
         Raises:
             ValidationError: If there is a declaration conflict between the two signatures.

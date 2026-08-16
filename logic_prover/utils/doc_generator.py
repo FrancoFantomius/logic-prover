@@ -8,6 +8,8 @@ and formats them into Markdown documentation files.
 from __future__ import annotations
 import ast
 import os
+import re
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -463,17 +465,119 @@ def render_markdown_module(module_doc: ModuleDoc) -> str:
     return "\n".join(lines)
 
 
-def build_markdown_docs(source_dir: str = "logic_prover", output_docs_dir: str = "docs") -> Dict[str, str]:
+def _github_slug(heading: str) -> str:
+    """Converts a heading into the anchor slug used by GitHub and VitePress.
+
+    Args:
+        heading: The raw Markdown heading text.
+
+    Returns:
+        Lower-cased slug with punctuation stripped and spaces replaced by hyphens.
+    """
+    normalized = heading.strip().lower()
+    return re.sub(r"[^\w\s-]", "", normalized).replace(" ", "-")
+
+
+def _collect_example_scripts(examples_dir: str) -> List[Tuple[Path, str, str]]:
+    """Collects example scripts together with their parsed module docstrings.
+
+    Args:
+        examples_dir: Directory containing the example .py scripts.
+
+    Returns:
+        List of (script_path, summary, description) tuples for every parseable
+        example script in the directory, sorted by file name.
+    """
+    entries: List[Tuple[Path, str, str]] = []
+    for script in sorted(Path(examples_dir).glob("*.py")):
+        source = script.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(source, filename=str(script))
+        except SyntaxError:
+            continue
+        raw_doc = ast.get_docstring(tree) or ""
+        summary, description, _, _, _ = parse_google_docstring(raw_doc)
+        entries.append((script, summary, description))
+    return entries
+
+
+def render_examples_markdown(examples_dir: str = "examples") -> str:
+    """Renders every runnable example script into a single Markdown page.
+
+    Each example is documented with its module docstring (summary and detailed
+    description) followed by the full source code, so the page doubles as a
+    tutorial reference.
+
+    Args:
+        examples_dir: Directory containing the example .py scripts.
+
+    Returns:
+        Markdown string documenting each example.
+    """
+    lines: List[str] = [
+        "# Examples",
+        "",
+        "Ready-to-run example scripts that exercise the library end to end. "
+        "Each file is self-contained, commented, and can be executed directly "
+        "with `python examples/<name>.py`.",
+        "",
+    ]
+
+    entries = _collect_example_scripts(examples_dir)
+    if not entries:
+        lines.append("_No example scripts found._")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append("## Table of Contents")
+    lines.append("")
+    for script, _, _ in entries:
+        lines.append(f"- [{script.name}](#{_github_slug(script.name)})")
+    lines.append("")
+
+    for script, summary, description in entries:
+        source = script.read_text(encoding="utf-8")
+        display_path = script.as_posix()
+        lines.append("---")
+        lines.append("")
+        lines.append(f"## {script.name}")
+        lines.append("")
+        lines.append(f"**File:** `{display_path}` — run with `python {display_path}`")
+        lines.append("")
+        if summary:
+            lines.append(summary)
+            lines.append("")
+        if description:
+            lines.append(textwrap.dedent(description).strip())
+            lines.append("")
+        lines.append("### Source")
+        lines.append("")
+        lines.append("```python")
+        lines.append(source.rstrip("\n"))
+        lines.append("```")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def build_markdown_docs(
+    source_dir: str = "logic_prover",
+    output_docs_dir: str = "docs",
+    examples_dir: str = "examples",
+) -> Dict[str, str]:
     """
     Scans the source codebase, extracts docstrings from all modules, and writes Markdown documentation.
 
     Generates:
     - docs/api/<submodule_group>.md (e.g. docs/api/core.md, docs/api/prover.md)
+    - docs/examples.md (if the examples directory exists)
     - docs/index.md (Landing page with module links and summary tables)
 
     Args:
         source_dir: Root package directory to scan (default 'logic_prover').
         output_docs_dir: Target output directory for markdown files (default 'docs').
+        examples_dir: Directory of runnable example scripts to document
+            (default 'examples'); skipped if it does not exist.
 
     Returns:
         Dictionary mapping created file paths to rendered content length.
@@ -581,6 +685,34 @@ def build_markdown_docs(source_dir: str = "logic_prover", output_docs_dir: str =
 
     for gname, glink, ncls, nfn in group_summaries:
         index_lines.append(f"| `{gname}` | [{gname} →]({glink}) | {ncls} | {nfn} |")
+
+    # Generate docs/examples.md from the examples directory (if present).
+    example_entries: List[Tuple[Path, str, str]] = []
+    examples_path = Path(examples_dir)
+    if examples_path.is_dir():
+        example_entries = _collect_example_scripts(examples_dir)
+        if example_entries:
+            examples_text = render_examples_markdown(examples_dir)
+            examples_file = output_path / "examples.md"
+            examples_file.write_text(examples_text, encoding="utf-8")
+            results[str(examples_file)] = examples_text
+
+            index_lines.append("")
+            index_lines.append("## Examples")
+            index_lines.append("")
+            index_lines.append(
+                "Ready-to-run scripts are collected on the "
+                "[Examples page](examples.md). Each file is self-contained, "
+                "commented, and can be executed directly:"
+            )
+            index_lines.append("")
+            index_lines.append("| Example | Description |")
+            index_lines.append("| :--- | :--- |")
+            for script, summary, _ in example_entries:
+                description = (summary or "Run this example to see it in action.")
+                if len(description) > 90:
+                    description = description[:87].rstrip() + "..."
+                index_lines.append(f"| `{script.name}` | {description} |")
 
     index_file = output_path / "index.md"
     index_text = "\n".join(index_lines) + "\n"

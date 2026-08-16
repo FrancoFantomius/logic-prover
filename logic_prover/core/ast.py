@@ -256,7 +256,17 @@ class Exists(Formula):
 
 
 def free_variables(node: Union[Term, Formula]) -> Set[Variable]:
-    """Returns the set of free individual variables present in a term or formula AST node."""
+    """Returns the set of free individual variables present in a term or formula AST node.
+
+    Args:
+        node: The Term or Formula AST node to analyze.
+
+    Returns:
+        Set of Variable nodes that occur freely in the node.
+
+    Raises:
+        InvalidFormulaError: If the node type is not recognized.
+    """
     # Check for cached result on nodes that pre-compute free vars
     cached = getattr(node, '_free_vars', None)
     if cached is not None:
@@ -284,7 +294,17 @@ def free_variables(node: Union[Term, Formula]) -> Set[Variable]:
 
 
 def bound_variables(node: Union[Term, Formula]) -> Set[Variable]:
-    """Returns the set of bound variables introduced by quantifiers in a formula AST node."""
+    """Returns the set of bound variables introduced by quantifiers in a formula AST node.
+
+    Args:
+        node: The Term or Formula AST node to analyze.
+
+    Returns:
+        Set of Variable nodes that are bound by quantifiers within the node.
+
+    Raises:
+        InvalidFormulaError: If the node type is not recognized.
+    """
     if isinstance(node, (Variable, Constant, FunctionApp, PredicateApp, Equality)):
         return set()
     elif isinstance(node, Not):
@@ -303,6 +323,15 @@ def formula_depth(formula: Formula) -> int:
     """Computes the maximum height/depth of the formula AST.
 
     Leaf formula nodes (PredicateApp, Equality) have depth 1.
+
+    Args:
+        formula: The Formula AST node to measure.
+
+    Returns:
+        The maximum depth of the formula tree.
+
+    Raises:
+        InvalidFormulaError: If the node type is not a recognized formula.
     """
     if isinstance(formula, (PredicateApp, Equality)):
         return 1
@@ -319,7 +348,17 @@ def formula_depth(formula: Formula) -> int:
 
 
 def formula_size(formula: Formula) -> int:
-    """Computes the total number of AST nodes (both Formula and Term nodes) in a formula tree."""
+    """Computes the total number of AST nodes (both Formula and Term nodes) in a formula tree.
+
+    Args:
+        formula: The Formula AST node to measure.
+
+    Returns:
+        The total number of nodes in the formula tree.
+
+    Raises:
+        InvalidFormulaError: If the node type is not recognized.
+    """
 
     def _term_size(term: Term) -> int:
         if isinstance(term, (Variable, Constant)):
@@ -355,6 +394,12 @@ def canonicalize_bound_variables(formula: Formula) -> Formula:
     1. Idempotency: canonicalize(canonicalize(f)) == canonicalize(f)
     2. Alpha-equivalence: If f1 and f2 are alpha-equivalent, canonicalize(f1) == canonicalize(f2)
     3. Free variable preservation: free_variables(canonicalize(f)) == free_variables(f)
+
+    Args:
+        formula: The Formula AST node to alpha-canonicalize.
+
+    Returns:
+        A new Formula node with bound variables renamed canonically.
     """
     free_vars = free_variables(formula)
     free_ids = {v.id for v in free_vars}
@@ -362,10 +407,16 @@ def canonicalize_bound_variables(formula: Formula) -> Formula:
     class IndexGenerator:
 
         def __init__(self, reserved: Set[int]) -> None:
+            """Initializes the generator with the set of reserved indices.
+
+            Args:
+                reserved: Indices that must never be returned (e.g. free variable IDs).
+            """
             self.reserved = reserved
             self.current = 0
 
         def get_next(self) -> int:
+            """Returns the next non-reserved index, advancing the internal counter."""
             while self.current in self.reserved:
                 self.current += 1
             idx = self.current

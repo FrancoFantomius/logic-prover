@@ -50,6 +50,14 @@ def reconstruct_proof(
     3. Convert resolution steps into ND inferences (Modus Ponens, Or Elimination, ResolutionTraceStep).
     4. Derive contradiction ⊥ at empty clause root step.
     5. Apply Double Negation Elimination / Proof by Contradiction to yield original_target as root.
+
+    Args:
+        resolution_trace: Ordered list of ResolutionStep records from the prover.
+        original_target: The formula the prover was asked to prove.
+        premises: Optional list of premise Formulas used by the prover.
+
+    Returns:
+        A simplified ProofDAG reconstructing the target's natural deduction proof.
     """
     steps: Dict[str, ProofStep] = {}
     premises = premises or []
@@ -138,6 +146,12 @@ def simplify_proof(proof: ProofDAG) -> ProofDAG:
     Optimizes ProofDAG by:
     1. Pruning dead/unreachable steps not leading to root_id.
     2. Collapsing identity and redundant single-premise steps.
+
+    Args:
+        proof: The ProofDAG to simplify.
+
+    Returns:
+        A pruned ProofDAG containing only steps reachable from the root.
     """
     try:
         reachable_ids = {s.id for s in proof.topological_order()}

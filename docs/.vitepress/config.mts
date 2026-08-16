@@ -18,6 +18,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Architecture', link: '/#architecture-overview' },
+      { text: 'Examples', link: '/examples' },
       {
         text: 'API Reference',
         items: [
@@ -47,6 +48,7 @@ export default defineConfig({
         text: 'Getting Started',
         items: [
           { text: 'Overview & Portal', link: '/' },
+          { text: 'Examples & Tutorials', link: '/examples' },
         ],
       },
       {

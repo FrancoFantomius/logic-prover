@@ -39,6 +39,13 @@ class DependencyGraph:
 
         If a node with the same name exists with an identical formula, this operation is idempotent.
         If the formula differs for an existing name, raises ValueError.
+
+        Args:
+            name: Unique name for the node.
+            formula: The Formula associated with the node.
+
+        Raises:
+            ValueError: If a node with the same name already holds a different formula.
         """
         if name in self.nodes:
             if self.nodes[name] != formula:
@@ -54,8 +61,15 @@ class DependencyGraph:
         """Adds a directed edge between source and target nodes with a specified relationship.
 
         Valid relationship strings: "implies", "equivalent", "depends".
-        Raises KeyError if source or target node is not registered.
-        Raises ValueError if relationship string is invalid.
+
+        Args:
+            source: Name of the source node.
+            target: Name of the target node.
+            relationship: One of 'implies', 'equivalent', or 'depends'.
+
+        Raises:
+            KeyError: If source or target node is not registered.
+            ValueError: If relationship string is invalid.
         """
         valid_rels = {"implies", "equivalent", "depends"}
         if relationship not in valid_rels:
@@ -76,6 +90,10 @@ class DependencyGraph:
 
         Registers the conclusion (theorem_name) and adds directed "implies" edges
         from each premise in proof.premises to theorem_name.
+
+        Args:
+            proof: The completed ProofDAG whose premises feed the theorem.
+            theorem_name: Name of the theorem node to register.
         """
         # Register conclusion
         self.add_node(theorem_name, proof.conclusion)
@@ -103,13 +121,33 @@ class DependencyGraph:
             self.add_edge(premise_name, theorem_name, "implies")
 
     def predecessors(self, name: str) -> List[str]:
-        """Returns a list of direct predecessor node names (nodes that point to `name`)."""
+        """Returns a list of direct predecessor node names (nodes that point to `name`).
+
+        Args:
+            name: The node whose predecessors to return.
+
+        Returns:
+            Sorted list of direct predecessor names.
+
+        Raises:
+            KeyError: If the node does not exist in the graph.
+        """
         if name not in self.nodes:
             raise KeyError(f"Node '{name}' does not exist in graph.")
         return sorted([src for src, _ in self._adj_in.get(name, set())])
 
     def successors(self, name: str) -> List[str]:
-        """Returns a list of direct successor node names (nodes that `name` points to)."""
+        """Returns a list of direct successor node names (nodes that `name` points to).
+
+        Args:
+            name: The node whose successors to return.
+
+        Returns:
+            Sorted list of direct successor names.
+
+        Raises:
+            KeyError: If the node does not exist in the graph.
+        """
         if name not in self.nodes:
             raise KeyError(f"Node '{name}' does not exist in graph.")
         return sorted([tgt for tgt, _ in self._adj_out.get(name, set())])
@@ -118,6 +156,15 @@ class DependencyGraph:
         """Computes the set of all node names reachable from the given node via directed edges.
 
         Uses Breadth-First Search (BFS) to traverse outward dependencies.
+
+        Args:
+            name: The starting node name.
+
+        Returns:
+            Set of node names reachable from name (excluding name itself).
+
+        Raises:
+            KeyError: If the node does not exist in the graph.
         """
         if name not in self.nodes:
             raise KeyError(f"Node '{name}' does not exist in graph.")
@@ -142,6 +189,14 @@ class DependencyGraph:
         visited: Dict[str, int] = {node: 0 for node in self.nodes}  # 0=unvisited, 1=visiting, 2=visited
 
         def dfs(u: str) -> bool:
+            """Recursively detects a cycle in the non-equivalence subgraph.
+
+            Args:
+                u: The node currently being visited.
+
+            Returns:
+                True if a cycle is found, False otherwise.
+            """
             visited[u] = 1
             for v in adj.get(u, []):
                 if visited[v] == 1:

@@ -241,7 +241,15 @@ def validate_formula(
 
 
 def is_well_formed(node: Union[Term, Formula], signature: Signature) -> bool:
-    """Convenience wrapper returning True if the AST node has zero validation errors."""
+    """Convenience wrapper returning True if the AST node has zero validation errors.
+
+    Args:
+        node: The Term or Formula AST node to check.
+        signature: The logical signature context used for validation.
+
+    Returns:
+        True if the node is well-formed, False otherwise.
+    """
     if isinstance(node, Term):
         return len(validate_term(node, signature)) == 0
     elif isinstance(node, Formula):

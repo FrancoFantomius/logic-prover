@@ -27,6 +27,7 @@ class PredicateVariable:
 
     @property
     def name(self) -> str:
+        """Returns the canonical string form ``P_<index>`` of the variable."""
         return f"P_{self.index}"
 
 
@@ -51,6 +52,7 @@ class FunctionVariable:
 
     @property
     def name(self) -> str:
+        """Returns the canonical string form ``F_<index>`` of the variable."""
         return f"F_{self.index}"
 
 
@@ -87,7 +89,14 @@ class ExistsFunc(Formula):
 
 
 def free_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariable]:
-    """Returns all unquantified PredicateVariable instances in a formula or term."""
+    """Returns all unquantified PredicateVariable instances in a formula or term.
+
+    Args:
+        node: The formula or term to search for free predicate variables.
+
+    Returns:
+        Set of PredicateVariable instances not bound by a predicate quantifier.
+    """
     if isinstance(node, PredicateApp):
         res: Set[PredicateVariable] = set()
         if isinstance(node.pred, PredicateVariable):
@@ -117,7 +126,14 @@ def free_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariabl
 
 
 def bound_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariable]:
-    """Returns all quantified PredicateVariable instances in a formula."""
+    """Returns all quantified PredicateVariable instances in a formula.
+
+    Args:
+        node: The formula or term to search for bound predicate variables.
+
+    Returns:
+        Set of PredicateVariable instances bound by a predicate quantifier.
+    """
     if isinstance(node, (ForallPred, ExistsPred)):
         return {node.variable} | bound_predicate_variables(node.body)
     elif isinstance(node, (ForallFunc, ExistsFunc, Forall, Exists)):
@@ -138,7 +154,14 @@ def bound_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariab
 
 
 def free_function_variables(node: Union[Formula, Term]) -> Set[FunctionVariable]:
-    """Returns all unquantified FunctionVariable instances in a formula or term."""
+    """Returns all unquantified FunctionVariable instances in a formula or term.
+
+    Args:
+        node: The formula or term to search for free function variables.
+
+    Returns:
+        Set of FunctionVariable instances not bound by a function quantifier.
+    """
     if isinstance(node, FunctionApp):
         res: Set[FunctionVariable] = set()
         if isinstance(node.func, FunctionVariable):
@@ -168,7 +191,14 @@ def free_function_variables(node: Union[Formula, Term]) -> Set[FunctionVariable]
 
 
 def bound_function_variables(node: Union[Formula, Term]) -> Set[FunctionVariable]:
-    """Returns all quantified FunctionVariable instances in a formula."""
+    """Returns all quantified FunctionVariable instances in a formula.
+
+    Args:
+        node: The formula or term to search for bound function variables.
+
+    Returns:
+        Set of FunctionVariable instances bound by a function quantifier.
+    """
     if isinstance(node, (ForallFunc, ExistsFunc)):
         return {node.variable} | bound_function_variables(node.body)
     elif isinstance(node, (ForallPred, ExistsPred, Forall, Exists)):

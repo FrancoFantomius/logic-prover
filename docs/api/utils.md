@@ -82,12 +82,28 @@ Renders a ModuleDoc object into GitHub-flavored Markdown text.
 
 **Returns:** `str` — Formatted Markdown string.
 
-### `def build_markdown_docs(source_dir: str, output_docs_dir: str) -> Dict[str, str]`
+### `def render_examples_markdown(examples_dir: str) -> str`
+
+Renders every runnable example script into a single Markdown page.
+
+Each example is documented with its module docstring (summary and detailed
+description) followed by the full source code, so the page doubles as a
+tutorial reference.
+
+**Parameters:**
+| Name | Type | Description |
+| :--- | :--- | :--- |
+| `examples_dir` | `str` | Directory containing the example .py scripts. |
+
+**Returns:** `str` — Markdown string documenting each example.
+
+### `def build_markdown_docs(source_dir: str, output_docs_dir: str, examples_dir: str) -> Dict[str, str]`
 
 Scans the source codebase, extracts docstrings from all modules, and writes Markdown documentation.
 
 Generates:
 - docs/api/<submodule_group>.md (e.g. docs/api/core.md, docs/api/prover.md)
+- docs/examples.md (if the examples directory exists)
 - docs/index.md (Landing page with module links and summary tables)
 
 **Parameters:**
@@ -95,6 +111,7 @@ Generates:
 | :--- | :--- | :--- |
 | `source_dir` | `str` | Root package directory to scan (default 'logic_prover'). |
 | `output_docs_dir` | `str` | Target output directory for markdown files (default 'docs'). |
+| `examples_dir` | `str` | Directory of runnable example scripts to document (default 'examples'); skipped if it does not exist. |
 
 **Returns:** `Dict[str, str]` — Dictionary mapping created file paths to rendered content length.
 

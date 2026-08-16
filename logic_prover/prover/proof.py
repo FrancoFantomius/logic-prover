@@ -43,7 +43,14 @@ class ProofStep:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ProofStep:
-        """Deserializes ProofStep from a dictionary."""
+        """Deserializes ProofStep from a dictionary.
+
+        Args:
+            data: Dictionary produced by ProofStep.to_dict().
+
+        Returns:
+            A reconstructed ProofStep instance.
+        """
         conclusion = _dict_to_formula(data["conclusion"])
 
         substitutions: Dict[Variable, Term] = {}
@@ -78,7 +85,14 @@ class ProofDAG:
         root_id: str,
         axiom_ids: Optional[Set[str]] = None
     ) -> None:
-        """Initializes a ProofDAG instance."""
+        """Initializes a ProofDAG instance.
+
+        Args:
+            steps: Mapping of step ids to ProofStep objects.
+            root_id: Id of the root (conclusion) step.
+            axiom_ids: Optional set of step ids to treat as axioms. If None,
+                axioms are inferred from steps lacking premises or using axiom rules.
+        """
         self.steps = dict(steps)
         self.root_id = root_id
         if axiom_ids is not None:
@@ -91,12 +105,25 @@ class ProofDAG:
 
     @property
     def conclusion(self) -> Formula:
+        """Returns the conclusion formula of the root step.
+
+        Returns:
+            The Formula concluded by the root step.
+
+        Raises:
+            ValueError: If root_id is not present in the steps.
+        """
         if self.root_id in self.steps:
             return self.steps[self.root_id].conclusion
         raise ValueError("ProofDAG root_id not found in steps.")
 
     @property
     def premises(self) -> List[Formula]:
+        """Returns the conclusion formulas of all axiom steps, excluding the reflexivity axiom.
+
+        Returns:
+            List of premise formulas derived from axiom steps.
+        """
         return [
             self.steps[aid].conclusion
             for aid in sorted(self.axiom_ids)
@@ -105,13 +132,27 @@ class ProofDAG:
 
 
     def add_step(self, step: ProofStep) -> None:
-        """Adds a step to the DAG."""
+        """Adds a step to the DAG.
+
+        Args:
+            step: The ProofStep to insert into the DAG.
+        """
         self.steps[step.id] = step
         if not step.premise_ids or step.rule in ("Axiom", "Hypothesis", "NegatedGoal"):
             self.axiom_ids.add(step.id)
 
     def get_step(self, step_id: str) -> ProofStep:
-        """Retrieves a step by ID."""
+        """Retrieves a step by ID.
+
+        Args:
+            step_id: The id of the step to retrieve.
+
+        Returns:
+            The ProofStep with the given id.
+
+        Raises:
+            KeyError: If no step with step_id exists in the DAG.
+        """
         if step_id not in self.steps:
             raise KeyError(f"ProofStep ID '{step_id}' not found in ProofDAG.")
         return self.steps[step_id]
@@ -123,6 +164,14 @@ class ProofDAG:
         order: List[ProofStep] = []
 
         def dfs(node_id: str) -> None:
+            """Recursively performs DFS from a node, appending in dependency order.
+
+            Args:
+                node_id: Id of the node to visit.
+
+            Raises:
+                ValueError: If a cycle is detected in the DAG.
+            """
             if node_id in in_stack:
                 raise ValueError(f"Cycle detected in ProofDAG involving node '{node_id}'.")
             if node_id in visited:
@@ -146,6 +195,12 @@ class ProofDAG:
         3. Verifies every premise_id references an existing step.
         4. Validates formula well-formedness if signature is provided.
         5. Checks rule-specific conclusion derivation logic for non-axiom steps.
+
+        Args:
+            signature: Optional Signature used to validate step conclusions.
+
+        Returns:
+            True if the DAG is logically valid, False otherwise.
         """
         if self.root_id not in self.steps:
             return False
@@ -254,6 +309,13 @@ class ProofDAG:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ProofDAG:
-        """Deserializes proof DAG from dictionary."""
+        """Deserializes proof DAG from dictionary.
+
+        Args:
+            data: Dictionary produced by ProofDAG.to_dict().
+
+        Returns:
+            A reconstructed ProofDAG instance.
+        """
         steps = {step_id: ProofStep.from_dict(step_data) for step_id, step_data in data["steps"].items()}
         return cls(steps=steps, root_id=data["root_id"], axiom_ids=set(data.get("axiom_ids", [])))

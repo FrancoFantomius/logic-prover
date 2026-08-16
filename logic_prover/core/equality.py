@@ -198,12 +198,30 @@ def equality_substitution(eq: Equality, formula: Formula) -> List[Formula]:
     results: Set[Formula] = set()
 
     def term_variants(term: Term, src: Term, dst: Term) -> List[Term]:
+        """Generates all term variants obtained by replacing src with dst in subterms.
+
+        Args:
+            term: The term to generate variants for.
+            src: The subterm to replace.
+            dst: The replacement term.
+
+        Returns:
+            De-duplicated list of term variants.
+        """
         variants: List[Term] = []
         if term == src:
             variants.append(dst)
         if isinstance(term, FunctionApp):
             args_variants = [term_variants(arg, src, dst) for arg in term.args]
             def combine_args(idx: int) -> List[Tuple[Term, ...]]:
+                """Recursively builds all combinations of subterm variants.
+
+                Args:
+                    idx: Current index into the args_variants list.
+
+                Returns:
+                    List of argument tuples formed by Cartesian combination.
+                """
                 if idx == len(args_variants):
                     return [()]
                 res: List[Tuple[Term, ...]] = []
@@ -223,6 +241,16 @@ def equality_substitution(eq: Equality, formula: Formula) -> List[Formula]:
         return unique
 
     def formula_variants(fmt: Formula, src: Term, dst: Term) -> List[Formula]:
+        """Generates all formula variants obtained by replacing src with dst in subformulas.
+
+        Args:
+            fmt: The formula to generate variants for.
+            src: The term to replace.
+            dst: The replacement term.
+
+        Returns:
+            De-duplicated list of formula variants.
+        """
         variants: List[Formula] = []
         if isinstance(fmt, Equality):
             left_vars = term_variants(fmt.left, src, dst)
@@ -233,6 +261,14 @@ def equality_substitution(eq: Equality, formula: Formula) -> List[Formula]:
         elif isinstance(fmt, PredicateApp):
             args_vars = [term_variants(arg, src, dst) for arg in fmt.args]
             def combine_pred_args(idx: int) -> List[Tuple[Term, ...]]:
+                """Recursively builds all combinations of predicate argument variants.
+
+                Args:
+                    idx: Current index into the args_vars list.
+
+                Returns:
+                    List of argument tuples formed by Cartesian combination.
+                """
                 if idx == len(args_vars):
                     return [()]
                 res: List[Tuple[Term, ...]] = []

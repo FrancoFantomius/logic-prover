@@ -28,20 +28,48 @@ class SubstitutionTransformer(ASTTransformer):
     scope_bound_vars: Set[Variable]
 
     def __init__(self, mapping: Dict[Variable, Term]) -> None:
-        """Initializes a SubstitutionTransformer instance with mapping."""
+        """Initializes a SubstitutionTransformer instance with mapping.
+
+        Args:
+            mapping: Dictionary mapping variables to their replacement terms.
+        """
         super().__init__()
         self.mapping = mapping
         self.scope_bound_vars = set()
 
     def visit_variable(self, node: Variable) -> Term:
+        """Handles visitation of a Variable node.
+
+        Args:
+            node: The Variable AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         if node in self.mapping:
             return self.mapping[node]
         return node
 
     def visit_constant(self, node: Constant) -> Term:
+        """Handles visitation of a Constant node.
+
+        Args:
+            node: The Constant AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         return node
 
     def visit_function_app(self, node: FunctionApp) -> FunctionApp:
+        """Handles visitation of a FunctionApp node.
+
+        Args:
+            node: The FunctionApp AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         new_args = tuple(self.visit(arg) for arg in node.args)
         return FunctionApp(
             func=node.func,
@@ -51,6 +79,14 @@ class SubstitutionTransformer(ASTTransformer):
         )
 
     def visit_predicate_app(self, node: PredicateApp) -> PredicateApp:
+        """Handles visitation of a PredicateApp node.
+
+        Args:
+            node: The PredicateApp AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         new_args = tuple(self.visit(arg) for arg in node.args)
         return PredicateApp(
             pred=node.pred,
@@ -59,15 +95,39 @@ class SubstitutionTransformer(ASTTransformer):
         )
 
     def visit_equality(self, node: Equality) -> Equality:
+        """Handles visitation of a Equality node.
+
+        Args:
+            node: The Equality AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         new_left = self.visit(node.left)
         new_right = self.visit(node.right)
         assert isinstance(new_left, Term) and isinstance(new_right, Term)
         return Equality(left=new_left, right=new_right)
 
     def visit_forall(self, node: Forall) -> Formula:
+        """Handles visitation of a Forall node.
+
+        Args:
+            node: The Forall AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         return self._handle_quantifier(node.variable, node.body, Forall)
 
     def visit_exists(self, node: Exists) -> Formula:
+        """Handles visitation of a Exists node.
+
+        Args:
+            node: The Exists AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
         return self._handle_quantifier(node.variable, node.body, Exists)
 
     def _handle_quantifier(
@@ -261,6 +321,15 @@ def unify_terms(
         subst = dict(subst)
 
     def deref(t: Term, s: Dict[Variable, Term]) -> Term:
+        """Fully resolves a term through the substitution chain.
+
+        Args:
+            t: Term to dereference.
+            s: Substitution dictionary to follow.
+
+        Returns:
+            The terminal term reached by repeatedly following variable bindings.
+        """
         while isinstance(t, Variable) and t in s:
             t = s[t]
         return t

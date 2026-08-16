@@ -170,12 +170,26 @@ def compute_equivalence_classes(
     parent: Dict[str, str] = {name: name for name, _ in formulas}
 
     def find(i: str) -> str:
+        """Finds the union-find representative for a name with path compression.
+
+        Args:
+            i: The name to look up.
+
+        Returns:
+            The representative root name.
+        """
         if parent[i] == i:
             return i
         parent[i] = find(parent[i])
         return parent[i]
 
     def union(i: str, j: str) -> None:
+        """Merges the union-find sets containing i and j.
+
+        Args:
+            i: First name to merge.
+            j: Second name to merge.
+        """
         root_i = find(i)
         root_j = find(j)
         if root_i != root_j:

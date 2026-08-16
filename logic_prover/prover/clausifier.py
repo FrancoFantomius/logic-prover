@@ -64,7 +64,14 @@ class Literal:
         return set(self._free_vars)
 
     def substitute(self, subst: Dict[Variable, Term]) -> Literal:
-        """Applies variable substitution to the literal atom."""
+        """Applies variable substitution to the literal atom.
+
+        Args:
+            subst: Mapping of variables to replacement terms.
+
+        Returns:
+            A new Literal with the substitution applied, or self if subst is empty.
+        """
         if not subst:
             return self
         new_atom = substitute_formula(self.atom, subst)
@@ -125,7 +132,14 @@ class Clause:
         return set(self._free_vars)
 
     def substitute(self, subst: Dict[Variable, Term]) -> Clause:
-        """Applies variable substitution to all literals in the clause."""
+        """Applies variable substitution to all literals in the clause.
+
+        Args:
+            subst: Mapping of variables to replacement terms.
+
+        Returns:
+            A new Clause with the substitution applied, or self if subst is empty.
+        """
         if not subst:
             return self
         return Clause(frozenset(lit.substitute(subst) for lit in self.literals))
@@ -145,6 +159,15 @@ def eliminate_implications(formula: Formula) -> Formula:
     Recursively eliminates Iff and Implies operators:
     - A ⟺ B  ==>  (A ⟹ B) ∧ (B ⟹ A)
     - A ⟹ B  ==>  ¬A ∨ B
+
+    Args:
+        formula: The Formula AST node to transform.
+
+    Returns:
+        An equivalent formula with only And/Or/Not and quantifiers.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     if isinstance(formula, (PredicateApp, Equality)):
         return formula
@@ -187,6 +210,15 @@ def to_nnf(formula: Formula) -> Formula:
     - ¬(∀x, P(x))    ==>  ∃x, ¬P(x)
     - ¬(∃x, P(x))    ==>  ∀x, ¬P(x)
     Assumes implications have already been eliminated.
+
+    Args:
+        formula: The Formula AST node to transform.
+
+    Returns:
+        An equivalent formula in Negation Normal Form.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     if isinstance(formula, (PredicateApp, Equality)):
         return formula
@@ -226,6 +258,15 @@ def standardize_variables(formula: Formula) -> Formula:
     """
     Renames bound variables so that each quantifier binds a unique variable index,
     preventing name clashes during Skolemization.
+
+    Args:
+        formula: The Formula AST node to standardize.
+
+    Returns:
+        An alpha-equivalent formula with unique bound variable indices.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     all_vars = free_variables(formula) | bound_variables(formula)
     max_id = max([v.id for v in all_vars], default=0)
@@ -270,6 +311,16 @@ def skolemize(formula: Formula, signature: Optional[Signature] = None) -> Formul
     - If k == 0, replaces x with Constant(sk_c, sort=x.sort).
     Updates signature with new Skolem function/constant symbols if signature is provided.
     Assumes formula is in NNF and variables are standardized.
+
+    Args:
+        formula: The Formula AST node to Skolemize.
+        signature: Optional Signature to register newly introduced Skolem symbols.
+
+    Returns:
+        A formula with all existential quantifiers eliminated.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     def _sk(f: Formula, outer_universals: List[Variable]) -> Formula:
         if isinstance(f, (PredicateApp, Equality)):
@@ -322,6 +373,15 @@ def drop_universals(formula: Formula) -> Formula:
     """
     Strips all Forall quantifiers. In CNF, all remaining free variables
     are implicitly universally quantified.
+
+    Args:
+        formula: The Formula AST node to strip quantifiers from.
+
+    Returns:
+        A formula without leading universal quantifiers.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     if isinstance(formula, Forall):
         return drop_universals(formula.body)
@@ -345,6 +405,15 @@ def distribute_cnf(formula: Formula) -> Formula:
     - A ∨ (B ∧ C)  ==>  (A ∨ B) ∧ (A ∨ C)
     - (A ∧ B) ∨ C  ==>  (A ∨ C) ∧ (B ∨ C)
     Assumes formula has no quantifiers or implications.
+
+    Args:
+        formula: The Formula AST node to distribute.
+
+    Returns:
+        An equivalent formula in Conjunctive Normal Form.
+
+    Raises:
+        ValueError: If an unsupported formula node is encountered.
     """
     if isinstance(formula, (PredicateApp, Equality)):
         return formula
@@ -384,6 +453,15 @@ def formula_to_clauses(formula: Formula) -> List[Clause]:
     """
     Converts a CNF-structured Formula (And/Or trees over atoms/nots)
     into a List of Clause instances. Filters out tautological clauses (L ∨ ¬L).
+
+    Args:
+        formula: A CNF-structured Formula AST node.
+
+    Returns:
+        List of Clause objects, excluding tautologies.
+
+    Raises:
+        ValueError: If an unexpected node appears inside a clause.
     """
     conjunctions: List[Formula] = []
 
@@ -431,6 +509,13 @@ def to_cnf(formula: Formula, signature: Optional[Signature] = None) -> List[Clau
     5. Drop universal quantifiers
     6. Distribute ∨ over ∧
     7. Convert AST to List[Clause] and filter tautologies
+
+    Args:
+        formula: The Formula AST node to convert.
+        signature: Optional Signature for Skolem symbol registration.
+
+    Returns:
+        List of Clause objects representing the CNF of the formula.
     """
     f1 = eliminate_implications(formula)
     f2 = to_nnf(f1)
@@ -444,5 +529,12 @@ def to_cnf(formula: Formula, signature: Optional[Signature] = None) -> List[Clau
 def negate_and_clausify(formula: Formula, signature: Optional[Signature] = None) -> List[Clause]:
     """
     Negates the given target formula (Not(formula)) and converts it to CNF for refutation search.
+
+    Args:
+        formula: The Formula AST node to negate and clausify.
+        signature: Optional Signature for Skolem symbol registration.
+
+    Returns:
+        List of Clause objects representing the CNF of the negated formula.
     """
     return to_cnf(Not(formula), signature=signature)
