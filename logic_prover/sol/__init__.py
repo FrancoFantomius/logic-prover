@@ -1,4 +1,4 @@
-﻿"""Second-Order Logic (SOL) extension module providing higher-order quantification and pattern matching."""
+"""Second-Order Logic (SOL) extension module providing higher-order quantification and pattern matching."""
 
 from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
@@ -31,7 +31,23 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
+    """Dynamically imports and retrieves attributes and functions from SOL submodules upon request.
+
+    Args:
+        name (str): Name of the attribute, class, or function to resolve.
+
+    Returns:
+        Any: The resolved symbol imported from the respective SOL module.
+
+    Raises:
+        AttributeError: If the requested attribute is not part of the SOL export interface.
+
+    Example:
+        >>> from logic_prover import sol
+        >>> hasattr(sol, "ho_pattern_unify")
+        True
+    """
     if name in (
         "ho_pattern_unify", "is_ho_pattern",
         "beta_reduce_predicate", "beta_reduce_function",

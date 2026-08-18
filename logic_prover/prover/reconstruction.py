@@ -1,4 +1,4 @@
-﻿"""Natural deduction proof reconstruction from resolution trace logs."""
+"""Natural deduction proof reconstruction from resolution trace logs."""
 
 from __future__ import annotations
 from typing import List, Dict, Set, Optional, Tuple, TYPE_CHECKING
@@ -14,7 +14,23 @@ if TYPE_CHECKING:
 
 
 def _literal_to_formula(lit: Literal) -> Formula:
-    """Converts a single Literal back into an AST Formula."""
+    """Converts a Clausal Literal instance back into an AST Formula.
+
+    Maps a positive literal to its underlying atomic formula, and a negative literal to Not(atom).
+
+    Args:
+        lit (Literal): The Literal instance to convert.
+
+    Returns:
+        Formula: The corresponding Formula AST node (PredicateApp, Equality, or Not).
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp
+        >>> from logic_prover.prover.clausifier import Literal
+        >>> lit = Literal(PredicateApp("P", 0, ()), positive=False)
+        >>> _literal_to_formula(lit)
+        Not(operand=PredicateApp(pred='P', arity=0, args=()))
+    """
     if lit.positive:
         return lit.atom
     else:
@@ -22,7 +38,22 @@ def _literal_to_formula(lit: Literal) -> Formula:
 
 
 def _clause_to_formula(clause: Clause) -> Formula:
-    """Converts a Clause back into a disjunctive Formula tree."""
+    """Converts a Clause back into a disjunctive Formula AST tree.
+
+    Maps an empty clause to the contradiction predicate False(), a single literal
+    to its formula, or multiple literals to nested Or(left, right) disjunctions.
+
+    Args:
+        clause (Clause): The Clause to convert into a Formula.
+
+    Returns:
+        Formula: The reconstructed disjunctive Formula AST.
+
+    Example:
+        >>> from logic_prover.prover.clausifier import Clause
+        >>> _clause_to_formula(Clause(frozenset()))
+        PredicateApp(pred='False', arity=0, args=())
+    """
     if clause.is_empty:
         return PredicateApp(pred="False", arity=0, args=())
 

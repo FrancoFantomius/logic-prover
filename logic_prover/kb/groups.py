@@ -1,4 +1,4 @@
-﻿"""Group theory axioms (associativity, identity, inverse, commutativity)."""
+"""Group theory axioms (associativity, identity, inverse, commutativity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -11,7 +11,19 @@ GroupElem: PrimitiveSort = PrimitiveSort("GroupElem")
 
 
 def get_group_signature() -> Signature:
-    """Returns the signature for group theory symbols (op, inv, e)."""
+    """Constructs the signature for abstract group theory symbols.
+
+    Registers constant identity 'e', binary operation 'op', and unary inverse 'inv'
+    over sort GroupElem.
+
+    Returns:
+        Signature: The initialized group theory Signature instance.
+
+    Example:
+        >>> sig = get_group_signature()
+        >>> sig.has_symbol("e") and sig.has_symbol("op") and sig.has_symbol("inv")
+        True
+    """
     sig = Signature()
     sig.register_constant("e", GroupElem)
     sig.register_function("op", 2, (GroupElem, GroupElem), GroupElem)
@@ -20,7 +32,25 @@ def get_group_signature() -> Signature:
 
 
 def get_group_axioms() -> List[Tuple[str, Formula]]:
-    """Returns group theory axioms: associativity, left/right identity, left/right inverse."""
+    """Generates the fundamental First-Order Group Theory axioms.
+
+    Includes:
+    - group_assoc: ∀x, y, z. op(op(x, y), z) = op(x, op(y, z))
+    - group_identity_left: ∀x. op(e, x) = x
+    - group_identity_right: ∀x. op(x, e) = x
+    - group_inverse_left: ∀x. op(inv(x), x) = e
+    - group_inverse_right: ∀x. op(x, inv(x)) = e
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for group theory.
+
+    Example:
+        >>> axioms = get_group_axioms()
+        >>> len(axioms) == 5
+        True
+        >>> axioms[0][0]
+        'group_assoc'
+    """
     v0 = Variable(0, sort=GroupElem)
     v1 = Variable(1, sort=GroupElem)
     v2 = Variable(2, sort=GroupElem)

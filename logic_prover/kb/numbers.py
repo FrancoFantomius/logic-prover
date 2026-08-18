@@ -1,4 +1,4 @@
-﻿"""Peano arithmetic axioms and natural number signature definitions."""
+"""Peano arithmetic axioms and natural number signature definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -12,7 +12,19 @@ from logic_prover.core.signature import Signature
 
 
 def get_peano_signature() -> Signature:
-    """Returns signature declaring Peano arithmetic symbols (zero, succ, add, mul, le, eq)."""
+    """Constructs the signature declaring Peano arithmetic constants, functions, and relations.
+
+    Registers constant 'zero', unary function 'succ', binary functions 'add' and 'mul',
+    and binary relations 'le' and 'eq'.
+
+    Returns:
+        Signature: The initialized Peano arithmetic Signature instance.
+
+    Example:
+        >>> sig = get_peano_signature()
+        >>> sig.has_symbol("zero") and sig.has_symbol("add") and sig.has_symbol("succ")
+        True
+    """
     sig = Signature()
     sig.register_constant("zero", Nat)
     sig.register_function("succ", 1, (Nat,), Nat)
@@ -24,7 +36,27 @@ def get_peano_signature() -> Signature:
 
 
 def get_peano_axioms() -> List[Tuple[str, Formula]]:
-    """Returns Peano arithmetic axioms for natural numbers."""
+    """Generates the First-Order Peano arithmetic axioms for natural numbers.
+
+    Includes:
+    - peano_zero_not_succ: ∀n:Nat. ¬(S(n) = 0)
+    - peano_succ_injective: ∀m, n:Nat. (S(m) = S(n) ⇒ m = n)
+    - peano_add_zero: ∀n:Nat. n + 0 = n
+    - peano_add_succ: ∀m, n:Nat. m + S(n) = S(m + n)
+    - peano_mul_zero: ∀n:Nat. n * 0 = 0
+    - peano_mul_succ: ∀m, n:Nat. m * S(n) = (m * n) + m
+    - peano_le_def: ∀m, n:Nat. (m ≤ n ⇔ ∃k. m + k = n)
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for Peano arithmetic.
+
+    Example:
+        >>> axioms = get_peano_axioms()
+        >>> len(axioms) == 7
+        True
+        >>> axioms[0][0]
+        'peano_zero_not_succ'
+    """
     zero = Constant("zero", sort=Nat)
 
     m = Variable(0, sort=Nat)

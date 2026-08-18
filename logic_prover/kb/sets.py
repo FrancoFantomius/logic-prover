@@ -1,4 +1,4 @@
-﻿"""Naive set theory axioms (extensionality, subset, union, intersection, empty set)."""
+"""Naive set theory axioms (extensionality, subset, union, intersection, empty set)."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -14,7 +14,19 @@ SetType: ParameterizedSort = SetSort(ElemSort)
 
 
 def get_set_signature() -> Signature:
-    """Returns signature for minimal set theory symbols."""
+    """Constructs the signature declaring standard axiomatic set theory symbols.
+
+    Registers sort constructor 'Set', binary relation 'in_set', 'subset',
+    constant 'empty_set', and functions 'union', 'inter', 'diff', 'singleton', 'powerset'.
+
+    Returns:
+        Signature: The initialized set theory Signature instance.
+
+    Example:
+        >>> sig = get_set_signature()
+        >>> sig.has_symbol("union") and sig.has_symbol("in_set")
+        True
+    """
     sig = Signature()
     sig.register_sort_constructor("Set", 1)
     sig.register_predicate("in_set", 2, (Ind, Ind))
@@ -29,7 +41,28 @@ def get_set_signature() -> Signature:
 
 
 def get_set_theory_axioms() -> List[Tuple[str, Formula]]:
-    """Returns minimal set theory axioms: extensionality, subset, empty set, union, inter, diff, singleton, powerset."""
+    """Generates the foundational First-Order Axiomatic Set Theory axioms.
+
+    Includes:
+    - set_extensionality: ∀A, B. (A = B ⇔ ∀x. (x ∈ A ⇔ x ∈ B))
+    - set_subset_def: ∀A, B. (A ⊆ B ⇔ ∀x. (x ∈ A ⇒ x ∈ B))
+    - set_empty_def: ∀x. ¬(x ∈ ∅)
+    - set_union_def: ∀A, B, x. (x ∈ (A ∪ B) ⇔ (x ∈ A ∨ x ∈ B))
+    - set_inter_def: ∀A, B, x. (x ∈ (A ∩ B) ⇔ (x ∈ A ∧ x ∈ B))
+    - set_diff_def: ∀A, B, x. (x ∈ (A \\ B) ⇔ (x ∈ A ∧ ¬(x ∈ B)))
+    - set_singleton_def: ∀x, y. (y ∈ {x} ⇔ y = x)
+    - set_powerset_def: ∀A, B. (B ∈ 𝒫(A) ⇔ B ⊆ A)
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for set theory.
+
+    Example:
+        >>> axioms = get_set_theory_axioms()
+        >>> len(axioms) == 8
+        True
+        >>> axioms[0][0]
+        'set_extensionality'
+    """
     A = Variable(0, sort=SetType)
     B = Variable(1, sort=SetType)
     x = Variable(3, sort=ElemSort)

@@ -1,4 +1,4 @@
-﻿"""Term rewriting system for applying directional rewrite rules and normalizations."""
+"""Term rewriting system for applying directional rewrite rules and normalizations."""
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -22,6 +22,11 @@ class RewriteRule:
     name: str = ""
 
     def __post_init__(self) -> None:
+        """Validates that lhs and rhs have matching AST categories (both Term or both Formula).
+
+        Raises:
+            ValidationError: If lhs is a Term while rhs is a Formula, or vice versa.
+        """
         if isinstance(self.lhs, Term) and not isinstance(self.rhs, Term):
             raise ValidationError("RewriteRule lhs is Term but rhs is Formula.")
         if isinstance(self.lhs, Formula) and not isinstance(self.rhs, Formula):
@@ -165,7 +170,19 @@ def rewrite(node: Union[Term, Formula], rule: RewriteRule) -> Optional[Union[Ter
 
 
 def _evaluate_condition(condition: Formula) -> bool:
-    """Internal helper to evaluate side conditions on rewrite rules."""
+    """Evaluates whether an instantiated side condition formula holds trivially (reflexive equality).
+
+    Args:
+        condition (Formula): The instantiated condition formula to evaluate.
+
+    Returns:
+        bool: True if the condition is satisfied, False otherwise.
+
+    Example:
+        >>> from logic_prover.core.ast import Equality, Variable
+        >>> _evaluate_condition(Equality(Variable(0), Variable(0)))
+        True
+    """
     if isinstance(condition, Equality) and condition.left == condition.right:
         return True
     return False

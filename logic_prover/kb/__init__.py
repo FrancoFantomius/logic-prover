@@ -1,4 +1,4 @@
-﻿"""Knowledge base module providing foundational logic, arithmetic, group, relation, order, set, and function axioms."""
+"""Knowledge base module providing foundational logic, arithmetic, group, relation, order, set, and function axioms."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -16,7 +16,21 @@ from logic_prover.kb.functions import get_function_axioms, get_function_signatur
 
 
 def get_extended_axioms() -> List[Tuple[str, Formula, str]]:
-    """Returns all extended axioms with category tags ('groups', 'relations', 'orders', 'sets', 'functions')."""
+    """Retrieves all extended mathematical domain axioms with category tags.
+
+    Collects axioms across algebra (groups), binary relations, orderings,
+    axiomatic set theory, and function theory.
+
+    Returns:
+        List[Tuple[str, Formula, str]]: List of (name, formula, category) tuples.
+
+    Example:
+        >>> axioms = get_extended_axioms()
+        >>> len(axioms) > 0
+        True
+        >>> axioms[0][2] in ("groups", "relations", "orders", "sets", "functions")
+        True
+    """
     extended_axioms: List[Tuple[str, Formula, str]] = []
 
     for name, formula in get_group_axioms():
@@ -38,7 +52,19 @@ def get_extended_axioms() -> List[Tuple[str, Formula, str]]:
 
 
 def get_all_axioms() -> List[Tuple[str, Formula, str]]:
-    """Returns complete library axiom set combining foundational and extended domains."""
+    """Retrieves the complete standard axiom library combining foundational and extended domains.
+
+    Merges equality schemata, first-order logic axioms, Peano arithmetic axioms,
+    and all extended mathematical theory axioms.
+
+    Returns:
+        List[Tuple[str, Formula, str]]: List of (name, formula, category) tuples representing all axioms.
+
+    Example:
+        >>> all_ax = get_all_axioms()
+        >>> any(name == "eq_reflexive" for name, _, _ in all_ax)
+        True
+    """
     all_axioms: List[Tuple[str, Formula, str]] = []
 
     for name, formula in get_equality_axioms():
@@ -56,7 +82,19 @@ def get_all_axioms() -> List[Tuple[str, Formula, str]]:
 
 
 def get_combined_signature() -> Signature:
-    """Merges signatures across all foundational and extended axiom domains."""
+    """Constructs and returns the union signature across all supported axiom domains.
+
+    Merges symbols for equality, first-order logic, Peano arithmetic, group theory,
+    relations, partial/total orders, set theory, and functions.
+
+    Returns:
+        Signature: A comprehensive Signature instance containing all registered symbols and constructors.
+
+    Example:
+        >>> sig = get_combined_signature()
+        >>> sig.has_symbol("eq") or sig.has_symbol("add") or sig.has_symbol("succ")
+        True
+    """
     sig = get_equality_signature()
     sig = sig.merge(get_fol_signature())
     sig = sig.merge(get_peano_signature())

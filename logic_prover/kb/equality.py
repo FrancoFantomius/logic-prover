@@ -1,4 +1,4 @@
-﻿"""Equality axioms and congruence signature definitions."""
+"""Equality axioms and congruence signature definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -11,7 +11,18 @@ from logic_prover.core.signature import Signature
 
 
 def get_equality_signature() -> Signature:
-    """Returns signature declaring generic equality operations and sample symbols for schemata."""
+    """Constructs the signature declaring generic equality operations and symbols for congruence schemata.
+
+    Registers unary function 'f', binary function 'f_bin', and unary predicate 'P'.
+
+    Returns:
+        Signature: The initialized equality Signature instance.
+
+    Example:
+        >>> sig = get_equality_signature()
+        >>> sig.has_symbol("f") and sig.has_symbol("P")
+        True
+    """
     sig = Signature()
     sig.register_function("f", 1, (Ind,), Ind)
     sig.register_function("f_bin", 2, (Ind, Ind), Ind)
@@ -20,7 +31,26 @@ def get_equality_signature() -> Signature:
 
 
 def get_equality_axioms() -> List[Tuple[str, Formula]]:
-    """Returns fundamental equality axioms: reflexivity, symmetry, transitivity, and congruence schemata."""
+    """Generates the fundamental First-Order Logic equality axioms and congruence schemata.
+
+    Includes:
+    - eq_reflexive: ∀x. x = x
+    - eq_symmetric: ∀x, y. (x = y ⇒ y = x)
+    - eq_transitive: ∀x, y, z. ((x = y ∧ y = z) ⇒ x = z)
+    - eq_congruence_unary_func: ∀x, y. (x = y ⇒ f(x) = f(y))
+    - eq_congruence_binary_func: ∀x1, x2, y1, y2. ((x1 = y1 ∧ x2 = y2) ⇒ f_bin(x1, x2) = f_bin(y1, y2))
+    - eq_congruence_unary_pred: ∀x, y. ((x = y ∧ P(x)) ⇒ P(y))
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for equality theory.
+
+    Example:
+        >>> axioms = get_equality_axioms()
+        >>> len(axioms) == 6
+        True
+        >>> axioms[0][0]
+        'eq_reflexive'
+    """
     x = Variable(0, sort=Ind)
     y = Variable(1, sort=Ind)
     z = Variable(2, sort=Ind)

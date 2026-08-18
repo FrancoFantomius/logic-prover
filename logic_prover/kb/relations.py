@@ -1,4 +1,4 @@
-﻿"""Binary relation theory axioms (reflexivity, symmetry, transitivity, irreflexivity)."""
+"""Binary relation theory axioms (reflexivity, symmetry, transitivity, irreflexivity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -13,7 +13,16 @@ RelElem: PrimitiveSort = PrimitiveSort("RelElem")
 
 
 def get_relation_signature() -> Signature:
-    """Returns the signature declaring binary relation predicate R and EqRel."""
+    """Constructs the signature declaring binary relation predicates 'R' and 'EqRel' over RelElem.
+
+    Returns:
+        Signature: The initialized binary relation Signature instance.
+
+    Example:
+        >>> sig = get_relation_signature()
+        >>> sig.has_symbol("R") and sig.has_symbol("EqRel")
+        True
+    """
     sig = Signature()
     sig.register_predicate("R", 2, (RelElem, RelElem))
     sig.register_predicate("EqRel", 2, (RelElem, RelElem))
@@ -21,7 +30,26 @@ def get_relation_signature() -> Signature:
 
 
 def get_relation_axioms() -> List[Tuple[str, Formula]]:
-    """Returns relation property axioms: reflexivity, symmetry, transitivity, anti-symmetry, irreflexivity, asymmetry."""
+    """Generates the fundamental binary relation theory property axioms.
+
+    Includes:
+    - rel_reflexive: ∀x. R(x, x)
+    - rel_symmetric: ∀x, y. (R(x, y) ⇒ R(y, x))
+    - rel_transitive: ∀x, y, z. ((R(x, y) ∧ R(y, z)) ⇒ R(x, z))
+    - rel_antisymmetric: ∀x, y. ((R(x, y) ∧ R(y, x)) ⇒ x = y)
+    - rel_irreflexive: ∀x. ¬R(x, x)
+    - rel_asymmetric: ∀x, y. (R(x, y) ⇒ ¬R(y, x))
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for relation properties.
+
+    Example:
+        >>> axioms = get_relation_axioms()
+        >>> len(axioms) == 6
+        True
+        >>> axioms[0][0]
+        'rel_reflexive'
+    """
     x = Variable(0, sort=RelElem)
     y = Variable(1, sort=RelElem)
     z = Variable(2, sort=RelElem)

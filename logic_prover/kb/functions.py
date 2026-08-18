@@ -1,4 +1,4 @@
-﻿"""Function theory axioms (injective, surjective, bijective, identity)."""
+"""Function theory axioms (injective, surjective, bijective, identity)."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -15,7 +15,19 @@ FuncSort: PrimitiveSort = PrimitiveSort("Func")
 
 
 def get_function_signature() -> Signature:
-    """Returns signature declaring function concepts (apply, comp, id_func, is_injective, etc.)."""
+    """Constructs the signature declaring function theory constants, operations, and predicates.
+
+    Registers binary functions 'apply' and 'comp', constant 'id_func', and unary
+    predicates 'is_injective', 'is_surjective', 'is_bijective'.
+
+    Returns:
+        Signature: The initialized function theory Signature instance.
+
+    Example:
+        >>> sig = get_function_signature()
+        >>> sig.has_symbol("apply") and sig.has_symbol("is_injective")
+        True
+    """
     sig = Signature()
     sig.register_function("apply", 2, (FuncSort, Ind), Ind)
     sig.register_function("comp", 2, (FuncSort, FuncSort), FuncSort)
@@ -27,7 +39,26 @@ def get_function_signature() -> Signature:
 
 
 def get_function_axioms() -> List[Tuple[str, Formula]]:
-    """Returns function concept axioms: composition, injectivity, surjectivity, bijectivity, identity function."""
+    """Generates the fundamental First-Order Function Theory axioms.
+
+    Includes:
+    - func_well_defined: ∀f, x, y. (x = y ⇒ apply(f, x) = apply(f, y))
+    - func_comp_def: ∀f, g, x. apply(comp(f, g), x) = apply(f, apply(g, x))
+    - func_injective_def: ∀f. (is_injective(f) ⇔ ∀x, y. (apply(f, x) = apply(f, y) ⇒ x = y))
+    - func_surjective_def: ∀f. (is_surjective(f) ⇔ ∀z. ∃x. apply(f, x) = z)
+    - func_bijective_def: ∀f. (is_bijective(f) ⇔ (is_injective(f) ∧ is_surjective(f)))
+    - func_id_def: ∀x. apply(id_func, x) = x
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for function theory.
+
+    Example:
+        >>> axioms = get_function_axioms()
+        >>> len(axioms) == 6
+        True
+        >>> axioms[0][0]
+        'func_well_defined'
+    """
     f = Variable(0, sort=FuncSort)
     g = Variable(1, sort=FuncSort)
     x = Variable(2, sort=Dom)
