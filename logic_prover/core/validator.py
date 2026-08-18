@@ -1,4 +1,4 @@
-﻿"""Validation engine for checking AST sort and signature consistency."""
+"""Validation engine for checking AST sort and signature consistency."""
 
 from __future__ import annotations
 from typing import List, Set, Union, Optional
@@ -20,7 +20,24 @@ from logic_prover.sol.ast_ext import (
 
 
 def _get_term_sort(term: Term, signature: Signature) -> Sort:
-    """Infer sort of term considering signature declarations."""
+    """Infers the sort of a term considering declarations registered in the signature.
+
+    Args:
+        term (Term): The Term AST node (Variable, Constant, or FunctionApp) whose sort is to be inferred.
+        signature (Signature): The logical signature context used to resolve constant and function sorts.
+
+    Returns:
+        Sort: The inferred Sort of the term node.
+
+    Example:
+        >>> from logic_prover.core.ast import Constant
+        >>> from logic_prover.core.signature import Signature
+        >>> from logic_prover.core.sorts import Nat
+        >>> sig = Signature()
+        >>> sig.register_constant("zero", Nat)
+        >>> _get_term_sort(Constant("zero"), sig)
+        PrimitiveSort(sort_name='Nat')
+    """
     if isinstance(term, Variable):
         return term.sort
     elif isinstance(term, Constant):

@@ -1,4 +1,4 @@
-﻿"""Diversity filter and Bloom-style formula deduplication filter."""
+"""Diversity filter and Bloom-style formula deduplication filter."""
 
 from __future__ import annotations
 import json
@@ -28,10 +28,22 @@ class FormulaFilter:
             self.load_state(self.storage_path)
 
     def _compute_hash(self, formula: Formula) -> str:
-        """
-        Computes deterministic SHA-256 hash of canonicalized formula.
-        Uses canonicalize_bound_variables to ensure alpha-equivalent formulas
-        yield identical hashes.
+        """Computes deterministic SHA-256 hash of a canonicalized formula AST.
+
+        Uses canonicalize_bound_variables to ensure alpha-equivalent formulas yield identical hashes.
+
+        Args:
+            formula (Formula): The formula AST node to hash.
+
+        Returns:
+            str: 64-character hexadecimal SHA-256 hash string.
+
+        Example:
+            >>> from logic_prover.core.ast import PredicateApp
+            >>> f_filter = FormulaFilter()
+            >>> h = f_filter._compute_hash(PredicateApp("P", 0, ()))
+            >>> len(h) == 64
+            True
         """
         canonical = canonicalize_bound_variables(formula)
         canonical_repr = repr(canonical)

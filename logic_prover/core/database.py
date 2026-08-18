@@ -1,4 +1,4 @@
-﻿"""SQLite database persistence engine for logic formulas, axioms, and theorems."""
+"""SQLite database persistence engine for logic formulas, axioms, and theorems."""
 
 from __future__ import annotations
 import sqlite3
@@ -21,6 +21,22 @@ ProofDAG = Any
 
 
 def _sort_to_dict(sort: Sort) -> Dict[str, Any]:
+    """Converts a Sort instance into a serializable dictionary structure.
+
+    Args:
+        sort (Sort): The Sort instance to serialize into a dictionary.
+
+    Returns:
+        Dict[str, Any]: A JSON-compatible dictionary representing the sort structure.
+
+    Raises:
+        DatabaseError: If the sort type is not recognized for serialization.
+
+    Example:
+        >>> from logic_prover.core.sorts import Ind
+        >>> _sort_to_dict(Ind)
+        {'sort_type': 'PrimitiveSort', 'name': 'Ind'}
+    """
     if isinstance(sort, PrimitiveSort):
         return {"sort_type": "PrimitiveSort", "name": sort.sort_name}
     elif isinstance(sort, ParameterizedSort):
@@ -40,6 +56,21 @@ def _sort_to_dict(sort: Sort) -> Dict[str, Any]:
 
 
 def _dict_to_sort(d: Dict[str, Any]) -> Sort:
+    """Reconstructs a Sort instance from a serialized dictionary representation.
+
+    Args:
+        d (Dict[str, Any]): Dictionary containing serialized sort information.
+
+    Returns:
+        Sort: The deserialized Sort instance (PrimitiveSort, ParameterizedSort, or FunctionSort).
+
+    Raises:
+        DatabaseError: If the dictionary structure does not contain a valid sort representation.
+
+    Example:
+        >>> _dict_to_sort({'sort_type': 'PrimitiveSort', 'name': 'Ind'})
+        PrimitiveSort(sort_name='Ind')
+    """
     stype = d.get("sort_type")
     if stype == "PrimitiveSort":
         return PrimitiveSort(d["name"])
@@ -58,6 +89,22 @@ from logic_prover.sol.ast_ext import (
 
 
 def _term_to_dict(term: Term) -> Dict[str, Any]:
+    """Converts a Term AST node into a serializable dictionary structure.
+
+    Args:
+        term (Term): The Term AST node (Variable, Constant, or FunctionApp) to serialize.
+
+    Returns:
+        Dict[str, Any]: A JSON-compatible dictionary representing the term node.
+
+    Raises:
+        DatabaseError: If the term node type is unsupported for serialization.
+
+    Example:
+        >>> from logic_prover.core.ast import Variable
+        >>> _term_to_dict(Variable(0))
+        {'node_type': 'Variable', 'id': 0, 'kind': 'INDIVIDUAL', 'sort': {'sort_type': 'PrimitiveSort', 'name': 'Ind'}}
+    """
     if isinstance(term, Variable):
         return {
             "node_type": "Variable",
@@ -91,6 +138,22 @@ def _term_to_dict(term: Term) -> Dict[str, Any]:
 
 
 def _dict_to_term(d: Dict[str, Any]) -> Term:
+    """Reconstructs a Term AST node from a serialized dictionary representation.
+
+    Args:
+        d (Dict[str, Any]): Dictionary containing serialized term node data.
+
+    Returns:
+        Term: The deserialized Term AST instance (Variable, Constant, or FunctionApp).
+
+    Raises:
+        DatabaseError: If the dictionary structure is invalid or unrecognized.
+
+    Example:
+        >>> data = {'node_type': 'Constant', 'name': 'c', 'sort': {'sort_type': 'PrimitiveSort', 'name': 'Ind'}}
+        >>> _dict_to_term(data)
+        Constant(name='c')
+    """
     ntype = d.get("node_type")
     if ntype == "Variable":
         return Variable(id=d["id"], kind=VariableKind(d["kind"]), sort=_dict_to_sort(d["sort"]))
@@ -114,6 +177,22 @@ def _dict_to_term(d: Dict[str, Any]) -> Term:
 
 
 def _formula_to_dict(formula: Formula) -> Dict[str, Any]:
+    """Converts a Formula AST node into a serializable dictionary structure.
+
+    Args:
+        formula (Formula): The Formula AST node to serialize into a dictionary.
+
+    Returns:
+        Dict[str, Any]: A JSON-compatible dictionary representing the formula tree.
+
+    Raises:
+        DatabaseError: If the formula node type is unsupported for serialization.
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp
+        >>> _formula_to_dict(PredicateApp('P', 0, ()))
+        {'node_type': 'PredicateApp', 'pred': 'P', 'arity': 0, 'args': []}
+    """
     if isinstance(formula, PredicateApp):
         pred_repr = {
             "node_type": "PredicateVariable",
@@ -200,6 +279,22 @@ def _formula_to_dict(formula: Formula) -> Dict[str, Any]:
 
 
 def _dict_to_formula(d: Dict[str, Any]) -> Formula:
+    """Reconstructs a Formula AST node from a serialized dictionary representation.
+
+    Args:
+        d (Dict[str, Any]): Dictionary containing serialized formula AST data.
+
+    Returns:
+        Formula: The deserialized Formula AST instance.
+
+    Raises:
+        DatabaseError: If the dictionary structure is invalid or unrecognized.
+
+    Example:
+        >>> data = {'node_type': 'PredicateApp', 'pred': 'P', 'arity': 0, 'args': []}
+        >>> _dict_to_formula(data)
+        PredicateApp(pred='P', arity=0, args=())
+    """
     ntype = d.get("node_type")
     if ntype == "PredicateApp":
         pred_raw = d["pred"]
@@ -324,9 +419,29 @@ class KnowledgeDatabase:
         self._init_db()
 
     def __enter__(self) -> KnowledgeDatabase:
+        """Enters the runtime context for the KnowledgeDatabase instance.
+
+        Returns:
+            KnowledgeDatabase: The database instance itself.
+
+        Example:
+            >>> with KnowledgeDatabase(":memory:") as db:
+            ...     isinstance(db, KnowledgeDatabase)
+            True
+        """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exits the runtime context and closes the database connection.
+
+        Args:
+            exc_type (Any): Exception type if an exception occurred within the context.
+            exc_val (Any): Exception instance if an exception occurred.
+            exc_tb (Any): Traceback object if an exception occurred.
+
+        Returns:
+            None
+        """
         self.close()
 
     def close(self) -> None:

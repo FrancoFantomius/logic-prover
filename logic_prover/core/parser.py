@@ -1,4 +1,4 @@
-﻿"""Lexer, parser, and string serializer for First-Order Logic terms and formulas."""
+"""Lexer, parser, and string serializer for First-Order Logic terms and formulas."""
 
 from __future__ import annotations
 import re
@@ -247,6 +247,17 @@ class _Parser:
         return lhs
 
     def _parse_parenthesized_or_prefix_formula(self) -> Formula:
+        """Parses a parenthesized subformula or prefix expression.
+
+        Handles parenthesized quantifiers, prefix operators like Not, And, Or,
+        Implies, Iff, Equality, and parenthesized predicate applications.
+
+        Returns:
+            Formula: The parsed Formula AST node.
+
+        Raises:
+            ParseError: If the parenthesized formula syntax is invalid.
+        """
         t1 = self.peek(1)
         if t1.type == TokenType.QUANTIFIER:
             self.consume(TokenType.LPAREN)
@@ -319,6 +330,14 @@ class _Parser:
         return inner_formula
 
     def _infix_precedence(self, token_type: TokenType) -> int:
+        """Returns the operator binding precedence for infix connective token types.
+
+        Args:
+            token_type (TokenType): The token type to evaluate.
+
+        Returns:
+            int: Numerical precedence value (higher binds tighter), or -1 for non-infix tokens.
+        """
         if token_type == TokenType.IFF:
             return 10
         elif token_type == TokenType.IMPLIES:
@@ -330,6 +349,14 @@ class _Parser:
         return -1
 
     def _parse_quantifier(self) -> Formula:
+        """Parses a first-order quantifier expression (forall / exists).
+
+        Returns:
+            Formula: Forall or Exists AST node enclosing the quantified variable and body.
+
+        Raises:
+            ParseError: If variable syntax or body formula is invalid.
+        """
         q_tok = self.consume(TokenType.QUANTIFIER)
         has_paren = False
         if self.peek().type == TokenType.LPAREN:
@@ -358,6 +385,14 @@ class _Parser:
             return Exists(variable=variable, body=body)
 
     def _parse_sol_quantifier(self) -> Formula:
+        """Parses a second-order logic quantifier over predicate or function variables.
+
+        Returns:
+            Formula: ForallPred, ExistsPred, ForallFunc, or ExistsFunc AST node.
+
+        Raises:
+            ParseError: If quantifier parameters or body syntax is invalid.
+        """
         q_tok = self.consume()
         has_paren = False
         if self.peek().type == TokenType.LPAREN:
@@ -392,6 +427,14 @@ class _Parser:
             return ForallFunc(variable=func_var, body=body) if q_tok.type == TokenType.FORALL_FUNC else ExistsFunc(variable=func_var, body=body)
 
     def _parse_sort(self) -> Sort:
+        """Parses a sort annotation (e.g. Ind, Nat, Bool, or parameterized constructor).
+
+        Returns:
+            Sort: The parsed Sort instance.
+
+        Raises:
+            ParseError: If the sort syntax is invalid.
+        """
         id_tok = self.consume(TokenType.IDENTIFIER)
         sort_name = id_tok.value
         if sort_name == "Ind":
@@ -413,6 +456,14 @@ class _Parser:
         return PrimitiveSort(name=sort_name)
 
     def _parse_atomic_formula(self) -> Formula:
+        """Parses an atomic formula (predicate variable application, term equality, or named predicate).
+
+        Returns:
+            Formula: The parsed atomic Formula AST node (PredicateApp or Equality).
+
+        Raises:
+            ParseError: If symbol is undeclared or token stream cannot form an atomic formula.
+        """
         tok = self.peek()
 
         if tok.type == TokenType.PRED_VAR:

@@ -1,4 +1,4 @@
-﻿"""Substitutions and term/formula unification algorithms."""
+"""Substitutions and term/formula unification algorithms."""
 
 from __future__ import annotations
 from typing import Dict, Set, Optional, Union, Callable, cast
@@ -136,6 +136,19 @@ class SubstitutionTransformer(ASTTransformer):
         body: Formula,
         constructor: Callable[[Variable, Formula], Formula],
     ) -> Formula:
+        """Handles capture-avoiding substitution across quantifier boundaries.
+
+        Shadows the bound variable within the inner mapping and renames it to a fresh variable
+        if it would capture free variables introduced by replacement terms.
+
+        Args:
+            bound_var (Variable): The quantified variable bound at this AST node.
+            body (Formula): The inner formula body subject to substitution.
+            constructor (Callable[[Variable, Formula], Formula]): Quantifier node constructor (Forall or Exists).
+
+        Returns:
+            Formula: The transformed quantifier formula AST node.
+        """
         # 1. Shadowing: remove bound_var from active mapping for inner scope
         old_mapping_val = self.mapping.pop(bound_var, None)
 
@@ -180,6 +193,15 @@ class SubstitutionTransformer(ASTTransformer):
     def _generate_fresh_variable(
         self, base_var: Variable, forbidden: Set[Variable]
     ) -> Variable:
+        """Generates a fresh variable whose ID is not present in the forbidden set.
+
+        Args:
+            base_var (Variable): Template variable providing initial sort, kind, and starting ID.
+            forbidden (Set[Variable]): Set of existing variables whose IDs cannot be reused.
+
+        Returns:
+            Variable: A fresh Variable instance guaranteed distinct from all forbidden variables.
+        """
         forbidden_ids = {v.id for v in forbidden}
         new_id = base_var.id
         while new_id in forbidden_ids:
@@ -189,6 +211,16 @@ class SubstitutionTransformer(ASTTransformer):
     def _rename_bound_variable(
         self, formula: Formula, old_var: Variable, new_var: Variable
     ) -> Formula:
+        """Renames occurrences of an old bound variable to a new variable in a formula.
+
+        Args:
+            formula (Formula): The target formula in which to rename the bound variable.
+            old_var (Variable): The variable to be replaced.
+            new_var (Variable): The replacement variable.
+
+        Returns:
+            Formula: The formula with all occurrences of old_var replaced by new_var.
+        """
         renamer = SubstitutionTransformer({old_var: new_var})
         res = renamer.visit(formula)
         assert isinstance(res, Formula)
@@ -196,7 +228,22 @@ class SubstitutionTransformer(ASTTransformer):
 
 
 def _validate_mapping_sorts(mapping: Dict[Variable, Term]) -> None:
-    """Validates that for all (v -> t) in mapping, is_compatible(v.sort, sort_of_term(t)) holds."""
+    """Validates sort compatibility for all variable-to-term pairs in a substitution mapping.
+
+    Args:
+        mapping (Dict[Variable, Term]): Dictionary mapping variables to replacement terms.
+
+    Returns:
+        None
+
+    Raises:
+        SortMismatchError: If any mapped term's sort is incompatible with the variable's sort.
+
+    Example:
+        >>> from logic_prover.core.ast import Variable, Constant
+        >>> from logic_prover.core.sorts import Ind
+        >>> _validate_mapping_sorts({Variable(0, sort=Ind): Constant("c", sort=Ind)})
+    """
     for var, term in mapping.items():
         term_sort = sort_of_term(term)
         if not is_compatible(var.sort, term_sort):

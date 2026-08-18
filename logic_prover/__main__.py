@@ -1,19 +1,19 @@
 """
 Command Line Interface (CLI) entry point for the logic library.
 
-Supports all 7 logic commands:
+Supports all 6 logic commands:
 - init: Initialize database with foundational logic axioms
 - explore: Generate and rank novel candidate formulas
 - prove: Attempt resolution proof for a target formula
 - analyze: Conduct hypothesis deduction and dependency analysis
 - export lean: Translate theorems and proofs to Lean 4 formal code
 - export graph: Export interactive proof or dependency DAG HTML graphs
-- docs: Build static Markdown documentation site
 """
 
 from __future__ import annotations
 import argparse
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -26,10 +26,9 @@ from logic_prover.core.parser import parse_formula, to_string
 from logic_prover.deducer import analyze_dependencies, compute_equivalence_classes
 from logic_prover.explorer import FormulaExplorer, calculate_diversity_scores, composite_interestingness
 from logic_prover.exporters import LeanExporter, GraphExporter
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
+from logic_prover.logging import get_logger, setup_logging
 from logic_prover.prover import TheoremProver
-from logic_prover.utils.doc_generator import build_markdown_docs
-from logic_prover.utils.logging import setup_logging, get_logger
 
 logger = get_logger("cli")
 
@@ -45,7 +44,6 @@ def build_parser() -> argparse.ArgumentParser:
     - analyze: Run deducer hypothesis analysis
     - export lean: Export to LEAN 4 code
     - export graph: Export interactive proof/dependency HTML graph
-    - docs: Regenerate static API documentation
 
     Returns:
         Configured argparse.ArgumentParser instance.
@@ -117,10 +115,6 @@ def build_parser() -> argparse.ArgumentParser:
     graph_parser.add_argument("--type", choices=["proof", "dependency"], default="proof", help="Graph visualization type")
     graph_parser.add_argument("--theorem", help="Target theorem name for proof graph export")
     graph_parser.add_argument("--db-path", help="Path to SQLite database")
-
-    # 7. docs command
-    docs_parser = subparsers.add_parser("docs", help="Regenerate static API documentation")
-    docs_parser.add_argument("--output-dir", type=str, default="docs", help="Target output directory for markdown docs (default: docs)")
 
     return parser
 
@@ -450,26 +444,6 @@ def cmd_export_graph(args: argparse.Namespace, config: SolverConfig) -> int:
     return 1
 
 
-def cmd_docs(args: argparse.Namespace, config: SolverConfig) -> int:
-    """
-    Executes the 'docs' command: regenerates the static Markdown API documentation
-    from source docstrings using the doc generator.
-
-    Args:
-        args: Parsed command-line arguments. Uses `args.output_dir` (falling back to
-            'docs') as the target output directory for the generated Markdown files.
-        config: Global SolverConfig (unused, kept for a consistent command signature).
-
-    Returns:
-        Exit code 0 on success.
-    """
-    output_dir = args.output_dir or "docs"
-    docs_created = build_markdown_docs(source_dir="logic_prover", output_docs_dir=output_dir)
-    print(f"Successfully generated {len(docs_created)} documentation files under '{output_dir}/'.")
-    logger.info(f"Generated {len(docs_created)} documentation files under '{output_dir}/'.")
-    return 0
-
-
 def main(argv: Optional[List[str]] = None) -> int:
     """
     Main entry point for CLI invocation.
@@ -481,7 +455,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         Exit code: 0 for success, non-zero for failure.
     """
     config = SolverConfig()
-    setup_logging(config=config)
 
     parser = build_parser()
     try:
@@ -503,8 +476,6 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return cmd_export_lean(args, config)
             elif args.export_type == "graph":
                 return cmd_export_graph(args, config)
-        elif args.command == "docs":
-            return cmd_docs(args, config)
     except (SolverError, ParseError, Exception) as e:
         print(f"Error executing command '{args.command}': {e}", file=sys.stderr)
         logger.error(f"Command '{args.command}' failed: {e}")

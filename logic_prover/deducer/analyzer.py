@@ -1,4 +1,4 @@
-﻿"""Network dependency analyzer and minimal hypothesis deduction algorithms."""
+"""Network dependency analyzer and minimal hypothesis deduction algorithms."""
 
 from __future__ import annotations
 from typing import List, Tuple, Set, Optional, Dict
@@ -14,7 +14,28 @@ logger = logging.getLogger(__name__)
 
 
 def _try_prove(prover: TheoremProver, target: Formula, premises: List[Formula]) -> bool:
-    """Attempts to prove target from premises using TheoremProver. Handles both prove and prove_theorem methods."""
+    """Attempts to prove a target formula from a given list of premises using TheoremProver.
+
+    Catches proof search timeouts, exhaustion errors, and unexpected exceptions, returning
+    a boolean status.
+
+    Args:
+        prover (TheoremProver): TheoremProver instance configured with search limits.
+        target (Formula): The target formula to prove.
+        premises (List[Formula]): List of premise formulas available to the prover.
+
+    Returns:
+        bool: True if a refutation / proof DAG was successfully found, False otherwise.
+
+    Example:
+        >>> from logic_prover.axioms import get_combined_signature
+        >>> from logic_prover.core.ast import PredicateApp
+        >>> from logic_prover.prover import TheoremProver
+        >>> prover = TheoremProver(signature=get_combined_signature())
+        >>> p = PredicateApp("P", 0, ())
+        >>> _try_prove(prover, target=p, premises=[p])
+        True
+    """
     try:
         if hasattr(prover, "prove_theorem"):
             try:

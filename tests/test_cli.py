@@ -1,4 +1,4 @@
-﻿"""
+"""
 Integration tests for the logic CLI entry point (logic/__main__.py).
 """
 
@@ -11,11 +11,11 @@ import unittest
 from logic_prover.__main__ import main
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.core.parser import parse_formula
-from logic_prover.kb import get_combined_signature
+from logic_prover.axioms import get_combined_signature
 
 
 class TestSolverCLI(unittest.TestCase):
-    """Test suite executing all 7 CLI commands end-to-end."""
+    """Test suite executing CLI commands end-to-end."""
 
     def setUp(self) -> None:
         """Create a temporary directory and database path for CLI execution."""
@@ -87,13 +87,6 @@ class TestSolverCLI(unittest.TestCase):
         ret = main(["export", "graph", "--type", "dependency", "--output", out_html, "--db-path", self.db_path])
         self.assertEqual(ret, 0)
         self.assertTrue(os.path.exists(out_html))
-
-    def test_cli_docs(self) -> None:
-        """Test 'docs' command generates markdown documentation files."""
-        docs_dir = os.path.join(self.tmp_dir, "docs")
-        ret = main(["docs", "--output-dir", docs_dir])
-        self.assertEqual(ret, 0)
-        self.assertTrue(os.path.exists(os.path.join(docs_dir, "index.md")))
 
     def test_cli_invalid_args(self) -> None:
         """Test invalid subcommand returns non-zero status code."""

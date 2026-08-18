@@ -27,7 +27,7 @@ from logic_prover.core.ast import Variable, Constant, PredicateApp, Implies, For
 from logic_prover.core.sorts import Ind
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.prover.proof import ProofStep, ProofDAG
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 
 
 def main() -> None:

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "logic_prover/**"
+      - "utils/**"
       - "docs/**"
       - "package.json"
       - ".github/workflows/docs.yml"
@@ -40,14 +41,9 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[docs,vis]"
-
       - name: Regenerate Markdown Documentation
         run: |
-          python -m logic_prover docs --output-dir docs
+          python utils/doc_generator.py --output-dir docs
 
       - name: Commit and Push Documentation Changes
         uses: stefanzweifel/git-auto-commit-action@v5

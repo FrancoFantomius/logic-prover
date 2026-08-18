@@ -43,7 +43,7 @@ features:
 - **`logic_prover.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.
 - **`logic_prover.kb`**: Knowledge database interface and foundational mathematical axioms.
 - **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.
-- **`logic_prover.utils`**: Central logging subsystem and automated documentation generator.
+- **`utils`**: Developer utilities and automated documentation generator.
 
 ## Submodule API Reference
 

@@ -29,7 +29,7 @@ from logic_prover.core.ast import (
 from logic_prover.core.sorts import Ind, Nat
 from logic_prover.core.signature import Signature
 from logic_prover.prover.engine import TheoremProver
-from logic_prover.kb.numbers import get_peano_signature, get_peano_axioms
+from logic_prover.axioms.peano import get_peano_signature, get_peano_axioms
 
 
 def build_toy_signature() -> Signature:

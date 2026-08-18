@@ -26,7 +26,7 @@ from pathlib import Path
 from logic_prover.config import SolverConfig
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.core.parser import to_string
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.explorer import (
     FormulaExplorer,
     calculate_diversity_scores,
