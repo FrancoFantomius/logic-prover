@@ -1,7 +1,7 @@
 # Logic Prover (`logic-prover`)
 
 [![PyPI version](https://img.shields.io/pypi/v/logic-prover.svg)](https://pypi.org/project/logic-prover/)
-[![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml)
+[![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/test.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/test.yml)
 [![Docs](https://img.shields.io/badge/Docs-francofantomius.com-blue.svg)](https://francofantomius.com/logic-prover/)
 [![Changelog](https://img.shields.io/badge/Changelog-Keep_a_Changelog-orange.svg)](CHANGELOG.md)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
@@ -20,7 +20,7 @@
 - **Deducer**: Network-level minimal hypothesis detection and equivalence classification.
 - **Lean 4 Export**: High-fidelity translation of formulas, statements, and tactic proofs into Lean 4 code.
 - **Interactive HTML Graphs**: Proof DAG and dependency graph visualizer.
-- **Optional Cython Acceleration**: Core AST, substitutions, and resolution engine compiled to native C extensions for high performance.
+- **Optional Cython Acceleration**: Core AST, substitutions, resolution engine, and constructive logic solvers compiled to native C extensions for high performance.
 - **Automated Documentation & Logging**: Structured logging subsystem and Reflection/AST documentation generator.
 
 ---
@@ -85,7 +85,7 @@ logic-prover export lean --output theorem.lean --stubs-only
 logic-prover export graph --type dependency --output network.html
 
 # Generate API Documentation
-logic-prover docs --output-dir docs
+python utils/doc_generator.py --output-dir docs
 ```
 
 *(You can also invoke via `python -m logic_prover`)*
@@ -95,15 +95,15 @@ logic-prover docs --output-dir docs
 ## Python API Example
 
 ```python
+import logging
 import logic_prover
-from logic_prover.kb import get_combined_signature
+from logic_prover.axioms import get_combined_signature
 from logic_prover.core.parser import parse_formula, to_string
 from logic_prover.prover.engine import TheoremProver
 from logic_prover.config import SolverConfig
-from logic_prover.utils.logging import setup_logging
 
-# Configure structured logging
-setup_logging(log_level="INFO")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Load logical signature containing predefined predicates & functions
 signature = get_combined_signature()
@@ -146,13 +146,14 @@ mkdocs serve
 ```
 logic_prover/
 ├── core/         # AST, Sorts, Signature, Parser, Substitutions, Rewriting, Database
-├── kb/           # Foundational mathematical knowledge bases (Logic, Equality, Numbers, Sets, Groups)
+├── axioms/       # Mathematical theories & classified axioms (Logic, Peano, ZFC, Groups, Rings, etc.)
 ├── prover/       # Resolution Prover, Clausification, Proof Reconstruction
 ├── explorer/     # Formula Generator, Diversity Metrics, Ranking Heuristics
 ├── deducer/      # Network Analysis, Minimal Hypotheses, Equivalence Classes
 ├── exporters/    # Lean 4 Exporter & HTML Interactive Graph Visualizers
-├── sol/          # Second-Order Logic (SOL) Extension
-└── utils/        # Logging Subsystem & Automated Doc Generator
+├── constructive/ # Intuitionistic & Constructive Provers (LJT calculus, Wallen's matrix method)
+└── sol/          # Second-Order Logic (SOL) Extension
+
 ```
 
 ---

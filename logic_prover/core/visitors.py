@@ -1,4 +1,4 @@
-﻿"""AST Visitor pattern implementations for traversal, size computation, and serialization."""
+"""AST Visitor pattern implementations for traversal, size computation, and serialization."""
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
@@ -1044,13 +1044,18 @@ class FreeVariableCollector(ASTVisitor[Set[Variable]]):
 
 
 class SubstitutionTransformer(ASTTransformer):
-    """Applies variable substitutions to terms and formulas with capture avoidance."""
+    """Applies variable substitutions to terms and formulas with capture avoidance.
+
+    Note:
+        This is a lightweight visitor-level substitution transformer. For the primary
+        sort-validating substitution pipeline, see `logic_prover.core.substitutions.SubstitutionTransformer`.
+    """
 
     def __init__(self, mapping: Dict[Variable, Term]) -> None:
         """Initializes the substitution transformer with a variable to term mapping.
 
         Args:
-            mapping: Dictionary mapping variables to their replacement terms.
+            mapping (Dict[Variable, Term]): Dictionary mapping variables to their replacement terms.
         """
         self.mapping = mapping
 

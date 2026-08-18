@@ -1,4 +1,4 @@
-﻿"""Optional Cython extension compilation setup script for logic library."""
+"""Optional Cython extension compilation setup script for logic library."""
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -31,6 +31,14 @@ if USE_CYTHON:
         "logic_prover/prover/clausifier.py",
         "logic_prover/prover/rules.py",
         "logic_prover/prover/engine.py",
+        "logic_prover/constructive/common.py",
+        "logic_prover/constructive/kripke.py",
+        "logic_prover/constructive/prefix.py",
+        "logic_prover/constructive/matrix.py",
+        "logic_prover/constructive/ljt.py",
+        "logic_prover/constructive/wallen.py",
+        "logic_prover/constructive/tableau.py",
+        "logic_prover/constructive/resolution.py",
     ]
     # Filter files that exist
     valid_files = [f for f in hotspot_files if os.path.exists(f)]
@@ -47,7 +55,7 @@ if USE_CYTHON:
             compiler_directives={
                 "language_level": "3",
                 "boundscheck": False,
-                "wraparound": False,
+                "wraparound": True,
                 "nonecheck": False,
                 "initializedcheck": False,
             },

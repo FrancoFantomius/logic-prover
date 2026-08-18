@@ -674,15 +674,15 @@ def build_markdown_docs(
         "- **`logic_prover.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.",
         "- **`logic_prover.deducer`**: Network dependency analysis and hypothesis minimal subset detection.",
         "- **`logic_prover.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.",
-        "- **`logic_prover.kb`**: Knowledge database interface and foundational mathematical axioms.",
+        "- **`logic_prover.axioms`**: Axiomatic mathematical theories, signatures, and formal Theory definitions.",
         "- **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.",
-        "- **`logic_prover.utils`**: Central logging subsystem and automated documentation generator.",
+        "- **`utils`**: Developer utilities and automated documentation generator.",
         "",
         "## Submodule API Reference",
         "",
         "| Module Group | Documentation Link | Documented Classes | Documented Functions |",
         "| :--- | :--- | :--- | :--- |",
-    ]
+        "    ]"
 
     for gname, glink, ncls, nfn in group_summaries:
         index_lines.append(f"| `{gname}` | [{gname} →]({glink}) | {ncls} | {nfn} |")
@@ -721,3 +721,35 @@ def build_markdown_docs(
     results[str(index_file)] = index_text
 
     return results
+
+
+def main() -> None:
+    """Main entrypoint for standalone doc generator invocation."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Automated API Documentation Generator.")
+    parser.add_argument(
+        "--source-dir",
+        type=str,
+        default="logic_prover",
+        help="Source directory to scan (default: logic_prover).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="docs",
+        help="Target output directory for markdown docs (default: docs).",
+    )
+    args = parser.parse_args()
+
+    # Ensure project root is on sys.path so reflections/imports work
+    project_root = Path(__file__).resolve().parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
+    docs_created = build_markdown_docs(source_dir=args.source_dir, output_docs_dir=args.output_dir)
+    print(f"Successfully generated {len(docs_created)} documentation files under '{args.output_dir}/'.")
+
+
+if __name__ == "__main__":
+    main()

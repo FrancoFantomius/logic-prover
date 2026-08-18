@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logic-prover"
-version = "0.1.5"
+version = "0.2.0"
 description = "A formal logic theorem prover, explorer, deducer, and LEAN exporter in Python."
 readme = "README.md"
 authors = [{ name = "Franco Fantomius", email = "mail@francofantomius.com" }]
@@ -46,12 +46,10 @@ Changelog = "https://github.com/FrancoFantomius/logic-prover/blob/main/CHANGELOG
 
 [project.optional-dependencies]
 vis = ["jinja2>=3.0.0"]
-docs = []
 dev = [
     "cython>=3.0.0",
     "pytest>=7.2.0",
     "pytest-cov>=4.0.0",
-    "hypothesis>=6.70.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
     "build>=1.0.0",

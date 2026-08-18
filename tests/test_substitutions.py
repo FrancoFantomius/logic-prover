@@ -1,12 +1,6 @@
-﻿import unittest
-
-try:
-    from hypothesis import given, strategies as st
-    HAS_HYPOTHESIS = True
-except ImportError:
-    HAS_HYPOTHESIS = False
-    given = lambda *args, **kwargs: (lambda f: f)
-    st = None
+import random
+import string
+import unittest
 
 from logic_prover.core.ast import (
     Variable,
@@ -370,18 +364,25 @@ class TestSubstitutions(unittest.TestCase):
             unify_formulas(p, Equality(x, x))
 
     # -------------------------------------------------------------------------
-    # 5. Property-based Invariant Verification (Hypothesis)
+    # 5. Property-based Invariant Verification
     # -------------------------------------------------------------------------
 
-    @unittest.skipUnless(HAS_HYPOTHESIS, "hypothesis library not installed")
-    @given(
-        var_id1=st.integers(min_value=0, max_value=100) if st else None,
-        var_id2=st.integers(min_value=101, max_value=200) if st else None,
-        const_name=st.text(min_size=1, max_size=10, alphabet="abcdefghijklmnopqrstuvwxyz") if st else None,
-    )
-    def test_hypothesis_composition_invariant(
+    def _verify_composition_invariant(
         self, var_id1: int, var_id2: int, const_name: str
     ) -> None:
+        """Verifies substitution composition associativity/invariant for given IDs and constant.
+
+        Args:
+            var_id1 (int): First variable integer identifier.
+            var_id2 (int): Second variable integer identifier.
+            const_name (str): Constant name string.
+
+        Returns:
+            None
+
+        Example:
+            >>> # Verifies apply(compose(s1, s2), x) == apply(s1, apply(s2, x))
+        """
         x = Variable(var_id1, sort=Ind)
         y = Variable(var_id2, sort=Ind)
         c = Constant(const_name, sort=Ind)
@@ -390,20 +391,27 @@ class TestSubstitutions(unittest.TestCase):
         s1 = {y: c}
 
         composed = compose_substitutions(s1, s2)
-        
+
         # apply(compose(s1, s2), x) == apply(s1, apply(s2, x))
         left = apply_substitution(composed, x)
         right = apply_substitution(s1, apply_substitution(s2, x))
         self.assertEqual(left, right)
 
-    @unittest.skipUnless(HAS_HYPOTHESIS, "hypothesis library not installed")
-    @given(
-        var_id=st.integers(min_value=0, max_value=100) if st else None,
-        const_name=st.text(min_size=1, max_size=10, alphabet="abcdefghijklmnopqrstuvwxyz") if st else None,
-    )
-    def test_hypothesis_unification_idempotency_and_commutativity(
+    def _verify_unification_idempotency_and_commutativity(
         self, var_id: int, const_name: str
     ) -> None:
+        """Verifies unification commutativity and idempotent application for given ID and constant.
+
+        Args:
+            var_id (int): Variable integer identifier.
+            const_name (str): Constant name string.
+
+        Returns:
+            None
+
+        Example:
+            >>> # Verifies unify_terms(x, c) == unify_terms(c, x) and apply(subst, x) == apply(subst, c)
+        """
         x = Variable(var_id, sort=Ind)
         c = Constant(const_name, sort=Ind)
 
@@ -412,6 +420,69 @@ class TestSubstitutions(unittest.TestCase):
 
         self.assertEqual(subst1, subst2)
         self.assertEqual(apply_substitution(subst1, x), apply_substitution(subst1, c))
+
+    def test_property_composition_invariant(self) -> None:
+        """Verifies substitution composition associativity across boundary cases and pseudo-random inputs.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Example:
+            >>> test_inst = TestSubstitutions()
+            >>> test_inst.test_property_composition_invariant()
+        """
+        # 1. Deterministic boundary cases
+        boundary_cases = [
+            (0, 1, "c"),
+            (0, 100, "const_val"),
+            (42, 43, "a"),
+            (999, 1000, "z"),
+        ]
+        for v1, v2, c_name in boundary_cases:
+            self._verify_composition_invariant(v1, v2, c_name)
+
+        # 2. Pseudo-random property verification with fixed seed
+        rng = random.Random(42)
+        for _ in range(100):
+            v1 = rng.randint(0, 500)
+            v2 = rng.randint(501, 1000)
+            length = rng.randint(1, 12)
+            c_name = "".join(rng.choice(string.ascii_lowercase) for _ in range(length))
+            self._verify_composition_invariant(v1, v2, c_name)
+
+    def test_property_unification_idempotency_and_commutativity(self) -> None:
+        """Verifies unification commutativity and idempotent application across boundary and pseudo-random inputs.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Example:
+            >>> test_inst = TestSubstitutions()
+            >>> test_inst.test_property_unification_idempotency_and_commutativity()
+        """
+        # 1. Deterministic boundary cases
+        boundary_cases = [
+            (0, "c"),
+            (42, "alpha"),
+            (100, "const"),
+            (9999, "omega"),
+        ]
+        for v, c_name in boundary_cases:
+            self._verify_unification_idempotency_and_commutativity(v, c_name)
+
+        # 2. Pseudo-random property verification with fixed seed
+        rng = random.Random(42)
+        for _ in range(100):
+            v = rng.randint(0, 1000)
+            length = rng.randint(1, 12)
+            c_name = "".join(rng.choice(string.ascii_lowercase) for _ in range(length))
+            self._verify_unification_idempotency_and_commutativity(v, c_name)
 
 
 if __name__ == "__main__":
