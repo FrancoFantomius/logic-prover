@@ -1,4 +1,6 @@
 import { defineConfig } from 'vitepress'
+import pkg from '../../package.json'
+
 
 export default defineConfig({
   title: 'Logic Prover',
@@ -34,7 +36,7 @@ export default defineConfig({
         ],
       },
       {
-        text: 'v0.1.4',
+        text: `v${pkg.version}`,
         items: [
           { text: 'Changelog', link: 'https://github.com/FrancoFantomius/logic-prover/blob/main/CHANGELOG.md' },
           { text: 'Contributing', link: 'https://github.com/FrancoFantomius/logic-prover/blob/main/CONTRIBUTING.md' },

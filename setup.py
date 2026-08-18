@@ -13,9 +13,30 @@ except ImportError:
 
 
 class OptionalBuildExt(build_ext):
-    """Custom build_ext command that gracefully falls back to pure Python if C compilation fails."""
+    """Custom build_ext command that enables parallel compilation and gracefully falls back to pure Python if C compilation fails."""
+
+    def finalize_options(self):
+        """Configure build options with automatic CPU core parallelism.
+
+        Parameters:
+            None.
+
+        Returns:
+            None: Modifies self.parallel in-place.
+        """
+        super().finalize_options()
+        if not self.parallel:
+            self.parallel = os.cpu_count() or 1
 
     def build_extension(self, ext):
+        """Build an individual C extension with graceful failure handling.
+
+        Parameters:
+            ext (setuptools.Extension): The extension module to compile.
+
+        Returns:
+            None: Compiles the extension or catches compilation errors.
+        """
         try:
             super().build_extension(ext)
         except Exception as e:
@@ -50,8 +71,10 @@ if USE_CYTHON:
             )
             for f in valid_files
         ]
+        cpu_count = os.cpu_count() or 1
         ext_modules = cythonize(
             extensions,
+            nthreads=cpu_count,
             compiler_directives={
                 "language_level": "3",
                 "boundscheck": False,
