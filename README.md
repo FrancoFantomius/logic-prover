@@ -1,7 +1,7 @@
 # Logic Prover (`logic-prover`)
 
 [![PyPI version](https://img.shields.io/pypi/v/logic-prover.svg)](https://pypi.org/project/logic-prover/)
-[![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/ci.yml)
+[![CI](https://github.com/FrancoFantomius/logic-prover/actions/workflows/test.yml/badge.svg)](https://github.com/FrancoFantomius/logic-prover/actions/workflows/test.yml)
 [![Docs](https://img.shields.io/badge/Docs-francofantomius.com-blue.svg)](https://francofantomius.com/logic-prover/)
 [![Changelog](https://img.shields.io/badge/Changelog-Keep_a_Changelog-orange.svg)](CHANGELOG.md)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
