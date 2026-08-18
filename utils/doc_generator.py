@@ -682,7 +682,7 @@ def build_markdown_docs(
         "",
         "| Module Group | Documentation Link | Documented Classes | Documented Functions |",
         "| :--- | :--- | :--- | :--- |",
-        "    ]"
+    ]
 
     for gname, glink, ncls, nfn in group_summaries:
         index_lines.append(f"| `{gname}` | [{gname} →]({glink}) | {ncls} | {nfn} |")
