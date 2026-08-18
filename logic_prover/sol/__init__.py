@@ -1,5 +1,7 @@
 """Second-Order Logic (SOL) extension module providing higher-order quantification and pattern matching."""
 
+from typing import Any
+
 from logic_prover.sol.ast_ext import (
     PredicateVariable, FunctionVariable,
     ForallPred, ExistsPred, ForallFunc, ExistsFunc,

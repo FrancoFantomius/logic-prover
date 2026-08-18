@@ -32,6 +32,7 @@ if USE_CYTHON:
         "logic_prover/prover/rules.py",
         "logic_prover/prover/engine.py",
         "logic_prover/constructive/common.py",
+        "logic_prover/constructive/kripke.py",
         "logic_prover/constructive/prefix.py",
         "logic_prover/constructive/matrix.py",
         "logic_prover/constructive/ljt.py",
