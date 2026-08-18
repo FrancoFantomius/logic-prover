@@ -41,7 +41,7 @@ features:
 - **`logic_prover.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.
 - **`logic_prover.deducer`**: Network dependency analysis and hypothesis minimal subset detection.
 - **`logic_prover.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.
-- **`logic_prover.kb`**: Knowledge database interface and foundational mathematical axioms.
+- **`logic_prover.axioms`**: Axiomatic mathematical theories, signatures, and formal Theory definitions.
 - **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.
 - **`logic_prover.utils`**: Central logging subsystem and automated documentation generator.
 
@@ -49,7 +49,13 @@ features:
 
 | Module Group | Documentation Link | Documented Classes | Documented Functions |
 | :--- | :--- | :--- | :--- |
-| `utils` | [utils →](api/utils.md) | 7 | 7 |
+| `axioms` | [axioms →](api/axioms.md) | 1 | 36 |
+| `constructive` | [constructive →](api/constructive.md) | 31 | 14 |
+| `core` | [core →](api/core.md) | 12 | 20 |
+| `deducer` | [deducer →](api/deducer.md) | 0 | 4 |
+| `explorer` | [explorer →](api/explorer.md) | 1 | 0 |
+| `logging` | [logging →](api/logging.md) | 1 | 2 |
+| `prover` | [prover →](api/prover.md) | 0 | 2 |
 
 ## Examples
 

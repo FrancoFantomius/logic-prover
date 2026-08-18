@@ -1,6 +1,6 @@
 # API Reference: `deducer`
 
-# Module `solver.deducer.analyzer`
+# Module `logic_prover.deducer.analyzer`
 
 Network dependency analyzer and minimal hypothesis deduction algorithms.
 
@@ -79,76 +79,6 @@ bidirectional prover calls for remaining pairs.
 | `prover` | `TheoremProver` | TheoremProver instance. |
 
 **Returns:** `List[Set[str]]` — List of sets of formula names, where each set contains mutually equivalent formulas.
-
-
----
-
-# Module `solver.deducer.graph`
-
-Dependency graph data structure for formula dependency networks.
-
----
-
-## Table of Contents
-- [Classes](#classes)
-
----
-
-## Classes
-
-### `class DependencyGraph`
-
-Represents a network-level graph of implication, dependency, and equivalence relationships among named formulas.
-
-#### Methods
-
-##### `def add_node(self, name: str, formula: Formula) -> None`
-
-Adds a named formula node to the graph.
-
-**Returns:** `None`
-
-##### `def add_edge(self, source: str, target: str, relationship: str) -> None`
-
-Adds a directed edge between source and target nodes with a specified relationship.
-
-**Returns:** `None`
-
-##### `def register_proof(self, proof: ProofDAG, theorem_name: str) -> None`
-
-Incrementally updates the dependency graph from a completed proof DAG.
-
-**Returns:** `None`
-
-##### `def predecessors(self, name: str) -> List[str]`
-
-Returns a list of direct predecessor node names (nodes that point to `name`).
-
-**Returns:** `List[str]`
-
-##### `def successors(self, name: str) -> List[str]`
-
-Returns a list of direct successor node names (nodes that `name` points to).
-
-**Returns:** `List[str]`
-
-##### `def transitive_closure(self, name: str) -> Set[str]`
-
-Computes the set of all node names reachable from the given node via directed edges.
-
-**Returns:** `Set[str]`
-
-##### `def is_acyclic_modulo_equivalence(self) -> bool`
-
-Returns True if the graph has no directed cycles other than those within "equivalent" components.
-
-**Returns:** `bool`
-
-##### `def to_dict(self) -> Dict[str, Any]`
-
-Serializes the graph into a dictionary suitable for JSON export and visualization.
-
-**Returns:** `Dict[str, Any]`
 
 
 ---

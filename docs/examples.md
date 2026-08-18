@@ -192,7 +192,7 @@ from logic_prover.core.ast import (
 from logic_prover.core.sorts import Ind, Nat
 from logic_prover.core.signature import Signature
 from logic_prover.prover.engine import TheoremProver
-from logic_prover.kb.numbers import get_peano_signature, get_peano_axioms
+from logic_prover.axioms.peano import get_peano_signature, get_peano_axioms
 
 
 def build_toy_signature() -> Signature:
@@ -351,7 +351,7 @@ from logic_prover.core.ast import Variable, Constant, PredicateApp, Implies, For
 from logic_prover.core.sorts import Ind
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.prover.proof import ProofStep, ProofDAG
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 
 
 def main() -> None:
@@ -478,7 +478,7 @@ from pathlib import Path
 from logic_prover.config import SolverConfig
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.core.parser import to_string
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.explorer import (
     FormulaExplorer,
     calculate_diversity_scores,
