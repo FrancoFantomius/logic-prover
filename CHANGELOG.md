@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-18
+
 ### Added
 - **Classified Axioms & Mathematical Theories Subfolder**: Added `logic_prover.axioms` subfolder unifying and classifying mathematical theories into dedicated modules (`group_theory`, `peano`, `zfc`, `analysis`, `linear_algebra`, `ring_theory`, `order_theory`, `boolean_algebra`, `relations`, `functions`, `equality`, `logic`).
 - **Theory Abstraction & Registry**: Introduced the `Theory` dataclass and global theory registry (`get_theory`, `list_theories`, `get_all_theories`) enabling direct theorem proving (`theory.prove()`) with automatic premise management and signature binding.
@@ -88,7 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Otter/Discount resolution theorem prover with equality superposition.
 - Core CLI interface for theorem proving and database initialization.
 
-[Unreleased]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/FrancoFantomius/logic-prover/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.1...v0.1.2

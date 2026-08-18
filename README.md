@@ -146,7 +146,7 @@ mkdocs serve
 ```
 logic_prover/
 ├── core/         # AST, Sorts, Signature, Parser, Substitutions, Rewriting, Database
-├── kb/           # Foundational mathematical knowledge bases (Logic, Equality, Numbers, Sets, Groups)
+├── axioms/       # Mathematical theories & classified axioms (Logic, Peano, ZFC, Groups, Rings, etc.)
 ├── prover/       # Resolution Prover, Clausification, Proof Reconstruction
 ├── explorer/     # Formula Generator, Diversity Metrics, Ranking Heuristics
 ├── deducer/      # Network Analysis, Minimal Hypotheses, Equivalence Classes
