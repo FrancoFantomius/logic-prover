@@ -1,13 +1,12 @@
-"""Binary relation theory axioms (reflexivity, symmetry, transitivity, irreflexivity)."""
+"""Binary relation theory axioms, signatures, and Theory definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
 
-from logic_prover.core.ast import (
-    Formula, Variable, PredicateApp, Equality, Forall, Implies, And, Not
-)
+from logic_prover.core.ast import Formula, Variable, PredicateApp, Equality, Forall, Implies, And, Not, Iff
 from logic_prover.core.sorts import PrimitiveSort
 from logic_prover.core.signature import Signature
+from logic_prover.axioms.base import Theory, register_theory
 
 RelElem: PrimitiveSort = PrimitiveSort("RelElem")
 
@@ -30,7 +29,7 @@ def get_relation_signature() -> Signature:
 
 
 def get_relation_axioms() -> List[Tuple[str, Formula]]:
-    """Generates the fundamental binary relation theory property axioms.
+    """Generates the fundamental binary relation property axioms.
 
     Includes:
     - rel_reflexive: ∀x. R(x, x)
@@ -95,3 +94,42 @@ def get_relation_axioms() -> List[Tuple[str, Formula]]:
         ("rel_irreflexive", rel_irreflexive),
         ("rel_asymmetric", rel_asymmetric),
     ]
+
+
+def get_equivalence_relation_axioms() -> List[Tuple[str, Formula]]:
+    """Generates the Equivalence Relation axioms (reflexivity, symmetry, transitivity).
+
+    Returns:
+        List[Tuple[str, Formula]]: List of (axiom_name, formula) pairs for equivalence relations.
+
+    Example:
+        >>> axioms = get_equivalence_relation_axioms()
+        >>> len(axioms) == 3
+        True
+    """
+    rel_map = dict(get_relation_axioms())
+    return [
+        ("eq_rel_reflexive", rel_map["rel_reflexive"]),
+        ("eq_rel_symmetric", rel_map["rel_symmetric"]),
+        ("eq_rel_transitive", rel_map["rel_transitive"]),
+    ]
+
+
+# Instantiated Theory objects
+relation_theory: Theory = Theory(
+    name="relations",
+    description="First-order theory of binary relations (reflexivity, symmetry, transitivity, antisymmetry, etc.).",
+    sorts={"RelElem": RelElem},
+    signature=get_relation_signature(),
+    axioms=dict(get_relation_axioms()),
+)
+register_theory(relation_theory)
+
+equivalence_relation_theory: Theory = Theory(
+    name="equivalence_relations",
+    description="First-order theory of equivalence relations (reflexive, symmetric, transitive binary relations).",
+    sorts={"RelElem": RelElem},
+    signature=get_relation_signature(),
+    axioms=dict(get_equivalence_relation_axioms()),
+)
+register_theory(equivalence_relation_theory)

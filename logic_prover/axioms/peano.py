@@ -1,4 +1,4 @@
-"""Peano arithmetic axioms and natural number signature definitions."""
+"""Peano arithmetic axioms, signature, and formal Theory definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -7,12 +7,13 @@ from logic_prover.core.ast import (
     Formula, Variable, Constant, FunctionApp, PredicateApp, Equality,
     Not, Implies, Iff, Forall, Exists
 )
-from logic_prover.core.sorts import PrimitiveSort, Nat, Ind
+from logic_prover.core.sorts import Nat, Ind
 from logic_prover.core.signature import Signature
+from logic_prover.axioms.base import Theory, register_theory
 
 
 def get_peano_signature() -> Signature:
-    """Constructs the signature declaring Peano arithmetic constants, functions, and relations.
+    """Constructs the logical signature declaring Peano arithmetic constants, functions, and relations.
 
     Registers constant 'zero', unary function 'succ', binary functions 'add' and 'mul',
     and binary relations 'le' and 'eq'.
@@ -31,6 +32,7 @@ def get_peano_signature() -> Signature:
     sig.register_function("add", 2, (Nat, Nat), Nat)
     sig.register_function("mul", 2, (Nat, Nat), Nat)
     sig.register_predicate("le", 2, (Ind, Ind))
+    sig.register_predicate("lt", 2, (Ind, Ind))
     sig.register_predicate("eq", 2, (Nat, Nat))
     return sig
 
@@ -38,7 +40,7 @@ def get_peano_signature() -> Signature:
 def get_peano_axioms() -> List[Tuple[str, Formula]]:
     """Generates the First-Order Peano arithmetic axioms for natural numbers.
 
-    Includes:
+    Axioms:
     - peano_zero_not_succ: ∀n:Nat. ¬(S(n) = 0)
     - peano_succ_injective: ∀m, n:Nat. (S(m) = S(n) ⇒ m = n)
     - peano_add_zero: ∀n:Nat. n + 0 = n
@@ -106,3 +108,14 @@ def get_peano_axioms() -> List[Tuple[str, Formula]]:
         ("peano_mul_succ", peano_mul_succ),
         ("peano_le_def", peano_le_def),
     ]
+
+
+# Instantiated Theory object
+peano_theory: Theory = Theory(
+    name="peano",
+    description="First-order Peano arithmetic for natural numbers (successor, addition, multiplication, ordering).",
+    sorts={"Nat": Nat},
+    signature=get_peano_signature(),
+    axioms=dict(get_peano_axioms()),
+)
+register_theory(peano_theory)

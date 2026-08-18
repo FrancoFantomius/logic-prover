@@ -26,7 +26,7 @@ from logic_prover.core.parser import parse_formula, to_string
 from logic_prover.deducer import analyze_dependencies, compute_equivalence_classes
 from logic_prover.explorer import FormulaExplorer, calculate_diversity_scores, composite_interestingness
 from logic_prover.exporters import LeanExporter, GraphExporter
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.logging import get_logger, setup_logging
 from logic_prover.prover import TheoremProver
 

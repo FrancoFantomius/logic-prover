@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import json
 import os
 import sqlite3
@@ -14,7 +14,7 @@ from logic_prover.core.sorts import Ind, Nat
 from logic_prover.core.exceptions import DatabaseError, SolverError
 from logic_prover.core.validator import is_well_formed
 from logic_prover.core.database import KnowledgeDatabase
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.__main__ import main
 
 

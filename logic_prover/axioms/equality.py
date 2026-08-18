@@ -4,10 +4,11 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from logic_prover.core.ast import (
-    Formula, Variable, Equality, Not, And, Or, Implies, Iff, Forall, Exists, FunctionApp, PredicateApp
+    Formula, Variable, Equality, And, Implies, Forall, FunctionApp, PredicateApp
 )
 from logic_prover.core.sorts import Ind
 from logic_prover.core.signature import Signature
+from logic_prover.axioms.base import Theory, register_theory
 
 
 def get_equality_signature() -> Signature:
@@ -72,9 +73,9 @@ def get_equality_axioms() -> List[Tuple[str, Formula]]:
             y,
             Forall(
                 z,
-                Implies(And(Equality(x, y), Equality(y, z)), Equality(x, z))
-            )
-        )
+                Implies(And(Equality(x, y), Equality(y, z)), Equality(x, z)),
+            ),
+        ),
     )
 
     # 4. eq_congruence_unary_func: forall x y, (x = y => f(x) = f(y))
@@ -93,10 +94,10 @@ def get_equality_axioms() -> List[Tuple[str, Formula]]:
                 y1,
                 Forall(
                     y2,
-                    Implies(And(Equality(x1, y1), Equality(x2, y2)), Equality(f_x1_x2, f_y1_y2))
-                )
-            )
-        )
+                    Implies(And(Equality(x1, y1), Equality(x2, y2)), Equality(f_x1_x2, f_y1_y2)),
+                ),
+            ),
+        ),
     )
 
     # 6. eq_congruence_unary_pred: forall x y, ((x = y & P(x)) => P(y))
@@ -106,8 +107,8 @@ def get_equality_axioms() -> List[Tuple[str, Formula]]:
         x,
         Forall(
             y,
-            Implies(And(Equality(x, y), px), py)
-        )
+            Implies(And(Equality(x, y), px), py),
+        ),
     )
 
     return [
@@ -118,3 +119,14 @@ def get_equality_axioms() -> List[Tuple[str, Formula]]:
         ("eq_congruence_binary_func", eq_congruence_binary_func),
         ("eq_congruence_unary_pred", eq_congruence_unary_pred),
     ]
+
+
+# Instantiated Theory object
+equality_theory: Theory = Theory(
+    name="equality",
+    description="First-order theory of equality (reflexivity, symmetry, transitivity, and function/predicate congruence).",
+    sorts={"Ind": Ind},
+    signature=get_equality_signature(),
+    axioms=dict(get_equality_axioms()),
+)
+register_theory(equality_theory)

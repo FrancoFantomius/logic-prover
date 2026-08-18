@@ -10,7 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- 
+- **Classified Axioms & Mathematical Theories Subfolder**: Added `logic_prover.axioms` subfolder unifying and classifying mathematical theories into dedicated modules (`group_theory`, `peano`, `zfc`, `analysis`, `linear_algebra`, `ring_theory`, `order_theory`, `boolean_algebra`, `relations`, `functions`, `equality`, `logic`).
+- **Theory Abstraction & Registry**: Introduced the `Theory` dataclass and global theory registry (`get_theory`, `list_theories`, `get_all_theories`) enabling direct theorem proving (`theory.prove()`) with automatic premise management and signature binding.
+- **Constructive Resolution with Prefixing and Translation**: Added resolution theorem provers for intuitionistic propositional logic (`logic_prover.constructive.resolution`), including direct clausal prefixed resolution (`PrefixedResolutionProver`) and relational S4 modal translation to First-Order Logic (`TranslationResolutionProver`).
+- **Cython Acceleration for Constructive Logic**: Added optional native C compilation for constructive and intuitionistic logic modules (`logic_prover.constructive.common`, `logic_prover.constructive.prefix`, `logic_prover.constructive.matrix`, `logic_prover.constructive.ljt`, `logic_prover.constructive.wallen`, `logic_prover.constructive.resolution`).
+
+### Removed
+- **Legacy Knowledge Base Package (`logic_prover.kb`)**: Removed legacy `logic_prover.kb` subpackage in favor of the consolidated, classified `logic_prover.axioms` architecture.
 ---
 
 ## [0.1.4] - 2026-08-15

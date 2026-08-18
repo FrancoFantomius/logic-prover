@@ -8,6 +8,7 @@ from logic_prover.core.ast import (
 )
 from logic_prover.core.sorts import Ind
 from logic_prover.core.signature import Signature
+from logic_prover.axioms.base import Theory, register_theory
 
 
 def get_fol_signature() -> Signature:
@@ -93,3 +94,14 @@ def get_fol_axioms() -> List[Tuple[str, Formula]]:
         ("quant_exists_intro", quant_exists_intro),
         ("quant_de_morgan_1", quant_de_morgan_1),
     ]
+
+
+# Instantiated Theory object
+fol_theory: Theory = Theory(
+    name="logic",
+    description="Foundational First-Order Logic schemata and quantifier tautologies.",
+    sorts={"Ind": Ind},
+    signature=get_fol_signature(),
+    axioms=dict(get_fol_axioms()),
+)
+register_theory(fol_theory)

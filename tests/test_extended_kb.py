@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,7 +10,7 @@ from logic_prover.core.sorts import PrimitiveSort, SetSort, Ind
 from logic_prover.core.validator import validate_formula
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.prover.engine import TheoremProver
-from logic_prover.kb import (
+from logic_prover.axioms import (
     get_all_axioms,
     get_extended_axioms,
     get_combined_signature,
@@ -25,12 +25,15 @@ from logic_prover.kb import (
     get_set_theory_axioms,
     get_function_signature,
     get_function_axioms,
+    GroupElem,
+    RelElem,
+    OrderElem,
+    ElemSort,
+    SetType,
+    Dom,
+    Codom,
+    FuncSort,
 )
-from logic_prover.kb.groups import GroupElem
-from logic_prover.kb.relations import RelElem
-from logic_prover.kb.orders import OrderElem
-from logic_prover.kb.sets import ElemSort, SetType
-from logic_prover.kb.functions import Dom, Codom, FuncSort
 
 
 class TestExtendedKB(unittest.TestCase):

@@ -9,7 +9,8 @@ __author__ = "Franco Fantomius"
 
 from logic_prover.config import SolverConfig
 from logic_prover.core.parser import parse_formula, to_string
-from logic_prover.kb import get_combined_signature
+from logic_prover.axioms import get_combined_signature, Theory, get_theory
+from logic_prover import axioms
 from logic_prover.logging import get_logger, setup_logging
 from logic_prover.prover.engine import TheoremProver
 from logic_prover.prover.proof import ProofDAG
@@ -23,7 +24,9 @@ __all__ = [
     "parse_formula",
     "to_string",
     "get_combined_signature",
+    "Theory",
+    "get_theory",
+    "axioms",
     "setup_logging",
     "get_logger",
 ]
-

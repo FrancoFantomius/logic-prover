@@ -20,7 +20,7 @@
 - **Deducer**: Network-level minimal hypothesis detection and equivalence classification.
 - **Lean 4 Export**: High-fidelity translation of formulas, statements, and tactic proofs into Lean 4 code.
 - **Interactive HTML Graphs**: Proof DAG and dependency graph visualizer.
-- **Optional Cython Acceleration**: Core AST, substitutions, and resolution engine compiled to native C extensions for high performance.
+- **Optional Cython Acceleration**: Core AST, substitutions, resolution engine, and constructive logic solvers compiled to native C extensions for high performance.
 - **Automated Documentation & Logging**: Structured logging subsystem and Reflection/AST documentation generator.
 
 ---
@@ -97,7 +97,7 @@ python utils/doc_generator.py --output-dir docs
 ```python
 import logging
 import logic_prover
-from logic_prover.kb import get_combined_signature
+from logic_prover.axioms import get_combined_signature
 from logic_prover.core.parser import parse_formula, to_string
 from logic_prover.prover.engine import TheoremProver
 from logic_prover.config import SolverConfig
@@ -151,6 +151,7 @@ logic_prover/
 ├── explorer/     # Formula Generator, Diversity Metrics, Ranking Heuristics
 ├── deducer/      # Network Analysis, Minimal Hypotheses, Equivalence Classes
 ├── exporters/    # Lean 4 Exporter & HTML Interactive Graph Visualizers
+├── constructive/ # Intuitionistic & Constructive Provers (LJT calculus, Wallen's matrix method)
 └── sol/          # Second-Order Logic (SOL) Extension
 
 ```

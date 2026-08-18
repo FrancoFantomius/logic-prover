@@ -1,4 +1,4 @@
-"""Function theory axioms (injective, surjective, bijective, identity)."""
+"""Function theory axioms, signatures, and formal Theory definitions."""
 
 from __future__ import annotations
 from typing import List, Tuple
@@ -8,6 +8,7 @@ from logic_prover.core.ast import (
 )
 from logic_prover.core.sorts import PrimitiveSort, Ind
 from logic_prover.core.signature import Signature
+from logic_prover.axioms.base import Theory, register_theory
 
 Dom: PrimitiveSort = PrimitiveSort("Dom")
 Codom: PrimitiveSort = PrimitiveSort("Codom")
@@ -134,3 +135,14 @@ def get_function_axioms() -> List[Tuple[str, Formula]]:
         ("func_bijective_def", func_bijective_def),
         ("func_id_def", func_id_def),
     ]
+
+
+# Instantiated Theory object
+function_theory: Theory = Theory(
+    name="functions",
+    description="First-order theory of functions (composition, injectivity, surjectivity, bijectivity, identity).",
+    sorts={"Dom": Dom, "Codom": Codom, "Func": FuncSort},
+    signature=get_function_signature(),
+    axioms=dict(get_function_axioms()),
+)
+register_theory(function_theory)

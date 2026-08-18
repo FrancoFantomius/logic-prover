@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 import os
 import tempfile
 import unittest
@@ -12,7 +12,7 @@ from logic_prover.core.sorts import Ind, Nat
 from logic_prover.core.signature import Signature
 from logic_prover.core.validator import validate_formula, is_well_formed
 from logic_prover.core.database import KnowledgeDatabase
-from logic_prover.kb import get_all_axioms, get_combined_signature
+from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.explorer import (
     DiversityMetrics,
     calculate_symbol_entropy,

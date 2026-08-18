@@ -28,7 +28,7 @@ def _try_prove(prover: TheoremProver, target: Formula, premises: List[Formula]) 
         bool: True if a refutation / proof DAG was successfully found, False otherwise.
 
     Example:
-        >>> from logic_prover.kb import get_combined_signature
+        >>> from logic_prover.axioms import get_combined_signature
         >>> from logic_prover.core.ast import PredicateApp
         >>> from logic_prover.prover import TheoremProver
         >>> prover = TheoremProver(signature=get_combined_signature())
