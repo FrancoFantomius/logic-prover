@@ -10,6 +10,9 @@ from logic_prover.constructive.common import (
     _is_atomic,
     normalize_formula,
     _formula_weight,
+    fresh_variable,
+    fresh_constant,
+    ground_terms,
 )
 from logic_prover.constructive.prefix import (
     PrefixSymbol,
@@ -79,6 +82,9 @@ __all__ = [
     "_is_atomic",
     "normalize_formula",
     "_formula_weight",
+    "fresh_variable",
+    "fresh_constant",
+    "ground_terms",
     # LJT
     "Sequent",
     "LJTProofNode",

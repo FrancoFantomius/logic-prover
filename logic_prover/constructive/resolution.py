@@ -28,6 +28,7 @@ from logic_prover.core.ast import (
     Implies,
     Iff,
     Forall,
+    Exists,
 )
 from logic_prover.core.parser import to_string
 from logic_prover.core.sorts import Ind
@@ -41,6 +42,7 @@ from logic_prover.constructive.common import (
     _is_atomic,
     normalize_formula,
 )
+from logic_prover.constructive.ljt import _collect_constants_and_functions
 from logic_prover.constructive.prefix import (
     PrefixSymbol,
     PrefixConstant,
@@ -897,7 +899,7 @@ def translate_ipc_to_fol(
 
     if _is_atomic(formula):
         if isinstance(formula, PredicateApp):
-            return PredicateApp(pred=formula.pred, arity=1, args=(world_term,))
+            return PredicateApp(pred=formula.pred, arity=formula.arity + 1, args=(world_term,) + formula.args)
         elif isinstance(formula, Equality):
             return formula
         return formula
@@ -934,14 +936,31 @@ def translate_ipc_to_fol(
         norm = normalize_formula(formula)
         return translate_ipc_to_fol(norm, world_term=world_term, var_counter=var_counter)
 
+    if isinstance(formula, Forall):
+        w_var = Variable(id=var_counter[0], sort=Ind)
+        var_counter[0] += 1
+        r_rel = PredicateApp(pred="R", arity=2, args=(world_term, w_var))
+        tau_body = translate_ipc_to_fol(formula.body, world_term=w_var, var_counter=var_counter)
+        return Forall(
+            variable=w_var,
+            body=Implies(
+                left=r_rel,
+                right=Forall(variable=formula.variable, body=tau_body),
+            ),
+        )
+
+    if isinstance(formula, Exists):
+        tau_body = translate_ipc_to_fol(formula.body, world_term=world_term, var_counter=var_counter)
+        return Exists(variable=formula.variable, body=tau_body)
+
     return formula
 
 
-def get_frame_axioms(atomic_predicates: Sequence[str]) -> List[Formula]:
+def get_frame_axioms(atomic_predicates: Sequence[Union[str, Tuple[str, int]]]) -> List[Formula]:
     """Generates the Kripke frame reflexivity, transitivity, and monotonicity axioms in FOL.
 
     Args:
-        atomic_predicates (Sequence[str]): List of proposition names occurring in the target.
+        atomic_predicates (Sequence[Union[str, Tuple[str, int]]]): List of proposition names or (name, arity) tuples.
 
     Returns:
         List[Formula]: Frame and monotonicity axioms in FOL.
@@ -976,22 +995,63 @@ def get_frame_axioms(atomic_predicates: Sequence[str]) -> List[Formula]:
 
     axioms: List[Formula] = [refl, trans]
 
-    # 3. Monotonicity for atomic predicates: forall x y. ((P(x) & R(x, y)) => P(y))
-    for pred in sorted(set(atomic_predicates)):
-        if pred in ("R", "_bot", "_top"):
-            continue
-        p_x = PredicateApp(pred=pred, arity=1, args=(x,))
-        p_y = PredicateApp(pred=pred, arity=1, args=(y,))
+    # 3. Monotonicity for atomic predicates:
+    parsed_preds: List[Tuple[str, int]] = []
+    for item in atomic_predicates:
+        if isinstance(item, str):
+            if item not in ("R", "_bot", "_top"):
+                parsed_preds.append((item, 0))
+        elif isinstance(item, tuple) and len(item) == 2:
+            if item[0] not in ("R", "_bot", "_top"):
+                parsed_preds.append(item)
+
+    for pred, arity in sorted(set(parsed_preds)):
+        ind_vars = [Variable(id=10 + i, sort=Ind) for i in range(arity)]
+        p_x = PredicateApp(pred=pred, arity=arity + 1, args=(x,) + tuple(ind_vars))
+        p_y = PredicateApp(pred=pred, arity=arity + 1, args=(y,) + tuple(ind_vars))
+        mono_body: Formula = Implies(left=And(left=p_x, right=r_xy), right=p_y)
+        for var in reversed(ind_vars):
+            mono_body = Forall(variable=var, body=mono_body)
         mono = Forall(
             variable=x,
             body=Forall(
                 variable=y,
-                body=Implies(left=And(left=p_x, right=r_xy), right=p_y),
+                body=mono_body,
             ),
         )
         axioms.append(mono)
 
     return axioms
+
+
+def _extract_predicate_declarations(formula: Formula) -> Set[Tuple[str, int]]:
+    """Recursively collects all predicate symbols and their IPC arities in a formula AST.
+
+    Args:
+        formula (Formula): Formula to inspect.
+
+    Returns:
+        Set[Tuple[str, int]]: Set of (predicate_name, arity) tuples.
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp
+        >>> from logic_prover.constructive.resolution import _extract_predicate_declarations
+        >>> p = PredicateApp("P", 0, ())
+        >>> _extract_predicate_declarations(p)
+        {('P', 0)}
+    """
+    preds: Set[Tuple[str, int]] = set()
+    if isinstance(formula, PredicateApp):
+        if formula.pred not in ("_bot", "_top", "R"):
+            preds.add((formula.pred, formula.arity))
+    elif isinstance(formula, Not):
+        preds.update(_extract_predicate_declarations(formula.operand))
+    elif isinstance(formula, (And, Or, Implies, Iff)):
+        preds.update(_extract_predicate_declarations(formula.left))
+        preds.update(_extract_predicate_declarations(formula.right))
+    elif isinstance(formula, (Forall, Exists)):
+        preds.update(_extract_predicate_declarations(formula.body))
+    return preds
 
 
 def _extract_predicate_names(formula: Formula) -> Set[str]:
@@ -1011,16 +1071,7 @@ def _extract_predicate_names(formula: Formula) -> Set[str]:
         >>> _extract_predicate_names(Implies(p, q)) == {"P", "Q"}
         True
     """
-    names: Set[str] = set()
-    if isinstance(formula, PredicateApp):
-        if formula.pred not in ("_bot", "_top"):
-            names.add(formula.pred)
-    elif isinstance(formula, Not):
-        names.update(_extract_predicate_names(formula.operand))
-    elif isinstance(formula, (And, Or, Implies, Iff)):
-        names.update(_extract_predicate_names(formula.left))
-        names.update(_extract_predicate_names(formula.right))
-    return names
+    return {name for name, _ in _extract_predicate_declarations(formula)}
 
 
 @dataclass
@@ -1164,24 +1215,31 @@ class TranslationResolutionProver:
         norm_target = normalize_formula(target)
         norm_premises = tuple(normalize_formula(p) for p in (premises or []))
 
-        # Collect atomic predicates
-        atoms: Set[str] = set()
-        atoms.update(_extract_predicate_names(norm_target))
+        # Collect atomic predicate declarations
+        preds: Set[Tuple[str, int]] = set()
+        preds.update(_extract_predicate_declarations(norm_target))
         for p in norm_premises:
-            atoms.update(_extract_predicate_names(p))
+            preds.update(_extract_predicate_declarations(p))
+
+        consts, fns = _collect_constants_and_functions(list(norm_premises) + [norm_target])
 
         # Build Signature
         sig = Signature()
         sig.register_predicate("R", 2, (Ind, Ind))
-        for pred in atoms:
-            sig.register_predicate(pred, 1, (Ind,))
+        for pred, arity in sorted(preds):
+            sig.register_predicate(pred, arity + 1, (Ind,) * (arity + 1))
         sig.register_constant("w0", Ind)
+        for c in consts:
+            if c.name != "w0":
+                sig.register_constant(c.name, Ind)
+        for f_name, f_arity in fns:
+            sig.register_function(f_name, f_arity, (Ind,) * f_arity, Ind)
 
         w0 = Constant("w0", sort=Ind)
         target_fol = translate_ipc_to_fol(norm_target, world_term=w0)
         premises_fol_list = [translate_ipc_to_fol(p, world_term=w0) for p in norm_premises]
 
-        frame_axioms = get_frame_axioms(sorted(atoms))
+        frame_axioms = get_frame_axioms(sorted(preds))
         all_fol_premises = frame_axioms + premises_fol_list
 
         config = SolverConfig(

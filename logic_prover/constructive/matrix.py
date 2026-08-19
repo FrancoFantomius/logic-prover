@@ -6,11 +6,12 @@ from enum import Enum
 from typing import List, Tuple, Optional, Dict, Any, Set
 
 from logic_prover.core.ast import (
-    Formula, PredicateApp, Not, And, Or, Implies
+    Formula, Term, Variable, Constant, PredicateApp, Not, And, Or, Implies, Forall, Exists
 )
 from logic_prover.core.parser import to_string
+from logic_prover.core.substitutions import substitute_formula
 from logic_prover.constructive.common import (
-    normalize_formula, _is_atomic, _is_falsum, _is_verum, FALSUM
+    normalize_formula, _is_atomic, _is_falsum, _is_verum, FALSUM, fresh_constant, fresh_variable
 )
 from logic_prover.constructive.prefix import (
     PrefixSymbol, PrefixConstant, PrefixVariable, Prefix
@@ -25,6 +26,8 @@ class PositionType(str, Enum):
         BETA: Branching propositional position.
         PHI: Intuitionistic dynamic universal/implication premise position introducing prefix variables.
         PSI: Intuitionistic static existential/implication goal position introducing prefix constants.
+        GAMMA: Quantifier position introducing individual variable.
+        DELTA: Quantifier position introducing individual parameter constant.
         ATOM: Atomic proposition leaf position.
 
     Example:
@@ -37,6 +40,8 @@ class PositionType(str, Enum):
     BETA = "BETA"
     PHI = "PHI"
     PSI = "PSI"
+    GAMMA = "GAMMA"
+    DELTA = "DELTA"
     ATOM = "ATOM"
 
 
@@ -53,6 +58,7 @@ class Position:
         parent (Optional[Position], default=None): Parent position node.
         children (Tuple[Position, ...], default=()): Child positions.
         symbol (Optional[PrefixSymbol], default=None): Introduced prefix symbol.
+        term_symbol (Optional[Union[Variable, Constant]], default=None): Introduced term variable or parameter constant.
 
     Example:
         >>> from logic_prover.core.ast import PredicateApp
@@ -72,6 +78,7 @@ class Position:
     parent: Optional[Position] = None
     children: Tuple[Position, ...] = field(default_factory=tuple)
     symbol: Optional[PrefixSymbol] = None
+    term_symbol: Optional[Union[Variable, Constant]] = None
 
     def is_leaf(self) -> bool:
         """Checks if this position is a leaf (atomic proposition).
@@ -397,6 +404,104 @@ class FormulaTree:
                 self.positions.append(pos)
                 return pos
 
+        # Universal Quantifier: forall x. A
+        if isinstance(f, Forall):
+            if polarity == 0:
+                # DELTA position: eigenvariable constant
+                const = self._next_constant()
+                if prefix.symbols:
+                    self._add_order_edge(prefix.symbols[-1], const)
+                new_prefix = prefix.append(const)
+                ind_const = fresh_constant(prefix="c")
+                sub_body = substitute_formula(f.body, {f.variable: ind_const})
+                pos = Position(
+                    id=pos_id,
+                    formula=f,
+                    polarity=polarity,
+                    pos_type=PositionType.DELTA,
+                    prefix=new_prefix,
+                    parent=parent,
+                    symbol=const,
+                    term_symbol=ind_const,
+                )
+                child = self._decompose(sub_body, polarity=0, prefix=new_prefix, parent=pos)
+                pos.children = (child,)
+                self.positions.append(pos)
+                return pos
+            else:
+                # GAMMA position: term variable with multiplicity
+                children_list: List[Position] = []
+                pos = Position(
+                    id=pos_id,
+                    formula=f,
+                    polarity=polarity,
+                    pos_type=PositionType.GAMMA,
+                    prefix=prefix,
+                    parent=parent,
+                )
+                for _ in range(self.multiplicity):
+                    var = self._next_variable()
+                    if prefix.symbols:
+                        self._add_order_edge(prefix.symbols[-1], var)
+                    gamma_prefix = prefix.append(var)
+                    term_var = fresh_variable()
+                    sub_body = substitute_formula(f.body, {f.variable: term_var})
+                    child = self._decompose(sub_body, polarity=1, prefix=gamma_prefix, parent=pos)
+                    children_list.append(child)
+
+                pos.children = tuple(children_list)
+                self.positions.append(pos)
+                return pos
+
+        # Existential Quantifier: exists x. A
+        if isinstance(f, Exists):
+            if polarity == 1:
+                # DELTA position: eigenvariable constant
+                const = self._next_constant()
+                if prefix.symbols:
+                    self._add_order_edge(prefix.symbols[-1], const)
+                new_prefix = prefix.append(const)
+                ind_const = fresh_constant(prefix="c")
+                sub_body = substitute_formula(f.body, {f.variable: ind_const})
+                pos = Position(
+                    id=pos_id,
+                    formula=f,
+                    polarity=polarity,
+                    pos_type=PositionType.DELTA,
+                    prefix=new_prefix,
+                    parent=parent,
+                    symbol=const,
+                    term_symbol=ind_const,
+                )
+                child = self._decompose(sub_body, polarity=1, prefix=new_prefix, parent=pos)
+                pos.children = (child,)
+                self.positions.append(pos)
+                return pos
+            else:
+                # GAMMA position: term variable with multiplicity
+                children_list: List[Position] = []
+                pos = Position(
+                    id=pos_id,
+                    formula=f,
+                    polarity=polarity,
+                    pos_type=PositionType.GAMMA,
+                    prefix=prefix,
+                    parent=parent,
+                )
+                for _ in range(self.multiplicity):
+                    var = self._next_variable()
+                    if prefix.symbols:
+                        self._add_order_edge(prefix.symbols[-1], var)
+                    gamma_prefix = prefix.append(var)
+                    term_var = fresh_variable()
+                    sub_body = substitute_formula(f.body, {f.variable: term_var})
+                    child = self._decompose(sub_body, polarity=0, prefix=gamma_prefix, parent=pos)
+                    children_list.append(child)
+
+                pos.children = tuple(children_list)
+                self.positions.append(pos)
+                return pos
+
         pos = Position(
             id=pos_id,
             formula=f,
@@ -430,7 +535,7 @@ class FormulaTree:
             if pos.is_leaf():
                 return [[pos]]
 
-            if pos.pos_type == PositionType.ALPHA:
+            if pos.pos_type in (PositionType.ALPHA, PositionType.DELTA, PositionType.GAMMA):
                 res: List[List[Position]] = []
                 for child in pos.children:
                     res.extend(_collect(child))

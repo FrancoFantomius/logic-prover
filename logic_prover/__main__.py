@@ -22,13 +22,18 @@ from typing import List, Optional
 from logic_prover.config import SolverConfig
 from logic_prover.core.database import KnowledgeDatabase
 from logic_prover.core.exceptions import SolverError, ParseError, ProofTimeoutError
-from logic_prover.core.parser import parse_formula, to_string
+from logic_prover.core.parser import parse_formula, to_string, tokenize, TokenType
+from logic_prover.core.signature import PredicateDecl
 from logic_prover.deducer import analyze_dependencies, compute_equivalence_classes
 from logic_prover.explorer import FormulaExplorer, calculate_diversity_scores, composite_interestingness
 from logic_prover.exporters import LeanExporter, GraphExporter
 from logic_prover.axioms import get_all_axioms, get_combined_signature
 from logic_prover.logging import get_logger, setup_logging
 from logic_prover.prover import TheoremProver
+from logic_prover.constructive.ljt import LJTProver
+from logic_prover.constructive.tableau import TableauProver
+from logic_prover.constructive.wallen import WallenProver
+from logic_prover.constructive.resolution import TranslationResolutionProver
 
 logger = get_logger("cli")
 
@@ -87,6 +92,22 @@ def build_parser() -> argparse.ArgumentParser:
     prove_parser.add_argument("--stubs-only", action="store_true", help="Check syntax without full resolution proof")
     prove_parser.add_argument("--save", action="store_true", help="Save proved theorem to database")
     prove_parser.add_argument("--db-path", type=str, default=None, help="Path to SQLite database file")
+
+    # 3b. prove-intuitionistic command
+    prove_int_parser = subparsers.add_parser(
+        "prove-intuitionistic", help="Prove target formula in Intuitionistic Logic (IPC/IQC)"
+    )
+    prove_int_parser.add_argument(
+        "target_pos", nargs="?", default=None, metavar="FORMULA", help="Target formula string to prove"
+    )
+    prove_int_parser.add_argument("--target", type=str, default=None, help="Target formula string to prove")
+    prove_int_parser.add_argument("--premises", nargs="*", default=[], help="Space-separated premise formula strings")
+    prove_int_parser.add_argument(
+        "--method", choices=["ljt", "tableau", "wallen", "translation"], default="ljt", help="Intuitionistic proof engine method"
+    )
+    prove_int_parser.add_argument("--max-term-depth", type=int, default=2, help="Maximum term depth for quantifier instantiation")
+    prove_int_parser.add_argument("--timeout", type=float, default=10.0, help="Prover wall-clock timeout in seconds")
+    prove_int_parser.add_argument("--max-steps", type=int, default=1000, help="Maximum search steps")
 
     # 4. analyze command
     analyze_parser = subparsers.add_parser(
@@ -271,6 +292,101 @@ def cmd_prove(args: argparse.Namespace, config: SolverConfig) -> int:
     except (SolverError, ProofTimeoutError) as e:
         print(f"FAILED: {e}")
         logger.error(f"Prover failure: {e}")
+        return 1
+
+
+def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> int:
+    """Executes the 'prove-intuitionistic' command using constructive provers (LJT, Tableau, Wallen, Translation).
+
+    Args:
+        args (argparse.Namespace): Parsed command-line arguments.
+        config (SolverConfig): Global SolverConfig providing defaults.
+
+    Returns:
+        int: Exit code 0 on success/provable, 1 on unprovable or error.
+
+    Example:
+        >>> import argparse
+        >>> from logic_prover.config import SolverConfig
+        >>> from logic_prover.__main__ import cmd_prove_intuitionistic
+        >>> args = argparse.Namespace(target="P => P", target_pos=None, premises=[], method="ljt", max_term_depth=2, timeout=10.0, max_steps=1000)
+        >>> cmd_prove_intuitionistic(args, SolverConfig())
+        0
+    """
+    target_str = args.target or args.target_pos
+    if not target_str:
+        print("Error: No target formula provided to prove.", file=sys.stderr)
+        return 1
+
+    signature = get_combined_signature()
+    for s in [target_str] + list(args.premises or []):
+        tokens = tokenize(s)
+        for i, tok in enumerate(tokens):
+            if tok.type == TokenType.IDENTIFIER and tok.value not in ("Ind", "Nat", "Bool", "forall", "exists", "true", "false"):
+                next_tok = tokens[i + 1] if i + 1 < len(tokens) else None
+                if not next_tok or next_tok.type != TokenType.LPAREN:
+                    signature.predicates[tok.value] = PredicateDecl(name=tok.value, arity=0, arg_sorts=())
+
+    target_formula = parse_formula(target_str, signature=signature)
+    premise_formulas = [parse_formula(p, signature=signature) for p in args.premises]
+
+    method = getattr(args, "method", None) or config.constructive_method or "ljt"
+    max_term_depth = getattr(args, "max_term_depth", None) or config.iqc_max_term_depth or 2
+
+    print(f"Target formula: {to_string(target_formula)}")
+    if premise_formulas:
+        print(f"Premises: {', '.join(to_string(p) for p in premise_formulas)}")
+    print(f"Method: {method}")
+
+    if method == "ljt":
+        prover = LJTProver(max_term_depth=max_term_depth)
+        proof = prover.prove(target=target_formula, premises=premise_formulas)
+        if proof is not None and proof.is_valid():
+            print("SUCCESS: Formula is intuitionistically VALID (proven via LJT / G4ip).")
+            print("\n--- Derivation Tree ---")
+            print(proof.to_ascii())
+            return 0
+        else:
+            print("FAILED: Formula could not be proven intuitionistically with LJT.")
+            return 1
+    elif method == "tableau":
+        prover_tab = TableauProver(max_depth=getattr(args, "max_steps", 100))
+        result_tab = prover_tab.prove(target=target_formula, premises=premise_formulas)
+        if result_tab.is_valid:
+            print("SUCCESS: Formula is intuitionistically VALID (proven via Semantic Tableau).")
+            print("\n--- Tableau Tree ---")
+            print(result_tab.to_string())
+            return 0
+        else:
+            print("FAILED: Formula is intuitionistically UNPROVABLE.")
+            if result_tab.countermodel:
+                print("\n--- Falsifying Kripke Countermodel ---")
+                print(result_tab.countermodel.to_string())
+            return 1
+    elif method == "wallen":
+        prover_wal = WallenProver()
+        result_wal = prover_wal.prove(target=target_formula, premises=premise_formulas)
+        if result_wal.is_valid:
+            print("SUCCESS: Formula is intuitionistically VALID (proven via Wallen Matrix Method).")
+            print(result_wal.to_string())
+            return 0
+        else:
+            print("FAILED: Formula could not be proven intuitionistically with Wallen matrix.")
+            return 1
+    elif method == "translation":
+        prover_trans = TranslationResolutionProver(
+            max_steps=getattr(args, "max_steps", 1000), timeout_sec=getattr(args, "timeout", 10.0)
+        )
+        result_trans = prover_trans.prove(target=target_formula, premises=premise_formulas)
+        if result_trans is not None and result_trans.is_valid:
+            print("SUCCESS: Formula is intuitionistically VALID (proven via Relational Translation Resolution).")
+            print(result_trans.to_string())
+            return 0
+        else:
+            print("FAILED: Formula could not be proven intuitionistically via Translation Resolution.")
+            return 1
+    else:
+        print(f"Unknown constructive method '{method}'.", file=sys.stderr)
         return 1
 
 
@@ -469,6 +585,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd_explore(args, config)
         elif args.command == "prove":
             return cmd_prove(args, config)
+        elif args.command == "prove-intuitionistic":
+            return cmd_prove_intuitionistic(args, config)
         elif args.command == "analyze":
             return cmd_analyze(args, config)
         elif args.command == "export":

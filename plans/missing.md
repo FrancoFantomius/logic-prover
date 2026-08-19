@@ -47,10 +47,3 @@ handles full first-order and higher-order logic classically.
 
 - No intuitionistic type theory, Calculus of Constructions, or HoTT.
 - The `sol` module is classical second-order logic, not constructive.
-
-## What Is Already Complete
-
-- LJT (G4ip) is a terminating decision procedure for IPC.
-- The labelled tableau engine builds explicit finite Kripke countermodels for
-  unprovable formulas.
-- Wallen's matrix / connection method and prefixed resolution cover IPC.

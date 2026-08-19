@@ -1,9 +1,10 @@
-"""Kripke frames, possible worlds, and semantic models for Intuitionistic Logic.
+"""Kripke frames, possible worlds, and semantic models for Intuitionistic First-Order Logic.
 
-This module provides Kripke semantics structures for intuitionistic propositional
-logic (Fitting 1969; Chagrov & Zakharyaschev 1997). In intuitionistic Kripke semantics,
-a model M = (W, <=, V) consists of a non-empty set of worlds W, a reflexive-transitive
-preorder <=, and a monotone valuation V where u <= v implies V(u) <= V(v).
+This module provides Kripke semantics structures for intuitionistic logic
+(Fitting 1969; Chagrov & Zakharyaschev 1997). In intuitionistic first-order Kripke semantics,
+a model M = (W, <=, D, V) consists of a non-empty set of worlds W, a reflexive-transitive
+preorder <=, expanding domain assignment D where u <= v implies D(u) <= D(v), and a monotone
+valuation V where u <= v implies V(u) <= V(v).
 """
 
 from __future__ import annotations
@@ -11,9 +12,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Set
 
 from logic_prover.core.ast import (
-    Formula, PredicateApp, Not, And, Or, Implies, Iff
+    Formula, Term, PredicateApp, Not, And, Or, Implies, Iff, Forall, Exists
 )
 from logic_prover.core.parser import to_string
+from logic_prover.core.substitutions import substitute_formula
 from logic_prover.constructive.common import (
     FALSUM,
     VERUM,
@@ -69,11 +71,13 @@ class World:
 
 
 class KripkeModel:
-    """A finite Kripke Model (W, <=, V) for Intuitionistic Propositional Logic.
+    """A finite Kripke Model (W, <=, D, V) for Intuitionistic First-Order Logic (IQC).
 
     In intuitionistic Kripke semantics:
     - W is a non-empty set of possible worlds.
     - <= is a preorder (reflexive, transitive accessibility relation).
+    - D maps each world w in W to a non-empty set of domain terms such that
+      if w <= w' then D(w) <= D(w') (expanding domain monotonicity).
     - V maps each world w in W to a set of true atomic propositions such that
       if w <= w' then V(w) <= V(w') (monotonicity / persistence / heredity).
 
@@ -81,6 +85,7 @@ class KripkeModel:
         worlds (Optional[List[World]], default=None): List of worlds in the model.
         relations (Optional[Dict[World, Set[World]]], default=None): Accessibility map.
         valuations (Optional[Dict[World, Set[Formula]]], default=None): Atomic valuation map.
+        domains (Optional[Dict[World, Set[Term]]], default=None): Per-world domain elements map.
 
     Example:
         >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -94,19 +99,22 @@ class KripkeModel:
     worlds: List[World]
     relations: Dict[World, Set[World]]
     valuations: Dict[World, Set[Formula]]
+    domains: Dict[World, Set[Term]]
 
     def __init__(
         self,
         worlds: Optional[List[World]] = None,
         relations: Optional[Dict[World, Set[World]]] = None,
         valuations: Optional[Dict[World, Set[Formula]]] = None,
+        domains: Optional[Dict[World, Set[Term]]] = None,
     ) -> None:
-        """Initializes a Kripke model with worlds, relations, and valuations.
+        """Initializes a Kripke model with worlds, relations, valuations, and domains.
 
         Args:
             worlds (Optional[List[World]], default=None): Initial list of worlds.
             relations (Optional[Dict[World, Set[World]]], default=None): Initial accessibility edges.
             valuations (Optional[Dict[World, Set[Formula]]], default=None): Initial truth assignments.
+            domains (Optional[Dict[World, Set[Term]]], default=None): Initial domain elements per world.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel
@@ -117,6 +125,7 @@ class KripkeModel:
         self.worlds = list(worlds) if worlds is not None else []
         self.relations = {w: set(targets) for w, targets in relations.items()} if relations is not None else {}
         self.valuations = {w: set(atoms) for w, atoms in valuations.items()} if valuations is not None else {}
+        self.domains = {w: set(terms) for w, terms in domains.items()} if domains is not None else {}
 
     def add_world(self, world: World) -> None:
         """Adds a world to the model, ensuring reflexivity in the accessibility relation.
@@ -139,9 +148,11 @@ class KripkeModel:
             self.relations[world].add(world)
         if world not in self.valuations:
             self.valuations[world] = set()
+        if world not in self.domains:
+            self.domains[world] = set()
 
     def add_relation(self, source: World, target: World) -> None:
-        """Adds an accessibility edge source <= target and maintains transitive closure.
+        """Adds an accessibility edge source <= target and maintains transitive closure and monotonicity.
 
         Args:
             source (World): The starting world.
@@ -179,16 +190,22 @@ class KripkeModel:
                             changed = True
 
     def _enforce_monotonicity(self) -> None:
-        """Enforces monotonicity: if u <= v then V(u) <= V(v)."""
+        """Enforces valuation and domain monotonicity: if u <= v then V(u) <= V(v) and D(u) <= D(v)."""
         changed = True
         while changed:
             changed = False
             for u in self.worlds:
                 for v in self.relations.get(u, set()):
                     if u != v:
+                        # Valuation monotonicity
                         for atom in self.valuations.get(u, set()):
                             if atom not in self.valuations.get(v, set()):
                                 self.valuations.setdefault(v, set()).add(atom)
+                                changed = True
+                        # Domain monotonicity
+                        for term in self.domains.get(u, set()):
+                            if term not in self.domains.get(v, set()):
+                                self.domains.setdefault(v, set()).add(term)
                                 changed = True
 
     def add_valuation(self, world: World, formula: Formula) -> None:
@@ -212,6 +229,28 @@ class KripkeModel:
         self.valuations[world].add(formula)
         for succ in self.accessible_worlds(world):
             self.valuations.setdefault(succ, set()).add(formula)
+
+    def add_domain_element(self, world: World, term: Term) -> None:
+        """Adds a domain element term at world, propagating along accessible worlds.
+
+        Args:
+            world (World): World where domain element is added.
+            term (Term): Ground term element to add to D(world).
+
+        Example:
+            >>> from logic_prover.core.ast import Constant
+            >>> from logic_prover.constructive.kripke import KripkeModel, World
+            >>> m = KripkeModel()
+            >>> w0 = World(0, "w0")
+            >>> c = Constant("c0")
+            >>> m.add_domain_element(w0, c)
+            >>> c in m.domains[w0]
+            True
+        """
+        self.add_world(world)
+        self.domains[world].add(term)
+        for succ in self.accessible_worlds(world):
+            self.domains.setdefault(succ, set()).add(term)
 
     def is_accessible(self, source: World, target: World) -> bool:
         """Tests whether target is reachable from source (source <= target).
@@ -253,7 +292,7 @@ class KripkeModel:
         return set(self.relations.get(world, {world}))
 
     def evaluate(self, formula: Formula, world: World) -> bool:
-        """Evaluates whether an intuitionistic formula is forced at a world: (M, world |= formula).
+        """Evaluates whether an intuitionistic first-order formula is forced at a world: (M, world |= formula).
 
         Args:
             formula (Formula): The formula AST to evaluate.
@@ -299,13 +338,30 @@ class KripkeModel:
             right_imp = Implies(left=formula.right, right=formula.left)
             return self.evaluate(left_imp, world) and self.evaluate(right_imp, world)
 
+        if isinstance(formula, Forall):
+            for succ in self.accessible_worlds(world):
+                domain_elems = self.domains.get(succ, set())
+                for t in domain_elems:
+                    sub_f = substitute_formula(formula.body, {formula.variable: t})
+                    if not self.evaluate(sub_f, succ):
+                        return False
+            return True
+
+        if isinstance(formula, Exists):
+            domain_elems = self.domains.get(world, set())
+            for t in domain_elems:
+                sub_f = substitute_formula(formula.body, {formula.variable: t})
+                if self.evaluate(sub_f, world):
+                    return True
+            return False
+
         return False
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the Kripke model structure to a dictionary.
 
         Returns:
-            Dict[str, Any]: Dictionary structure with worlds, relations, and valuations.
+            Dict[str, Any]: Dictionary structure with worlds, relations, valuations, and domains.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -324,13 +380,17 @@ class KripkeModel:
                 w.name: sorted([to_string(f) for f in self.valuations.get(w, set())])
                 for w in self.worlds
             },
+            "domains": {
+                w.name: sorted([to_string(t) for t in self.domains.get(w, set())])
+                for w in self.worlds
+            },
         }
 
     def to_string(self) -> str:
         """Formats the Kripke model as a readable multi-line description.
 
         Returns:
-            str: Description of worlds, accessibility relation, and atomic valuations.
+            str: Description of worlds, accessibility relation, atomic valuations, and domains.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -339,12 +399,17 @@ class KripkeModel:
             >>> "Kripke Model" in m.to_string()
             True
         """
-        lines: List[str] = ["Kripke Model (W, <=, V):"]
+        lines: List[str] = ["Kripke Model (W, <=, D, V):"]
         lines.append(f"  Worlds: {', '.join(w.name for w in self.worlds) if self.worlds else 'empty'}")
         lines.append("  Accessibility Relation (<=):")
         for w in self.worlds:
             succs = sorted([s.name for s in self.relations.get(w, set())])
             lines.append(f"    {w.name} <= {{{', '.join(succs)}}}")
+        lines.append("  Domains D(w):")
+        for w in self.worlds:
+            terms = sorted([to_string(t) for t in self.domains.get(w, set())])
+            terms_str = ", ".join(terms) if terms else "empty"
+            lines.append(f"    D({w.name}) = {{{terms_str}}}")
         lines.append("  Valuations V(w):")
         for w in self.worlds:
             atoms = sorted([to_string(f) for f in self.valuations.get(w, set())])
@@ -361,3 +426,4 @@ __all__ = [
     "World",
     "KripkeModel",
 ]
+

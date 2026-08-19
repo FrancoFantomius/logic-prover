@@ -1,4 +1,4 @@
-﻿"""Configuration management module for the logic library."""
+"""Configuration management module for the logic library."""
 
 from __future__ import annotations
 import json
@@ -31,6 +31,8 @@ class SolverConfig:
     prover_timeout_sec: float = 10.0
     log_level: str = "INFO"
     lean_mathlib_version: str = "latest"
+    constructive_method: str = "ljt"
+    iqc_max_term_depth: int = 2
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> SolverConfig:

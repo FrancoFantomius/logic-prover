@@ -1,11 +1,11 @@
-"""Semantic Tableaux with Kripke Semantics for Intuitionistic Propositional Logic (IPC).
+"""Semantic Tableaux with Kripke Semantics for Intuitionistic First-Order Logic (IQC).
 
 This module implements a labelled/prefixed semantic tableau calculus for intuitionistic
-propositional logic (Fitting 1969, 1983; Goré 1999). Proof search decomposes signed
-formulas across explicit Kripke worlds. When a formula is intuitionistically valid,
+first-order logic (Fitting 1969, 1983; Goré 1999). Proof search decomposes signed
+formulas across explicit Kripke worlds and domains. When a formula is intuitionistically valid,
 all tableau branches close. When a formula is unprovable (e.g. classical tautologies
 such as excluded middle or double negation elimination), an open saturated branch
-is used to construct an explicit finite Kripke countermodel (W, <=, V) falsifying
+is used to construct an explicit finite Kripke countermodel (W, <=, D, V) falsifying
 the target.
 """
 
@@ -15,16 +15,19 @@ from enum import Enum
 from typing import List, Tuple, Optional, Dict, Any, Set
 
 from logic_prover.core.ast import (
-    Formula, PredicateApp, Not, And, Or, Implies, Iff
+    Formula, Term, Constant, PredicateApp, Not, And, Or, Implies, Iff, Forall, Exists
 )
 from logic_prover.core.parser import to_string
+from logic_prover.core.substitutions import substitute_formula
 from logic_prover.constructive.common import (
     FALSUM,
     VERUM,
     _is_falsum,
     _is_verum,
     _is_atomic,
+    fresh_constant,
 )
+from logic_prover.constructive.ljt import _collect_constants_and_functions
 from logic_prover.constructive.kripke import (
     World,
     KripkeModel,
@@ -453,6 +456,7 @@ class _BranchState:
         relations (Dict[World, Set[World]], default_factory=dict): Accessibility relation edges.
         t_formulas (Dict[World, Set[Formula]], default_factory=dict): Signed true formulas per world.
         f_formulas (Dict[World, Set[Formula]], default_factory=dict): Signed false formulas per world.
+        domains (Dict[World, Set[Term]], default_factory=dict): Per-world domain ground terms.
         applied_rules (Set[Tuple[Any, ...]], default_factory=set): Set of rule signature tuples already applied.
 
     Example:
@@ -469,6 +473,7 @@ class _BranchState:
     relations: Dict[World, Set[World]] = field(default_factory=dict)
     t_formulas: Dict[World, Set[Formula]] = field(default_factory=dict)
     f_formulas: Dict[World, Set[Formula]] = field(default_factory=dict)
+    domains: Dict[World, Set[Term]] = field(default_factory=dict)
     applied_rules: Set[Tuple[Any, ...]] = field(default_factory=set)
 
     def copy(self) -> _BranchState:
@@ -489,6 +494,7 @@ class _BranchState:
             relations={w: set(succs) for w, succs in self.relations.items()},
             t_formulas={w: set(forms) for w, forms in self.t_formulas.items()},
             f_formulas={w: set(forms) for w, forms in self.f_formulas.items()},
+            domains={w: set(terms) for w, terms in self.domains.items()},
             applied_rules=set(self.applied_rules),
         )
 
@@ -511,6 +517,7 @@ class _BranchState:
         self.relations.setdefault(world, {world})
         self.t_formulas.setdefault(world, set())
         self.f_formulas.setdefault(world, set())
+        self.domains.setdefault(world, set())
 
     def add_relation(self, source: World, target: World) -> None:
         """Adds accessibility relation source <= target with transitive closure and monotonicity.
@@ -537,11 +544,13 @@ class _BranchState:
             if source in self.relations.get(u, set()):
                 self.relations[u].add(target)
 
-        # Propagate T-formulas from predecessors to target
+        # Propagate T-formulas and domains from predecessors to target
         for u in self.worlds:
             if target in self.relations.get(u, set()) and u != target:
                 for f in self.t_formulas.get(u, set()):
                     self.t_formulas[target].add(f)
+                for t in self.domains.get(u, set()):
+                    self.domains[target].add(t)
 
     def add_t_formula(self, world: World, formula: Formula) -> None:
         """Adds a true formula at world and propagates along accessibility relation.
@@ -586,6 +595,29 @@ class _BranchState:
         """
         self.add_world(world)
         self.f_formulas[world].add(formula)
+
+    def add_domain_element(self, world: World, term: Term) -> None:
+        """Adds a domain ground term at world and propagates along accessibility relations.
+
+        Args:
+            world (World): World node where domain element is added.
+            term (Term): Ground term added to D(world).
+
+        Example:
+            >>> from logic_prover.core.ast import Constant
+            >>> from logic_prover.constructive.kripke import World
+            >>> from logic_prover.constructive.tableau import _BranchState
+            >>> s = _BranchState()
+            >>> w0 = World(0, "w0")
+            >>> c = Constant("c0")
+            >>> s.add_domain_element(w0, c)
+            >>> c in s.domains[w0]
+            True
+        """
+        self.add_world(world)
+        self.domains[world].add(term)
+        for succ in self.relations.get(world, set()):
+            self.domains.setdefault(succ, set()).add(term)
 
 
 class TableauProver:
@@ -674,7 +706,7 @@ class TableauProver:
             state (_BranchState): Saturated open branch.
 
         Returns:
-            KripkeModel: The constructed Kripke model (W, <=, V).
+            KripkeModel: The constructed Kripke model (W, <=, D, V).
         """
         model = KripkeModel()
         for w in state.worlds:
@@ -683,6 +715,8 @@ class TableauProver:
             for v in state.relations.get(u, set()):
                 model.add_relation(u, v)
         for w in state.worlds:
+            for t in state.domains.get(w, set()):
+                model.add_domain_element(w, t)
             for f in state.t_formulas.get(w, set()):
                 if _is_atomic(f) and not _is_falsum(f) and not _is_verum(f):
                     model.add_valuation(w, f)
@@ -693,7 +727,7 @@ class TableauProver:
         target: Formula,
         premises: Optional[List[Formula]] = None,
     ) -> TableauProofResult:
-        """Attempts to prove an intuitionistic propositional formula or find a Kripke countermodel.
+        """Attempts to prove an intuitionistic formula or find a Kripke countermodel.
 
         Args:
             target (Formula): The target formula to prove.
@@ -717,6 +751,13 @@ class TableauProver:
         w0 = World(id=0, name="w0")
         initial_state = _BranchState()
         initial_state.add_world(w0)
+
+        consts, _ = _collect_constants_and_functions(list(premise_list) + [target])
+        if consts:
+            for c in consts:
+                initial_state.add_domain_element(w0, c)
+        else:
+            initial_state.add_domain_element(w0, Constant("c0"))
 
         for p in premise_list:
             initial_state.add_t_formula(w0, p)
@@ -834,6 +875,54 @@ class TableauProver:
                             is_closed, open_b = self._expand_branch(state, child, depth + 1)
                             node.is_closed = is_closed
                             return is_closed, open_b
+
+        # 2d. F(Forall): F(forall x. A, w) -> creates fresh domain element a in D(w), F(A[a/x], w)
+        for w in list(state.worlds):
+            for f in list(state.f_formulas.get(w, set())):
+                if isinstance(f, Forall):
+                    sig = ("F_Forall", f, w)
+                    if sig not in state.applied_rules:
+                        state.applied_rules.add(sig)
+                        all_forms = [form for w_f in state.worlds for form in (state.t_formulas.get(w_f, set()) | state.f_formulas.get(w_f, set()))]
+                        existing_consts, _ = _collect_constants_and_functions(all_forms)
+                        a_const = fresh_constant(prefix="a", existing_constants=existing_consts | state.domains.get(w, set()))
+                        state.add_domain_element(w, a_const)
+                        inst = substitute_formula(f.body, {f.variable: a_const})
+                        child = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.FALSE, f, w),
+                            rule=f"F_Forall ({to_string(a_const)})",
+                            world=w,
+                        )
+                        node.children.append(child)
+                        state.add_f_formula(w, inst)
+                        is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                        node.is_closed = is_closed
+                        return is_closed, open_b
+
+        # 2e. T(Exists): T(exists x. A, w) -> creates fresh domain element a in D(w), T(A[a/x], w)
+        for w in list(state.worlds):
+            for f in list(state.t_formulas.get(w, set())):
+                if isinstance(f, Exists):
+                    sig = ("T_Exists", f, w)
+                    if sig not in state.applied_rules:
+                        state.applied_rules.add(sig)
+                        all_forms = [form for w_f in state.worlds for form in (state.t_formulas.get(w_f, set()) | state.f_formulas.get(w_f, set()))]
+                        existing_consts, _ = _collect_constants_and_functions(all_forms)
+                        a_const = fresh_constant(prefix="a", existing_constants=existing_consts | state.domains.get(w, set()))
+                        state.add_domain_element(w, a_const)
+                        inst = substitute_formula(f.body, {f.variable: a_const})
+                        child = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.TRUE, f, w),
+                            rule=f"T_Exists ({to_string(a_const)})",
+                            world=w,
+                        )
+                        node.children.append(child)
+                        state.add_t_formula(w, inst)
+                        is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                        node.is_closed = is_closed
+                        return is_closed, open_b
 
         # Step 3: Apply World-Creating Rules (Kripke World Transitions)
         # 3a. F(Implies): F(A => B, w) -> creates w_new >= w with T(A, w_new), F(B, w_new)
@@ -1070,6 +1159,49 @@ class TableauProver:
 
                         node.is_closed = closed_l and closed_r
                         return node.is_closed, open_r if not closed_r else None
+
+        # 4f. T(Forall): T(forall x. A, w) -> for all accessible w' >= w and t in D(w'), T(A[t/x], w')
+        for w in list(state.worlds):
+            for f in list(state.t_formulas.get(w, set())):
+                if isinstance(f, Forall):
+                    for w_prime in list(state.relations.get(w, set())):
+                        for t in list(state.domains.get(w_prime, set())):
+                            sig = ("T_Forall", f, w, w_prime, t)
+                            if sig not in state.applied_rules:
+                                state.applied_rules.add(sig)
+                                inst = substitute_formula(f.body, {f.variable: t})
+                                child = TableauNode(
+                                    id=self._next_node_id(),
+                                    signed_formula=SignedFormula(Sign.TRUE, inst, w_prime),
+                                    rule=f"T_Forall ({w_prime.name}, {to_string(t)})",
+                                    world=w_prime,
+                                )
+                                node.children.append(child)
+                                state.add_t_formula(w_prime, inst)
+                                is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                                node.is_closed = is_closed
+                                return is_closed, open_b
+
+        # 4g. F(Exists): F(exists x. A, w) -> for all t in D(w), F(A[t/x], w)
+        for w in list(state.worlds):
+            for f in list(state.f_formulas.get(w, set())):
+                if isinstance(f, Exists):
+                    for t in list(state.domains.get(w, set())):
+                        sig = ("F_Exists", f, w, t)
+                        if sig not in state.applied_rules:
+                            state.applied_rules.add(sig)
+                            inst = substitute_formula(f.body, {f.variable: t})
+                            child = TableauNode(
+                                id=self._next_node_id(),
+                                signed_formula=SignedFormula(Sign.FALSE, inst, w),
+                                rule=f"F_Exists ({w.name}, {to_string(t)})",
+                                world=w,
+                            )
+                            node.children.append(child)
+                            state.add_f_formula(w, inst)
+                            is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                            node.is_closed = is_closed
+                            return is_closed, open_b
 
         # Step 5: Saturated branch with no further rules applicable and no clash
         node.is_closed = False

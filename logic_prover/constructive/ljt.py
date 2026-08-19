@@ -1,17 +1,19 @@
 """Roy Dyckhoff's Contraction-Free Sequent Calculus (LJT / G4ip) for Intuitionistic Logic.
 
-This module implements the terminating, contraction-free sequent calculus LJT
-developed by Roy Dyckhoff (1992) for propositional intuitionistic logic (IPC).
+This module implements the contraction-free sequent calculus LJT (Dyckhoff 1992)
+extended with first-order quantifier rules for Intuitionistic First-Order Logic (IQC / iFOL).
 """
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, Set, Iterable
 
 from logic_prover.core.ast import (
-    Formula, And, Or, Implies
+    Formula, Term, Variable, Constant, FunctionApp, PredicateApp, Equality,
+    Not, And, Or, Implies, Iff, Forall, Exists, free_variables
 )
 from logic_prover.core.parser import to_string
+from logic_prover.core.substitutions import substitute_formula
 from logic_prover.constructive.common import (
     FALSUM,
     VERUM,
@@ -20,7 +22,62 @@ from logic_prover.constructive.common import (
     _is_atomic,
     normalize_formula,
     _formula_weight,
+    fresh_constant,
+    ground_terms,
 )
+
+
+def _collect_constants_and_functions(
+    formulas: Iterable[Formula]
+) -> Tuple[Set[Constant], Set[Tuple[str, int]]]:
+    """Extracts all constants and function signature declarations occurring in given formulas.
+
+    Args:
+        formulas (Iterable[Formula]): Collection of formula AST nodes.
+
+    Returns:
+        Tuple[Set[Constant], Set[Tuple[str, int]]]: Set of constants and set of (func_name, arity) pairs.
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp, Constant
+        >>> from logic_prover.constructive.ljt import _collect_constants_and_functions
+        >>> c = Constant("c0")
+        >>> p = PredicateApp("P", 1, (c,))
+        >>> consts, fns = _collect_constants_and_functions([p])
+        >>> c in consts
+        True
+    """
+    constants: Set[Constant] = set()
+    functions: Set[Tuple[str, int]] = set()
+
+    def _traverse_term(t: Term) -> None:
+        if isinstance(t, Constant):
+            constants.add(t)
+        elif isinstance(t, FunctionApp):
+            if isinstance(t.func, str):
+                functions.add((t.func, t.arity))
+            for arg in t.args:
+                _traverse_term(arg)
+
+    def _traverse_formula(f: Formula) -> None:
+        if isinstance(f, PredicateApp):
+            for arg in f.args:
+                _traverse_term(arg)
+        elif isinstance(f, Equality):
+            _traverse_term(f.left)
+            _traverse_term(f.right)
+        elif isinstance(f, Not):
+            _traverse_formula(f.operand)
+        elif isinstance(f, (And, Or, Implies, Iff)):
+            _traverse_formula(f.left)
+            _traverse_formula(f.right)
+        elif isinstance(f, (Forall, Exists)):
+            _traverse_formula(f.body)
+
+    for form in formulas:
+        _traverse_formula(form)
+
+    return constants, functions
 
 
 @dataclass(frozen=True)
@@ -281,18 +338,45 @@ class LJTProofTree:
 
 
 class LJTProver:
-    """Automated Theorem Prover for Intuitionistic Propositional Logic using LJT / G4ip calculus."""
+    """Automated Theorem Prover for Intuitionistic First-Order Logic (IQC) using LJT / G4ip calculus.
 
-    def __init__(self) -> None:
+    Args:
+        max_term_depth (int, default=2): Maximum function nesting depth for ground term enumeration.
+        max_depth (int, default=100): Maximum search derivation depth bound.
+    """
+
+    max_term_depth: int
+    max_depth: int
+
+    def __init__(self, max_term_depth: int = 2, max_depth: int = 100) -> None:
         """Initializes the LJT theorem prover instance.
+
+        Args:
+            max_term_depth (int, default=2): Maximum term nesting depth for quantifier instantiation.
+            max_depth (int, default=100): Search recursion depth limit.
 
         Example:
             >>> from logic_prover.constructive.ljt import LJTProver
-            >>> prover = LJTProver()
+            >>> prover = LJTProver(max_term_depth=2)
             >>> isinstance(prover, LJTProver)
             True
         """
-        pass
+        self.max_term_depth = max(0, max_term_depth)
+        self.max_depth = max(1, max_depth)
+
+    def _get_ground_terms(self, gamma: Sequence[Formula], goal: Formula) -> List[Term]:
+        """Computes available ground terms for quantifier instantiation from sequent formulas.
+
+        Args:
+            gamma (Sequence[Formula]): Current antecedent hypothesis formulas.
+            goal (Formula): Current goal succedent formula.
+
+        Returns:
+            List[Term]: Ground terms up to max_term_depth.
+        """
+        all_forms = list(gamma) + [goal]
+        consts, fns = _collect_constants_and_functions(all_forms)
+        return ground_terms(constants=list(consts), functions=list(fns), max_depth=self.max_term_depth)
 
     def prove(
         self,
@@ -320,7 +404,7 @@ class LJTProver:
         norm_target = normalize_formula(target)
         norm_premises = [normalize_formula(p) for p in (premises or [])]
         initial_sequent = Sequent(antecedents=tuple(norm_premises), succedent=norm_target)
-        proof_node = self._search(initial_sequent)
+        proof_node = self._search(initial_sequent, depth=0, instantiated_universals=frozenset())
         if proof_node is not None:
             return LJTProofTree(root=proof_node)
         return None
@@ -349,18 +433,28 @@ class LJTProver:
         """
         return self.prove(target=target, premises=premises) is not None
 
-    def _search(self, seq: Sequent) -> Optional[LJTProofNode]:
-        """Main recursive search procedure implementing Dyckhoff's LJT reduction rules.
+    def _search(
+        self,
+        seq: Sequent,
+        depth: int = 0,
+        instantiated_universals: frozenset[Tuple[Formula, Term]] = frozenset()
+    ) -> Optional[LJTProofNode]:
+        """Main recursive search procedure implementing Dyckhoff's LJT reduction rules for IQC.
 
         Invertible rules are executed deterministically first, followed by backtracking
         on non-invertible choices.
 
         Args:
             seq (Sequent): The current sequent to reduce.
+            depth (int, default=0): Current search recursion depth.
+            instantiated_universals (frozenset[Tuple[Formula, Term]], default=frozenset()): Tracked (universal, term) instantiations.
 
         Returns:
             Optional[LJTProofNode]: The derivation node if provable, None otherwise.
         """
+        if depth > self.max_depth:
+            return None
+
         gamma = list(seq.antecedents)
         goal = seq.succedent
 
@@ -381,7 +475,7 @@ class LJTProver:
         # (R =>): Implication on Right
         if isinstance(goal, Implies):
             prem_seq = Sequent(antecedents=tuple(gamma + [goal.left]), succedent=goal.right)
-            prem_node = self._search(prem_seq)
+            prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
             if prem_node is not None:
                 return LJTProofNode(sequent=seq, rule="R_Imp", premises=(prem_node,))
             return None
@@ -389,12 +483,23 @@ class LJTProver:
         # (R &): Conjunction on Right
         if isinstance(goal, And):
             seq1 = Sequent(antecedents=tuple(gamma), succedent=goal.left)
-            node1 = self._search(seq1)
+            node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals)
             if node1 is not None:
                 seq2 = Sequent(antecedents=tuple(gamma), succedent=goal.right)
-                node2 = self._search(seq2)
+                node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if node2 is not None:
                     return LJTProofNode(sequent=seq, rule="R_And", premises=(node1, node2))
+            return None
+
+        # (R Forall): Universal Quantifier on Right (Eigenvariable rule)
+        if isinstance(goal, Forall):
+            consts, _ = _collect_constants_and_functions(gamma + [goal])
+            c = fresh_constant(prefix="c", existing_constants=consts)
+            sub_body = normalize_formula(substitute_formula(goal.body, {goal.variable: c}))
+            prem_seq = Sequent(antecedents=tuple(gamma), succedent=sub_body)
+            prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
+            if prem_node is not None:
+                return LJTProofNode(sequent=seq, rule="R_Forall", premises=(prem_node,))
             return None
 
         # --- 3. INVERTIBLE LEFT RULES ---
@@ -403,7 +508,7 @@ class LJTProver:
             if isinstance(a, And):
                 rest = gamma[:i] + gamma[i + 1:]
                 prem_seq = Sequent(antecedents=tuple(rest + [a.left, a.right]), succedent=goal)
-                prem_node = self._search(prem_seq)
+                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if prem_node is not None:
                     return LJTProofNode(sequent=seq, rule="L_And", premises=(prem_node,))
                 return None
@@ -413,12 +518,25 @@ class LJTProver:
             if isinstance(a, Or):
                 rest = gamma[:i] + gamma[i + 1:]
                 seq1 = Sequent(antecedents=tuple(rest + [a.left]), succedent=goal)
-                node1 = self._search(seq1)
+                node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if node1 is not None:
                     seq2 = Sequent(antecedents=tuple(rest + [a.right]), succedent=goal)
-                    node2 = self._search(seq2)
+                    node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals)
                     if node2 is not None:
                         return LJTProofNode(sequent=seq, rule="L_Or", premises=(node1, node2))
+                return None
+
+        # (L Exists): Existential Quantifier on Left (Eigenvariable rule)
+        for i, a in enumerate(gamma):
+            if isinstance(a, Exists):
+                rest = gamma[:i] + gamma[i + 1:]
+                consts, _ = _collect_constants_and_functions(gamma + [goal])
+                c = fresh_constant(prefix="c", existing_constants=consts)
+                sub_body = normalize_formula(substitute_formula(a.body, {a.variable: c}))
+                prem_seq = Sequent(antecedents=tuple(rest + [sub_body]), succedent=goal)
+                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
+                if prem_node is not None:
+                    return LJTProofNode(sequent=seq, rule="L_Exists", premises=(prem_node,))
                 return None
 
         # (L => 1): Atom => B on Left when Atom in Gamma
@@ -428,7 +546,7 @@ class LJTProver:
                 if atom in gamma:
                     rest = gamma[:i] + gamma[i + 1:]
                     prem_seq = Sequent(antecedents=tuple(rest + [a.right]), succedent=goal)
-                    prem_node = self._search(prem_seq)
+                    prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
                     if prem_node is not None:
                         return LJTProofNode(sequent=seq, rule="L_Imp_Atom", premises=(prem_node,))
                     return None
@@ -442,7 +560,7 @@ class LJTProver:
                 decomp = Implies(left=c, right=Implies(left=d, right=b))
                 rest = gamma[:i] + gamma[i + 1:]
                 prem_seq = Sequent(antecedents=tuple(rest + [decomp]), succedent=goal)
-                prem_node = self._search(prem_seq)
+                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if prem_node is not None:
                     return LJTProofNode(sequent=seq, rule="L_Imp_And", premises=(prem_node,))
                 return None
@@ -457,7 +575,7 @@ class LJTProver:
                 decomp2 = Implies(left=d, right=b)
                 rest = gamma[:i] + gamma[i + 1:]
                 prem_seq = Sequent(antecedents=tuple(rest + [decomp1, decomp2]), succedent=goal)
-                prem_node = self._search(prem_seq)
+                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if prem_node is not None:
                     return LJTProofNode(sequent=seq, rule="L_Imp_Or", premises=(prem_node,))
                 return None
@@ -466,14 +584,41 @@ class LJTProver:
         # (R | 1, R | 2): Disjunction on Right
         if isinstance(goal, Or):
             seq1 = Sequent(antecedents=tuple(gamma), succedent=goal.left)
-            node1 = self._search(seq1)
+            node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals)
             if node1 is not None:
                 return LJTProofNode(sequent=seq, rule="R_Or1", premises=(node1,))
 
             seq2 = Sequent(antecedents=tuple(gamma), succedent=goal.right)
-            node2 = self._search(seq2)
+            node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals)
             if node2 is not None:
                 return LJTProofNode(sequent=seq, rule="R_Or2", premises=(node2,))
+
+        # (R Exists): Existential Quantifier on Right (Witness term search)
+        if isinstance(goal, Exists):
+            candidate_terms = self._get_ground_terms(gamma, goal)
+            for t in candidate_terms:
+                inst = normalize_formula(substitute_formula(goal.body, {goal.variable: t}))
+                prem_seq = Sequent(antecedents=tuple(gamma), succedent=inst)
+                node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals)
+                if node is not None:
+                    return LJTProofNode(sequent=seq, rule="R_Exists", premises=(node,))
+
+        # (L Forall): Universal Quantifier on Left (Instantiation with ground terms)
+        for i, a in enumerate(gamma):
+            if isinstance(a, Forall):
+                candidate_terms = self._get_ground_terms(gamma, goal)
+                for t in candidate_terms:
+                    sig = (a, t)
+                    if sig in instantiated_universals:
+                        continue
+                    inst = normalize_formula(substitute_formula(a.body, {a.variable: t}))
+                    if inst in gamma:
+                        continue
+                    next_inst = instantiated_universals | {sig}
+                    prem_seq = Sequent(antecedents=tuple(gamma + [inst]), succedent=goal)
+                    node = self._search(prem_seq, depth=depth + 1, instantiated_universals=next_inst)
+                    if node is not None:
+                        return LJTProofNode(sequent=seq, rule="L_Forall", premises=(node,))
 
         # (L => 4): (C => D) => B on Left
         for i, a in enumerate(gamma):
@@ -485,10 +630,10 @@ class LJTProver:
 
                 d_imp_b = Implies(left=d, right=b)
                 seq1 = Sequent(antecedents=tuple(rest + [d_imp_b, c]), succedent=d)
-                node1 = self._search(seq1)
+                node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals)
                 if node1 is not None:
                     seq2 = Sequent(antecedents=tuple(rest + [b]), succedent=goal)
-                    node2 = self._search(seq2)
+                    node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals)
                     if node2 is not None:
                         return LJTProofNode(sequent=seq, rule="L_Imp_Imp", premises=(node1, node2))
 
@@ -497,13 +642,15 @@ class LJTProver:
 
 def prove_ljt(
     formula: Formula,
-    premises: Optional[List[Formula]] = None
+    premises: Optional[List[Formula]] = None,
+    max_term_depth: int = 2
 ) -> Optional[LJTProofTree]:
     """Top-level convenience function to prove a formula using the LJT calculus.
 
     Args:
         formula (Formula): The formula to prove.
         premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
+        max_term_depth (int, default=2): Maximum term depth for quantifier instantiation.
 
     Returns:
         Optional[LJTProofTree]: The derivation proof tree if valid, None if not provable.
@@ -516,7 +663,7 @@ def prove_ljt(
         >>> proof is not None
         True
     """
-    prover = LJTProver()
+    prover = LJTProver(max_term_depth=max_term_depth)
     return prover.prove(target=formula, premises=premises)
 
 
@@ -530,9 +677,11 @@ __all__ = [
     "normalize_formula",
     "_formula_weight",
     # LJT specific symbols
+    "_collect_constants_and_functions",
     "Sequent",
     "LJTProofNode",
     "LJTProofTree",
     "LJTProver",
     "prove_ljt",
 ]
+
