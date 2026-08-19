@@ -33,6 +33,7 @@ class SolverConfig:
     lean_mathlib_version: str = "latest"
     constructive_method: str = "ljt"
     iqc_max_term_depth: int = 2
+    iqc_eq_subst_max: int = 5
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> SolverConfig:
