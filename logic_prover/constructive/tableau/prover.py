@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import List, Tuple, Optional, Set
 
 from logic_prover.core.ast import (
-    Formula, Term, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Formula, Term, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.parser import to_string
 from logic_prover.core.substitutions import substitute_formula
@@ -30,7 +31,7 @@ from logic_prover.constructive.tableau.branch import _BranchState
 
 
 class TableauProver:
-    """Automated Theorem Prover and Countermodel Builder for Intuitionistic First-Order Logic with Equality (iFOL=).
+    """Automated Theorem Prover and Countermodel Builder for Intuitionistic First-Order Logic with Equality (iFOL=) and IK.
 
     Implements labelled semantic tableaux with explicit Kripke frame semantics and equality reasoning.
 
@@ -38,6 +39,7 @@ class TableauProver:
         max_depth (int, default=100): Maximum branch depth limit.
         max_worlds (int, default=50): Maximum number of Kripke worlds allowed.
         eq_subst_max (int, default=5): Maximum equality substitution branching depth.
+        max_modal_depth (int, default=3): Maximum depth for modal transitions.
 
     Example:
         >>> from logic_prover.core.ast import PredicateApp, Implies
@@ -52,15 +54,17 @@ class TableauProver:
     max_depth: int
     max_worlds: int
     eq_subst_max: int
+    max_modal_depth: int
     _node_counter: int
 
-    def __init__(self, max_depth: int = 100, max_worlds: int = 50, eq_subst_max: int = 5) -> None:
-        """Initializes the tableau prover with depth, world bounds, and equality substitution limits.
+    def __init__(self, max_depth: int = 100, max_worlds: int = 50, eq_subst_max: int = 5, max_modal_depth: int = 3) -> None:
+        """Initializes the tableau prover with depth, world bounds, equality substitution limits, and modal depth.
 
         Args:
             max_depth (int, default=100): Maximum search depth.
             max_worlds (int, default=50): Maximum number of generated worlds.
             eq_subst_max (int, default=5): Maximum equality substitution steps.
+            max_modal_depth (int, default=3): Maximum depth of modal transitions.
 
         Example:
             >>> from logic_prover.constructive.tableau.prover import TableauProver
@@ -71,6 +75,7 @@ class TableauProver:
         self.max_depth = max(1, max_depth)
         self.max_worlds = max(1, max_worlds)
         self.eq_subst_max = max(0, eq_subst_max)
+        self.max_modal_depth = max(1, max_modal_depth)
         self._node_counter = 0
 
     def _next_node_id(self) -> int:
@@ -102,30 +107,30 @@ class TableauProver:
                 if _is_verum(f):
                     return (w, f, f"Verum top asserted FALSE at {w.name}")
 
-            # 3. Direct complementary clash: w |= A and w |/= A
+            # 3. Direct sign clash: w |= f and w |/= f
             t_set = state.t_formulas.get(w, set())
             f_set = state.f_formulas.get(w, set())
-            common = t_set.intersection(f_set)
+            common = t_set & f_set
             if common:
-                clash_formula = next(iter(common))
-                return (w, clash_formula, f"Complementary clash on {to_string(clash_formula)} at {w.name}")
+                clash_f = next(iter(common))
+                return (w, clash_f, f"Sign clash on {to_string(clash_f)} at {w.name}")
 
-            # 4. Reflexivity clash: F(t = t, w)
-            for f in f_set:
-                if isinstance(f, Equality) and f.left == f.right:
-                    return (w, f, f"Reflexivity clash on {to_string(f)} at {w.name}")
+            # 4. Reflexivity clash on false equality: F(t = t, w)
+            for ff in f_set:
+                if isinstance(ff, Equality) and ff.left == ff.right:
+                    return (w, ff, f"Equality reflexivity clash on {to_string(ff)} at {w.name}")
 
-            # 5. Equality Congruence clash
+            # 5. Equality Congruence clashes
             eqs = state.equalities.get(w, set())
             if eqs:
                 cc = CongruenceClosure()
                 for eq in eqs:
                     cc.merge(eq.left, eq.right)
 
-                # Check if an equality in f_set is proved true by cc
-                for f in f_set:
-                    if isinstance(f, Equality) and cc.are_equal(f.left, f.right):
-                        return (w, f, f"Equality clash on {to_string(f)} at {w.name}")
+                # Check false equality clash: w |/= (s = t) where s == t in cc
+                for ff in f_set:
+                    if isinstance(ff, Equality) and cc.are_equal(ff.left, ff.right):
+                        return (w, ff, f"Equality congruence clash on {to_string(ff)} at {w.name}")
 
                 # Check predicate congruence clash
                 for tf in t_set:
@@ -144,7 +149,7 @@ class TableauProver:
             state (_BranchState): Saturated open branch.
 
         Returns:
-            KripkeModel: The constructed Kripke model (W, <=, D, V, E).
+            KripkeModel: The constructed Kripke model (W, <=, R, D, V, E).
         """
         model = KripkeModel()
         for w in state.worlds:
@@ -152,6 +157,8 @@ class TableauProver:
         for u in state.worlds:
             for v in state.relations.get(u, set()):
                 model.add_relation(u, v)
+            for v in state.modal_relations.get(u, set()):
+                model.add_modal_relation(u, v)
         for w in state.worlds:
             for t in state.domains.get(w, set()):
                 model.add_domain_element(w, t)
@@ -422,6 +429,47 @@ class TableauProver:
                                         node.is_closed = is_closed
                                         return is_closed, open_b
 
+        # 2g. T(Box): T([]A, w) -> T(A, v) for all w' >= w and v with w' R v
+        for w in list(state.worlds):
+            for f in list(state.t_formulas.get(w, set())):
+                if isinstance(f, Box):
+                    for w_prime in list(state.relations.get(w, set())):
+                        for v in list(state.modal_relations.get(w_prime, set())):
+                            sig = ("T_Box", f, w, w_prime, v)
+                            if sig not in state.applied_rules:
+                                state.applied_rules.add(sig)
+                                child = TableauNode(
+                                    id=self._next_node_id(),
+                                    signed_formula=SignedFormula(Sign.TRUE, f, w),
+                                    rule=f"T_Box ({v.name})",
+                                    world=v,
+                                )
+                                node.children.append(child)
+                                state.add_t_formula(v, f.operand)
+                                is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                                node.is_closed = is_closed
+                                return is_closed, open_b
+
+        # 2h. F(Diamond): F(<>A, w) -> F(A, v) for all v with w R v
+        for w in list(state.worlds):
+            for f in list(state.f_formulas.get(w, set())):
+                if isinstance(f, Diamond):
+                    for v in list(state.modal_relations.get(w, set())):
+                        sig = ("F_Diamond", f, w, v)
+                        if sig not in state.applied_rules:
+                            state.applied_rules.add(sig)
+                            child = TableauNode(
+                                id=self._next_node_id(),
+                                signed_formula=SignedFormula(Sign.FALSE, f, w),
+                                rule=f"F_Diamond ({v.name})",
+                                world=v,
+                            )
+                            node.children.append(child)
+                            state.add_f_formula(v, f.operand)
+                            is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                            node.is_closed = is_closed
+                            return is_closed, open_b
+
         # Step 3: Apply World-Creating Rules (Kripke World Transitions)
         # 3a. F(Implies): F(A => B, w) -> creates w_new >= w with T(A, w_new), F(B, w_new)
         for w in list(state.worlds):
@@ -475,6 +523,88 @@ class TableauProver:
                         is_closed, open_b = self._expand_branch(state, child, depth + 1)
                         node.is_closed = is_closed
                         return is_closed, open_b
+
+        # 3c. F(Box): F([]A, w) -> creates fresh v with w R v and F(A, v)
+        for w in list(state.worlds):
+            for f in list(state.f_formulas.get(w, set())):
+                if isinstance(f, Box):
+                    sig = ("F_Box", f, w)
+                    if sig not in state.applied_rules and len(state.worlds) < self.max_worlds:
+                        state.applied_rules.add(sig)
+                        new_world_id = len(state.worlds)
+                        v_new = World(id=new_world_id, name=f"w{new_world_id}")
+                        state.add_world(v_new)
+                        state.add_modal_relation(w, v_new)
+                        state.add_f_formula(v_new, f.operand)
+
+                        child = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.FALSE, f, w),
+                            rule=f"F_Box ({w.name} R {v_new.name})",
+                            world=v_new,
+                        )
+                        node.children.append(child)
+                        is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                        node.is_closed = is_closed
+                        return is_closed, open_b
+
+        # 3d. T(Diamond): T(<>A, w) -> creates fresh v with w R v and T(A, v)
+        for w in list(state.worlds):
+            for f in list(state.t_formulas.get(w, set())):
+                if isinstance(f, Diamond):
+                    sig = ("T_Diamond", f, w)
+                    if sig not in state.applied_rules and len(state.worlds) < self.max_worlds:
+                        state.applied_rules.add(sig)
+                        new_world_id = len(state.worlds)
+                        v_new = World(id=new_world_id, name=f"w{new_world_id}")
+                        state.add_world(v_new)
+                        state.add_modal_relation(w, v_new)
+                        state.add_t_formula(v_new, f.operand)
+
+                        child = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.TRUE, f, w),
+                            rule=f"T_Diamond ({w.name} R {v_new.name})",
+                            world=v_new,
+                        )
+                        node.children.append(child)
+                        is_closed, open_b = self._expand_branch(state, child, depth + 1)
+                        node.is_closed = is_closed
+                        return is_closed, open_b
+
+        # 3e. Commutation (F1): when w <= w' and w R v, assert w' R v
+        for w in list(state.worlds):
+            for w_prime in list(state.relations.get(w, set())):
+                for v in list(state.modal_relations.get(w, set())):
+                    has_comm = any(
+                        v_prime in state.relations.get(v, set())
+                        for v_prime in state.modal_relations.get(w_prime, set())
+                    )
+                    if not has_comm:
+                        sig = ("Commutation_F1", w, w_prime, v)
+                        if sig not in state.applied_rules:
+                            state.applied_rules.add(sig)
+                            state.add_modal_relation(w_prime, v)
+                            is_closed, open_b = self._expand_branch(state, node, depth + 1)
+                            node.is_closed = is_closed
+                            return is_closed, open_b
+
+        # 3f. Commutation (F2): when w R v and v <= v', assert w R v'
+        for w in list(state.worlds):
+            for v in list(state.modal_relations.get(w, set())):
+                for v_prime in list(state.relations.get(v, set())):
+                    has_comm2 = any(
+                        v_prime in state.modal_relations.get(w_prime, set())
+                        for w_prime in state.relations.get(w, set())
+                    )
+                    if not has_comm2:
+                        sig = ("Commutation_F2", w, v, v_prime)
+                        if sig not in state.applied_rules:
+                            state.applied_rules.add(sig)
+                            state.add_modal_relation(w, v_prime)
+                            is_closed, open_b = self._expand_branch(state, node, depth + 1)
+                            node.is_closed = is_closed
+                            return is_closed, open_b
 
         # Step 4: Apply Branching Rules
         # 4a. F(And): F(A & B, w) -> F(A, w) | F(B, w)

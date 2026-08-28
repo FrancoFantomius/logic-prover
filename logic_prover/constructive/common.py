@@ -6,7 +6,8 @@ from typing import List, Sequence, Tuple, Set, Optional, Iterable
 
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp,
-    PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.sorts import Ind
 
@@ -76,7 +77,7 @@ def _is_atomic(formula: Formula) -> bool:
         >>> _is_atomic(And(left=p, right=p))
         False
     """
-    if isinstance(formula, (Not, And, Or, Implies, Iff, Forall, Exists)):
+    if isinstance(formula, (Not, And, Or, Implies, Iff, Forall, Exists, Box, Diamond)):
         return False
     return True
 
@@ -114,6 +115,8 @@ def collect_equalities(formula: Formula, sign: Optional[str] = None) -> Set[Equa
                 equalities.add(node)
         elif isinstance(node, Not):
             _traverse(node.operand, -current_polarity)
+        elif isinstance(node, (Box, Diamond)):
+            _traverse(node.operand, current_polarity)
         elif isinstance(node, And):
             _traverse(node.left, current_polarity)
             _traverse(node.right, current_polarity)
@@ -283,6 +286,10 @@ def normalize_formula(formula: Formula) -> Formula:
         imp1 = Implies(left=left_norm, right=right_norm)
         imp2 = Implies(left=right_norm, right=left_norm)
         return And(left=imp1, right=imp2)
+    elif isinstance(formula, Box):
+        return Box(operand=normalize_formula(formula.operand))
+    elif isinstance(formula, Diamond):
+        return Diamond(operand=normalize_formula(formula.operand))
     elif isinstance(formula, And):
         return And(left=normalize_formula(formula.left), right=normalize_formula(formula.right))
     elif isinstance(formula, Or):
@@ -325,6 +332,8 @@ def _formula_weight(formula: Formula) -> int:
     """
     if _is_atomic(formula):
         return 1
+    elif isinstance(formula, (Box, Diamond)):
+        return 1 + _formula_weight(formula.operand)
     elif isinstance(formula, And):
         return 1 + _formula_weight(formula.left) + _formula_weight(formula.right)
     elif isinstance(formula, Or):

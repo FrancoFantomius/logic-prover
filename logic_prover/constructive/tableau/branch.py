@@ -14,7 +14,8 @@ class _BranchState:
 
     Args:
         worlds (List[World], default_factory=list): List of worlds active in this branch.
-        relations (Dict[World, Set[World]], default_factory=dict): Accessibility relation edges.
+        relations (Dict[World, Set[World]], default_factory=dict): Accessibility relation edges (<=).
+        modal_relations (Dict[World, Set[World]], default_factory=dict): Modal accessibility relation edges (R).
         t_formulas (Dict[World, Set[Formula]], default_factory=dict): Signed true formulas per world.
         f_formulas (Dict[World, Set[Formula]], default_factory=dict): Signed false formulas per world.
         domains (Dict[World, Set[Term]], default_factory=dict): Per-world domain ground terms.
@@ -33,6 +34,7 @@ class _BranchState:
 
     worlds: List[World] = field(default_factory=list)
     relations: Dict[World, Set[World]] = field(default_factory=dict)
+    modal_relations: Dict[World, Set[World]] = field(default_factory=dict)
     t_formulas: Dict[World, Set[Formula]] = field(default_factory=dict)
     f_formulas: Dict[World, Set[Formula]] = field(default_factory=dict)
     domains: Dict[World, Set[Term]] = field(default_factory=dict)
@@ -55,6 +57,7 @@ class _BranchState:
         return _BranchState(
             worlds=list(self.worlds),
             relations={w: set(succs) for w, succs in self.relations.items()},
+            modal_relations={w: set(succs) for w, succs in self.modal_relations.items()},
             t_formulas={w: set(forms) for w, forms in self.t_formulas.items()},
             f_formulas={w: set(forms) for w, forms in self.f_formulas.items()},
             domains={w: set(terms) for w, terms in self.domains.items()},
@@ -82,10 +85,34 @@ class _BranchState:
         if world not in self.worlds:
             self.worlds.append(world)
         self.relations.setdefault(world, {world})
+        self.modal_relations.setdefault(world, set())
         self.t_formulas.setdefault(world, set())
         self.f_formulas.setdefault(world, set())
         self.domains.setdefault(world, set())
         self.equalities.setdefault(world, set())
+
+    def add_modal_relation(self, source: World, target: World) -> None:
+        """Adds modal accessibility relation source R target.
+
+        Args:
+            source (World): Source world node.
+            target (World): Target world node.
+
+        Returns:
+            None: Modifies branch state in-place.
+
+        Example:
+            >>> from logic_prover.constructive.kripke import World
+            >>> from logic_prover.constructive.tableau.branch import _BranchState
+            >>> s = _BranchState()
+            >>> w0, w1 = World(0, "w0"), World(1, "w1")
+            >>> s.add_modal_relation(w0, w1)
+            >>> w1 in s.modal_relations[w0]
+            True
+        """
+        self.add_world(source)
+        self.add_world(target)
+        self.modal_relations[source].add(target)
 
     def add_relation(self, source: World, target: World) -> None:
         """Adds accessibility relation source <= target with transitive closure and monotonicity.

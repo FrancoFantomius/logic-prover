@@ -57,6 +57,14 @@ from logic_prover.constructive.tableau import (
     TableauProver,
     prove_tableau,
 )
+from logic_prover.constructive.ik import (
+    IKSequent,
+    IKProofNode,
+    IKProofTree,
+    IKProofResult,
+    IKProver,
+    prove_ik,
+)
 from logic_prover.constructive.resolution import (
     PrefixedLiteral,
     PrefixedClause,
@@ -68,10 +76,14 @@ from logic_prover.constructive.resolution import (
     PrefixedResolutionProver,
     prove_prefixed_resolution,
     translate_ipc_to_fol,
+    translate_ik_to_fol,
     get_frame_axioms,
+    get_ik_frame_axioms,
     TranslationResolutionResult,
     TranslationResolutionProver,
+    IKTranslationResolutionProver,
     prove_translation_resolution,
+    prove_ik_translation_resolution,
     ConstructiveResolutionProver,
     prove_resolution,
 )
@@ -124,6 +136,13 @@ __all__ = [
     "TableauProofResult",
     "TableauProver",
     "prove_tableau",
+    # IK
+    "IKSequent",
+    "IKProofNode",
+    "IKProofTree",
+    "IKProofResult",
+    "IKProver",
+    "prove_ik",
     # Resolution
     "PrefixedLiteral",
     "PrefixedClause",
@@ -135,10 +154,14 @@ __all__ = [
     "PrefixedResolutionProver",
     "prove_prefixed_resolution",
     "translate_ipc_to_fol",
+    "translate_ik_to_fol",
     "get_frame_axioms",
+    "get_ik_frame_axioms",
     "TranslationResolutionResult",
     "TranslationResolutionProver",
+    "IKTranslationResolutionProver",
     "prove_translation_resolution",
+    "prove_ik_translation_resolution",
     "ConstructiveResolutionProver",
     "prove_resolution",
 ]

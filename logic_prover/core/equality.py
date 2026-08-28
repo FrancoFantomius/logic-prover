@@ -1,4 +1,4 @@
-﻿"""Congruence closure algorithms for tracking ground term equivalences and function congruences."""
+"""Congruence closure algorithms for tracking ground term equivalences and function congruences."""
 
 from __future__ import annotations
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -6,7 +6,8 @@ from collections import deque
 
 from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp, PredicateApp,
-    Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.sorts import is_compatible
 from logic_prover.core.exceptions import ValidationError
@@ -282,6 +283,12 @@ def equality_substitution(eq: Equality, formula: Formula) -> List[Formula]:
         elif isinstance(fmt, Not):
             for sub in formula_variants(fmt.operand, src, dst):
                 variants.append(Not(sub))
+        elif isinstance(fmt, Box):
+            for sub in formula_variants(fmt.operand, src, dst):
+                variants.append(Box(sub))
+        elif isinstance(fmt, Diamond):
+            for sub in formula_variants(fmt.operand, src, dst):
+                variants.append(Diamond(sub))
         elif isinstance(fmt, And):
             for l in formula_variants(fmt.left, src, dst):
                 for r in formula_variants(fmt.right, src, dst):

@@ -10,7 +10,7 @@ from typing import List, Tuple, Optional, Dict, Any, Set, Iterable
 
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp, Equality,
-    Not, And, Or, Implies, Iff, Forall, Exists, free_variables
+    Not, And, Or, Implies, Iff, Forall, Exists, Box, Diamond, free_variables
 )
 from logic_prover.core.parser import to_string
 from logic_prover.core.substitutions import substitute_formula
@@ -68,7 +68,7 @@ def _collect_constants_and_functions(
         elif isinstance(f, Equality):
             _traverse_term(f.left)
             _traverse_term(f.right)
-        elif isinstance(f, Not):
+        elif isinstance(f, (Not, Box, Diamond)):
             _traverse_formula(f.operand)
         elif isinstance(f, (And, Or, Implies, Iff)):
             _traverse_formula(f.left)

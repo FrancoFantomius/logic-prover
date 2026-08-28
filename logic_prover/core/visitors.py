@@ -6,7 +6,8 @@ from typing import Generic, TypeVar, Union, Any, Set, Dict, Optional, Tuple, Lis
 
 from logic_prover.core.ast import (
     Term, Variable, Constant, FunctionApp,
-    Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.sol.ast_ext import (
     ForallPred, ExistsPred, ForallFunc, ExistsFunc, PredicateVariable, FunctionVariable
@@ -31,6 +32,8 @@ class ASTVisitor(ABC, Generic[T]):
             PredicateApp: 'visit_predicate_app',
             Equality: 'visit_equality',
             Not: 'visit_not',
+            Box: 'visit_box',
+            Diamond: 'visit_diamond',
             And: 'visit_and',
             Or: 'visit_or',
             Implies: 'visit_implies',
@@ -131,6 +134,28 @@ class ASTVisitor(ABC, Generic[T]):
             Result of visiting this node.
         """
         pass
+
+    def visit_box(self, node: Box) -> T:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return self.visit(node.operand)
+
+    def visit_diamond(self, node: Diamond) -> T:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return self.visit(node.operand)
 
     @abstractmethod
     def visit_and(self, node: And) -> T:
@@ -335,6 +360,36 @@ class ASTTransformer(ASTVisitor[Union[Term, Formula]]):
             return node
         assert isinstance(new_op, Formula)
         return Not(operand=new_op)
+
+    def visit_box(self, node: Box) -> Formula:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        new_op = self.visit(node.operand)
+        if new_op is node.operand:
+            return node
+        assert isinstance(new_op, Formula)
+        return Box(operand=new_op)
+
+    def visit_diamond(self, node: Diamond) -> Formula:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        new_op = self.visit(node.operand)
+        if new_op is node.operand:
+            return node
+        assert isinstance(new_op, Formula)
+        return Diamond(operand=new_op)
 
     def visit_and(self, node: And) -> Formula:
         """Handles visitation of a And node.
@@ -566,6 +621,28 @@ class DepthVisitor(ASTVisitor[int]):
         """
         return 1 + self.visit(node.operand)
 
+    def visit_box(self, node: Box) -> int:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return 1 + self.visit(node.operand)
+
+    def visit_diamond(self, node: Diamond) -> int:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return 1 + self.visit(node.operand)
+
     def visit_and(self, node: And) -> int:
         """Handles visitation of a And node.
 
@@ -740,6 +817,28 @@ class SizeVisitor(ASTVisitor[int]):
 
         Args:
             node: The Not AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return 1 + self.visit(node.operand)
+
+    def visit_box(self, node: Box) -> int:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return 1 + self.visit(node.operand)
+
+    def visit_diamond(self, node: Diamond) -> int:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
 
         Returns:
             Result of visiting this node.
@@ -926,6 +1025,28 @@ class FreeVariableCollector(ASTVisitor[Set[Variable]]):
 
         Args:
             node: The Not AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return self.visit(node.operand)
+
+    def visit_box(self, node: Box) -> Set[Variable]:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        return self.visit(node.operand)
+
+    def visit_diamond(self, node: Diamond) -> Set[Variable]:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
 
         Returns:
             Result of visiting this node.
@@ -1243,6 +1364,38 @@ class ExportVisitor(ASTVisitor[str]):
         elif self.notation == "latex":
             return f"\\neg ({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"\\neg {op_str}"
         return f"~({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"~{op_str}"
+
+    def visit_box(self, node: Box) -> str:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        op_str = self.visit(node.operand)
+        if self.notation == "prefix":
+            return f"(box {op_str})"
+        elif self.notation == "latex":
+            return f"\\Box ({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"\\Box {op_str}"
+        return f"[]({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"[]{op_str}"
+
+    def visit_diamond(self, node: Diamond) -> str:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        op_str = self.visit(node.operand)
+        if self.notation == "prefix":
+            return f"(diamond {op_str})"
+        elif self.notation == "latex":
+            return f"\\Diamond ({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"\\Diamond {op_str}"
+        return f"<>({op_str})" if isinstance(node.operand, (And, Or, Implies, Iff)) else f"<>{op_str}"
 
     def visit_and(self, node: And) -> str:
         """Handles visitation of a And node.

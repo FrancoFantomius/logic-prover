@@ -1,4 +1,4 @@
-﻿"""Abstract Syntax Tree (AST) definitions for First-Order Logic terms and formulas."""
+"""Abstract Syntax Tree (AST) definitions for First-Order Logic terms and formulas."""
 
 from __future__ import annotations
 from abc import ABC
@@ -251,6 +251,52 @@ class Exists(Formula):
     def __post_init__(self) -> None:
         object.__setattr__(self, '_hash_cache', hash((type(self), self.variable, self.body)))
 
+@dataclass(frozen=True, slots=True)
+class Box(Formula):
+    """Represents modal necessity []operand (Box).
+
+    Args:
+        operand: The subformula enclosed in the necessity box.
+
+    Example:
+        >>> from logic_prover.core.ast import Box, PredicateApp
+        >>> p = PredicateApp("P", 0, ())
+        >>> box_p = Box(operand=p)
+        >>> type(box_p.operand).__name__
+        'PredicateApp'
+    """
+
+    operand: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.operand)))
+
+    def __hash__(self) -> int:
+        return self._hash_cache
+
+
+@dataclass(frozen=True, slots=True)
+class Diamond(Formula):
+    """Represents modal possibility <>operand (Diamond).
+
+    Args:
+        operand: The subformula enclosed in the possibility diamond.
+
+    Example:
+        >>> from logic_prover.core.ast import Diamond, PredicateApp
+        >>> p = PredicateApp("P", 0, ())
+        >>> diamond_p = Diamond(operand=p)
+        >>> type(diamond_p.operand).__name__
+        'PredicateApp'
+    """
+
+    operand: Formula
+    _hash_cache: int = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, '_hash_cache', hash((type(self), self.operand)))
+
     def __hash__(self) -> int:
         return self._hash_cache
 
@@ -281,7 +327,7 @@ def free_variables(node: Union[Term, Formula]) -> Set[Variable]:
         return set(node._free_vars)
     elif isinstance(node, Equality):
         return set(node._free_vars)
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return free_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return free_variables(node.left) | free_variables(node.right)
@@ -307,7 +353,7 @@ def bound_variables(node: Union[Term, Formula]) -> Set[Variable]:
     """
     if isinstance(node, (Variable, Constant, FunctionApp, PredicateApp, Equality)):
         return set()
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return bound_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return bound_variables(node.left) | bound_variables(node.right)
@@ -335,7 +381,7 @@ def formula_depth(formula: Formula) -> int:
     """
     if isinstance(formula, (PredicateApp, Equality)):
         return 1
-    elif isinstance(formula, Not):
+    elif isinstance(formula, (Not, Box, Diamond)):
         return 1 + formula_depth(formula.operand)
     elif isinstance(formula, (And, Or, Implies, Iff)):
         return 1 + max(formula_depth(formula.left), formula_depth(formula.right))
@@ -372,7 +418,7 @@ def formula_size(formula: Formula) -> int:
         return 1 + sum(_term_size(arg) for arg in formula.args)
     elif isinstance(formula, Equality):
         return 1 + _term_size(formula.left) + _term_size(formula.right)
-    elif isinstance(formula, Not):
+    elif isinstance(formula, (Not, Box, Diamond)):
         return 1 + formula_size(formula.operand)
     elif isinstance(formula, (And, Or, Implies, Iff)):
         return 1 + formula_size(formula.left) + formula_size(formula.right)
@@ -443,6 +489,10 @@ def canonicalize_bound_variables(formula: Formula) -> Formula:
             return Equality(left=_canonicalize_term(f.left, env), right=_canonicalize_term(f.right, env))
         elif isinstance(f, Not):
             return Not(operand=_canonicalize_formula(f.operand, env))
+        elif isinstance(f, Box):
+            return Box(operand=_canonicalize_formula(f.operand, env))
+        elif isinstance(f, Diamond):
+            return Diamond(operand=_canonicalize_formula(f.operand, env))
         elif isinstance(f, And):
             return And(left=_canonicalize_formula(f.left, env), right=_canonicalize_formula(f.right, env))
         elif isinstance(f, Or):

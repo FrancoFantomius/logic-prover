@@ -30,12 +30,16 @@ from logic_prover.constructive.resolution.prefixed import (
 )
 from logic_prover.constructive.resolution.translation import (
     translate_ipc_to_fol,
+    translate_ik_to_fol,
     get_frame_axioms,
+    get_ik_frame_axioms,
     _extract_predicate_declarations,
     _extract_predicate_names,
     TranslationResolutionResult,
     TranslationResolutionProver,
+    IKTranslationResolutionProver,
     prove_translation_resolution,
+    prove_ik_translation_resolution,
 )
 from logic_prover.constructive.resolution.prover import (
     ConstructiveResolutionProver,
@@ -56,10 +60,14 @@ __all__ = [
     "prove_prefixed_resolution",
     # Translation resolution
     "translate_ipc_to_fol",
+    "translate_ik_to_fol",
     "get_frame_axioms",
+    "get_ik_frame_axioms",
     "TranslationResolutionResult",
     "TranslationResolutionProver",
+    "IKTranslationResolutionProver",
     "prove_translation_resolution",
+    "prove_ik_translation_resolution",
     # Unified resolution prover & API
     "ConstructiveResolutionProver",
     "prove_resolution",

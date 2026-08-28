@@ -9,7 +9,7 @@
 
 `logic-prover` is a formal logic theorem prover, explorer, deducer, and Lean 4 exporter in Python with optional Cython acceleration.
 
-📚 **Full Documentation & API Reference**: [https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)
+**Full Documentation & API Reference**: [https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)
 
 ---
 
@@ -130,7 +130,7 @@ for step in proof_dag.topological_order():
 
 Full interactive documentation, API reference, architecture deep dives, and tutorials are available at:
 
-🌐 **[https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)**
+**[https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)**
 
 You can also build the documentation locally using MkDocs:
 

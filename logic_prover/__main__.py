@@ -33,7 +33,8 @@ from logic_prover.prover import TheoremProver
 from logic_prover.constructive.ljt import LJTProver
 from logic_prover.constructive.tableau import TableauProver
 from logic_prover.constructive.wallen import WallenProver
-from logic_prover.constructive.resolution import TranslationResolutionProver
+from logic_prover.constructive.resolution import TranslationResolutionProver, IKTranslationResolutionProver
+from logic_prover.constructive.ik import IKProver
 
 logger = get_logger("cli")
 
@@ -103,7 +104,10 @@ def build_parser() -> argparse.ArgumentParser:
     prove_int_parser.add_argument("--target", type=str, default=None, help="Target formula string to prove")
     prove_int_parser.add_argument("--premises", nargs="*", default=[], help="Space-separated premise formula strings")
     prove_int_parser.add_argument(
-        "--method", choices=["ljt", "tableau", "wallen", "translation"], default="ljt", help="Intuitionistic proof engine method"
+        "--method",
+        choices=["ljt", "tableau", "wallen", "translation", "ik-ljt", "ik-tableau", "ik-translation"],
+        default="ljt",
+        help="Intuitionistic/modal proof engine method",
     )
     prove_int_parser.add_argument("--max-term-depth", type=int, default=2, help="Maximum term depth for quantifier instantiation")
     prove_int_parser.add_argument("--timeout", type=float, default=10.0, help="Prover wall-clock timeout in seconds")
@@ -384,6 +388,44 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
             return 0
         else:
             print("FAILED: Formula could not be proven intuitionistically via Translation Resolution.")
+            return 1
+    elif method == "ik-ljt":
+        prover_ik = IKProver(max_depth=getattr(args, "max_steps", 50))
+        result_ik = prover_ik.prove(target=target_formula, premises=premise_formulas)
+        if result_ik.is_valid:
+            print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Sequent Calculus).")
+            print(result_ik.to_string())
+            return 0
+        else:
+            print("FAILED: Formula is UNPROVABLE in Constructive Modal Logic IK.")
+            if result_ik.countermodel:
+                print("\n--- Falsifying Kripke Countermodel ---")
+                print(result_ik.countermodel.to_string())
+            return 1
+    elif method == "ik-tableau":
+        prover_ik_tab = TableauProver(max_depth=getattr(args, "max_steps", 100))
+        result_ik_tab = prover_ik_tab.prove(target=target_formula, premises=premise_formulas)
+        if result_ik_tab.is_valid:
+            print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Semantic Tableau).")
+            print(result_ik_tab.to_string())
+            return 0
+        else:
+            print("FAILED: Formula is UNPROVABLE in Constructive Modal Logic IK.")
+            if result_ik_tab.countermodel:
+                print("\n--- Falsifying Kripke Countermodel ---")
+                print(result_ik_tab.countermodel.to_string())
+            return 1
+    elif method == "ik-translation":
+        prover_ik_trans = IKTranslationResolutionProver(
+            max_steps=getattr(args, "max_steps", 1000), timeout_sec=getattr(args, "timeout", 10.0)
+        )
+        result_ik_trans = prover_ik_trans.prove(target=target_formula, premises=premise_formulas)
+        if result_ik_trans is not None and result_ik_trans.is_valid:
+            print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Relational Translation Resolution).")
+            print(result_ik_trans.to_string())
+            return 0
+        else:
+            print("FAILED: Formula could not be proven in Constructive Modal Logic IK via Translation Resolution.")
             return 1
     else:
         print(f"Unknown constructive method '{method}'.", file=sys.stderr)

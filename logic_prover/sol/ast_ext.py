@@ -1,4 +1,4 @@
-﻿"""AST extensions for Second-Order Logic (predicate/function variables and quantifiers)."""
+"""AST extensions for Second-Order Logic (predicate/function variables and quantifiers)."""
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -6,7 +6,8 @@ from typing import Tuple, Set, Union
 
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
-    Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.sorts import Sort, Ind
 from logic_prover.core.exceptions import InvalidFormulaError
@@ -111,7 +112,7 @@ def free_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariabl
         return res
     elif isinstance(node, Equality):
         return free_predicate_variables(node.left) | free_predicate_variables(node.right)
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return free_predicate_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return free_predicate_variables(node.left) | free_predicate_variables(node.right)
@@ -138,7 +139,7 @@ def bound_predicate_variables(node: Union[Formula, Term]) -> Set[PredicateVariab
         return {node.variable} | bound_predicate_variables(node.body)
     elif isinstance(node, (ForallFunc, ExistsFunc, Forall, Exists)):
         return bound_predicate_variables(node.body)
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return bound_predicate_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return bound_predicate_variables(node.left) | bound_predicate_variables(node.right)
@@ -176,7 +177,7 @@ def free_function_variables(node: Union[Formula, Term]) -> Set[FunctionVariable]
         return res
     elif isinstance(node, Equality):
         return free_function_variables(node.left) | free_function_variables(node.right)
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return free_function_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return free_function_variables(node.left) | free_function_variables(node.right)
@@ -203,7 +204,7 @@ def bound_function_variables(node: Union[Formula, Term]) -> Set[FunctionVariable
         return {node.variable} | bound_function_variables(node.body)
     elif isinstance(node, (ForallPred, ExistsPred, Forall, Exists)):
         return bound_function_variables(node.body)
-    elif isinstance(node, Not):
+    elif isinstance(node, (Not, Box, Diamond)):
         return bound_function_variables(node.operand)
     elif isinstance(node, (And, Or, Implies, Iff)):
         return bound_function_variables(node.left) | bound_function_variables(node.right)

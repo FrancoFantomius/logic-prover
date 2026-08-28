@@ -6,7 +6,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp, PredicateApp,
-    Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.sorts import is_compatible
 from logic_prover.core.substitutions import substitute_term, substitute_formula
@@ -118,7 +119,7 @@ def match_formula(
             return None
         return match_term(pattern.right, target.right, res)
 
-    if isinstance(pattern, Not) and isinstance(target, Not):
+    if isinstance(pattern, (Not, Box, Diamond)) and isinstance(target, (Not, Box, Diamond)):
         return match_formula(pattern.operand, target.operand, subst)
 
     if isinstance(pattern, (And, Or, Implies, Iff)) and isinstance(target, (And, Or, Implies, Iff)):
@@ -214,6 +215,10 @@ def rewrite_all(node: Union[Term, Formula], rules: List[RewriteRule], max_root_s
         curr = Equality(new_l, new_r)
     elif isinstance(curr, Not):
         curr = Not(rewrite_all(curr.operand, rules, max_root_steps))
+    elif isinstance(curr, Box):
+        curr = Box(rewrite_all(curr.operand, rules, max_root_steps))
+    elif isinstance(curr, Diamond):
+        curr = Diamond(rewrite_all(curr.operand, rules, max_root_steps))
     elif isinstance(curr, And):
         curr = And(rewrite_all(curr.left, rules, max_root_steps), rewrite_all(curr.right, rules, max_root_steps))
     elif isinstance(curr, Or):
