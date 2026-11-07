@@ -24,12 +24,14 @@ handles full first-order and higher-order logic classically.
   `op(inv(a), op(a, b)) = b`) cannot be proved, even though they are
   intuitionistically valid in iFOL with equality.
 
-## 3. Proof-Term Extraction (Curry-Howard)
+## 3. Proof-Term Extraction (Curry-Howard) and Program Synthesis
 
 - Proofs are stored as trees / DAGs, not as lambda terms or natural-deduction
-  terms.
+  terms (see `plans/proof-terms.md`).
 - No witness extraction for disjunction or existential formulas under the BHK
   interpretation, so a proof cannot be turned back into a program.
+- No code generator to emit executable Python functions from extracted proofs
+  (see `plans/python-exporter.md`).
 
 ## 4. Intuitionistic Arithmetic
 

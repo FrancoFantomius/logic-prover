@@ -98,10 +98,11 @@ not direct. Two options (implement both, expose via one dispatcher):
 
 - `config.py`: add `intuitionistic_extract_terms: bool = False` to `SolverConfig`.
 - `__main__.py`: on the `prove-intuitionistic` subcommand (from `iFOL.md` Phase 6), add
-  `--extract-term` and `--term-format {string,lean,latex}`; print the checked term and, for
+  `--extract-term` and `--term-format {string,lean,latex,python}`; print the checked term and, for
   existential goals, the witness.
 - `exporters/lean_exporter.py`: add `export_term(term, name, type)` emitting a Lean 4
   `def`/`theorem` with the extracted term as its body.
+- `exporters/python_exporter.py`: Python code generator (see `plans/python-exporter.md`).
 - `constructive/__init__.py`: export `ProofTerm`, `infer_type`, `extract_ljt_term`,
   `extract_witness`, `extract_program`.
 
