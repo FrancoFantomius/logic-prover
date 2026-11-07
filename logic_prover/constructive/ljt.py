@@ -29,6 +29,30 @@ from logic_prover.constructive.common import (
     fresh_constant,
     ground_terms,
 )
+from logic_prover.constructive.terms import (
+    ProofTerm,
+    ProofType,
+    Var,
+    Abs,
+    App,
+    Pair,
+    Fst,
+    Snd,
+    Inl,
+    Inr,
+    Case,
+    Unit,
+    Abort,
+    Refl,
+    Subst,
+    ExistsIntro,
+    ExistsElim,
+    NatRec,
+    formula_to_type,
+    substitute_term,
+    infer_type,
+    term_to_string,
+)
 
 
 def _collect_constants_and_functions(
@@ -252,6 +276,7 @@ class LJTProofNode:
         sequent (Sequent): The sequent established at this derivation node.
         rule (str): The name of the deduction rule applied.
         premises (Tuple[LJTProofNode, ...], default=()): Child premise proof nodes.
+        term (Optional[ProofTerm], default=None): Annotated Curry-Howard proof term.
 
     Example:
         >>> from logic_prover.core.ast import PredicateApp
@@ -265,6 +290,7 @@ class LJTProofNode:
     sequent: Sequent
     rule: str
     premises: Tuple[LJTProofNode, ...] = field(default_factory=tuple)
+    term: Optional[ProofTerm] = field(default=None)
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the proof node and its subtree to a dictionary.
@@ -280,11 +306,14 @@ class LJTProofNode:
             >>> node.to_dict()["rule"]
             'Ax'
         """
-        return {
+        data: Dict[str, Any] = {
             "sequent": self.sequent.to_string(),
             "rule": self.rule,
             "premises": [p.to_dict() for p in self.premises],
         }
+        if self.term is not None:
+            data["term"] = term_to_string(self.term)
+        return data
 
 
 class LJTProofTree:
@@ -545,7 +574,15 @@ class LJTProver:
         norm_target = normalize_formula(target)
         norm_premises = [normalize_formula(p) for p in (premises or [])]
         initial_sequent = Sequent(antecedents=tuple(norm_premises), succedent=norm_target)
-        proof_node = self._search(initial_sequent, depth=0, instantiated_universals=frozenset(), eq_subst_count=0, ind_depth=0)
+        initial_hyp_vars = tuple(f"h{i}" for i in range(len(norm_premises)))
+        proof_node = self._search(
+            initial_sequent,
+            depth=0,
+            instantiated_universals=frozenset(),
+            eq_subst_count=0,
+            ind_depth=0,
+            hyp_vars=initial_hyp_vars,
+        )
         if proof_node is not None:
             return LJTProofTree(root=proof_node)
         return None
@@ -581,11 +618,12 @@ class LJTProver:
         instantiated_universals: frozenset[Tuple[Formula, Term]] = frozenset(),
         eq_subst_count: int = 0,
         ind_depth: int = 0,
+        hyp_vars: Optional[Tuple[str, ...]] = None,
     ) -> Optional[LJTProofNode]:
         """Main recursive search procedure implementing Dyckhoff's LJT reduction rules for IQC and HA.
 
         Invertible rules are executed deterministically first, followed by backtracking
-        on non-invertible choices.
+        on non-invertible choices. Simultaneously constructs typed Curry-Howard proof terms.
 
         Args:
             seq (Sequent): The current sequent to reduce.
@@ -593,51 +631,91 @@ class LJTProver:
             instantiated_universals (frozenset[Tuple[Formula, Term]], default=frozenset()): Tracked (universal, term) instantiations.
             eq_subst_count (int, default=0): Number of equality substitution steps performed on this branch.
             ind_depth (int, default=0): Current nested mathematical induction depth.
+            hyp_vars (Optional[Tuple[str, ...]], default=None): Variable identifiers associated with sequent hypotheses.
 
         Returns:
-            Optional[LJTProofNode]: The derivation node if provable, None otherwise.
+            Optional[LJTProofNode]: The derivation node carrying Curry-Howard proof term if provable, None otherwise.
         """
         if depth > self.max_depth:
             return None
 
         gamma = list(seq.antecedents)
         goal = seq.succedent
+        if hyp_vars is None:
+            hyp_vars = tuple(f"h_{depth}_{i}" for i in range(len(gamma)))
 
         # --- 1. AXIOM CHECKS ---
         # Right Verum
         if _is_verum(goal):
-            return LJTProofNode(sequent=seq, rule="R_Top", premises=())
+            return LJTProofNode(sequent=seq, rule="R_Top", premises=(), term=Unit())
 
         # Left Falsum (Ex Falso Quodlibet)
-        if any(_is_falsum(a) for a in gamma):
-            return LJTProofNode(sequent=seq, rule="L_Bot", premises=())
+        for i, a in enumerate(gamma):
+            if _is_falsum(a):
+                bot_var = hyp_vars[i]
+                return LJTProofNode(
+                    sequent=seq,
+                    rule="L_Bot",
+                    premises=(),
+                    term=Abort(formula_to_type(goal), Var(bot_var)),
+                )
 
         # Identity / Ax: Goal in Antecedents
         if goal in gamma:
-            return LJTProofNode(sequent=seq, rule="Ax", premises=())
+            ax_idx = gamma.index(goal)
+            ax_var = hyp_vars[ax_idx]
+            return LJTProofNode(sequent=seq, rule="Ax", premises=(), term=Var(ax_var))
 
         # Right Reflexivity (Equality t = t on Right)
         if isinstance(goal, Equality) and goal.left == goal.right:
-            return LJTProofNode(sequent=seq, rule="R_Refl", premises=())
+            return LJTProofNode(sequent=seq, rule="R_Refl", premises=(), term=Refl(goal.left))
 
         # --- 2. INVERTIBLE RIGHT RULES ---
         # (R =>): Implication on Right
         if isinstance(goal, Implies):
+            x_var = f"x_{depth}"
             prem_seq = Sequent(antecedents=tuple(gamma + [goal.left]), succedent=goal.right)
-            prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+            prem_hyp_vars = tuple(hyp_vars) + (x_var,)
+            prem_node = self._search(
+                prem_seq,
+                depth=depth + 1,
+                instantiated_universals=instantiated_universals,
+                eq_subst_count=eq_subst_count,
+                ind_depth=ind_depth,
+                hyp_vars=prem_hyp_vars,
+            )
             if prem_node is not None:
-                return LJTProofNode(sequent=seq, rule="R_Imp", premises=(prem_node,))
+                p_term = prem_node.term if prem_node.term is not None else Var(x_var)
+                term = Abs(x_var, formula_to_type(goal.left), p_term)
+                return LJTProofNode(sequent=seq, rule="R_Imp", premises=(prem_node,), term=term)
             return None
 
         # (R &): Conjunction on Right
         if isinstance(goal, And):
             seq1 = Sequent(antecedents=tuple(gamma), succedent=goal.left)
-            node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+            node1 = self._search(
+                seq1,
+                depth=depth + 1,
+                instantiated_universals=instantiated_universals,
+                eq_subst_count=eq_subst_count,
+                ind_depth=ind_depth,
+                hyp_vars=hyp_vars,
+            )
             if node1 is not None:
                 seq2 = Sequent(antecedents=tuple(gamma), succedent=goal.right)
-                node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                node2 = self._search(
+                    seq2,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=hyp_vars,
+                )
                 if node2 is not None:
-                    return LJTProofNode(sequent=seq, rule="R_And", premises=(node1, node2))
+                    t1 = node1.term if node1.term is not None else Unit()
+                    t2 = node2.term if node2.term is not None else Unit()
+                    term = Pair(t1, t2)
+                    return LJTProofNode(sequent=seq, rule="R_And", premises=(node1, node2), term=term)
             return None
 
         # (R Forall / R Ind): Universal Quantifier on Right
@@ -649,25 +727,54 @@ class LJTProver:
                 zero = Constant("zero", sort=goal.variable.sort)
                 sub_base = normalize_formula(substitute_formula(goal.body, {goal.variable: zero}))
                 prem_seq_base = Sequent(antecedents=tuple(gamma), succedent=sub_base)
-                node_base = self._search(prem_seq_base, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth + 1)
+                node_base = self._search(
+                    prem_seq_base,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth + 1,
+                    hyp_vars=hyp_vars,
+                )
                 if node_base is not None:
                     # Step case: Gamma, A(c) => A(S(c))
                     hyp_step = normalize_formula(substitute_formula(goal.body, {goal.variable: c}))
                     succ_c = FunctionApp("succ", 1, (c,), return_sort=goal.variable.sort)
                     sub_step = normalize_formula(substitute_formula(goal.body, {goal.variable: succ_c}))
+                    ih_var = f"ih_{depth}"
                     prem_seq_step = Sequent(antecedents=tuple(gamma + [hyp_step]), succedent=sub_step)
-                    node_step = self._search(prem_seq_step, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth + 1)
+                    prem_step_hyp_vars = tuple(hyp_vars) + (ih_var,)
+                    node_step = self._search(
+                        prem_seq_step,
+                        depth=depth + 1,
+                        instantiated_universals=instantiated_universals,
+                        eq_subst_count=eq_subst_count,
+                        ind_depth=ind_depth + 1,
+                        hyp_vars=prem_step_hyp_vars,
+                    )
                     if node_step is not None:
-                        return LJTProofNode(sequent=seq, rule="R_Ind", premises=(node_base, node_step))
+                        t_base = node_base.term if node_base.term is not None else Unit()
+                        t_step = node_step.term if node_step.term is not None else Unit()
+                        v_name = goal.variable.name if hasattr(goal.variable, "name") else f"v{goal.variable.id}"
+                        term = NatRec(t_base, c.name, ih_var, t_step, Var(v_name))
+                        return LJTProofNode(sequent=seq, rule="R_Ind", premises=(node_base, node_step), term=term)
 
             # 2. Standard eigenvariable rule (R_Forall)
             consts, _ = _collect_constants_and_functions(gamma + [goal])
             c = fresh_constant(prefix="c", existing_constants=consts)
             sub_body = normalize_formula(substitute_formula(goal.body, {goal.variable: c}))
             prem_seq = Sequent(antecedents=tuple(gamma), succedent=sub_body)
-            prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+            prem_node = self._search(
+                prem_seq,
+                depth=depth + 1,
+                instantiated_universals=instantiated_universals,
+                eq_subst_count=eq_subst_count,
+                ind_depth=ind_depth,
+                hyp_vars=hyp_vars,
+            )
             if prem_node is not None:
-                return LJTProofNode(sequent=seq, rule="R_Forall", premises=(prem_node,))
+                p_term = prem_node.term if prem_node.term is not None else Unit()
+                term = Abs(c.name, None, p_term)
+                return LJTProofNode(sequent=seq, rule="R_Forall", premises=(prem_node,), term=term)
 
             return None
 
@@ -676,46 +783,103 @@ class LJTProver:
         for i, a in enumerate(gamma):
             if isinstance(a, Equality) and a.left == a.right:
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
                 prem_seq = Sequent(antecedents=tuple(rest), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=rest_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Refl", premises=(prem_node,))
+                    return LJTProofNode(sequent=seq, rule="L_Refl", premises=(prem_node,), term=prem_node.term)
                 return None
 
         # (L &): Conjunction on Left
         for i, a in enumerate(gamma):
             if isinstance(a, And):
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_and = hyp_vars[i]
+                x1 = f"l_{depth}_{i}"
+                x2 = f"r_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [a.left, a.right]), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (x1, x2)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_And", premises=(prem_node,))
+                    t = prem_node.term if prem_node.term is not None else Unit()
+                    t = substitute_term(t, x1, Fst(Var(h_and)))
+                    t = substitute_term(t, x2, Snd(Var(h_and)))
+                    return LJTProofNode(sequent=seq, rule="L_And", premises=(prem_node,), term=t)
                 return None
 
         # (L |): Disjunction on Left
         for i, a in enumerate(gamma):
             if isinstance(a, Or):
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_or = hyp_vars[i]
+                y1 = f"l_{depth}_{i}"
                 seq1 = Sequent(antecedents=tuple(rest + [a.left]), succedent=goal)
-                node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                node1 = self._search(
+                    seq1,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=rest_vars + (y1,),
+                )
                 if node1 is not None:
+                    y2 = f"r_{depth}_{i}"
                     seq2 = Sequent(antecedents=tuple(rest + [a.right]), succedent=goal)
-                    node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                    node2 = self._search(
+                        seq2,
+                        depth=depth + 1,
+                        instantiated_universals=instantiated_universals,
+                        eq_subst_count=eq_subst_count,
+                        ind_depth=ind_depth,
+                        hyp_vars=rest_vars + (y2,),
+                    )
                     if node2 is not None:
-                        return LJTProofNode(sequent=seq, rule="L_Or", premises=(node1, node2))
+                        t1 = node1.term if node1.term is not None else Unit()
+                        t2 = node2.term if node2.term is not None else Unit()
+                        term = Case(Var(h_or), y1, t1, y2, t2)
+                        return LJTProofNode(sequent=seq, rule="L_Or", premises=(node1, node2), term=term)
                 return None
 
         # (L Exists): Existential Quantifier on Left (Eigenvariable rule)
         for i, a in enumerate(gamma):
             if isinstance(a, Exists):
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_ex = hyp_vars[i]
                 consts, _ = _collect_constants_and_functions(gamma + [goal])
                 c = fresh_constant(prefix="c", existing_constants=consts)
                 sub_body = normalize_formula(substitute_formula(a.body, {a.variable: c}))
+                y = f"w_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [sub_body]), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (y,)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Exists", premises=(prem_node,))
+                    t = prem_node.term if prem_node.term is not None else Unit()
+                    term = ExistsElim(Var(h_ex), c.name, y, t)
+                    return LJTProofNode(sequent=seq, rule="L_Exists", premises=(prem_node,), term=term)
                 return None
 
         # (L => 1): Atom => B on Left when Atom in Gamma
@@ -724,10 +888,25 @@ class LJTProver:
                 atom = a.left
                 if atom in gamma:
                     rest = gamma[:i] + gamma[i + 1:]
+                    rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                    h_imp = hyp_vars[i]
+                    atom_idx = gamma.index(atom)
+                    h_atom = hyp_vars[atom_idx]
+                    y_b = f"b_{depth}_{i}"
                     prem_seq = Sequent(antecedents=tuple(rest + [a.right]), succedent=goal)
-                    prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                    prem_hyp_vars = rest_vars + (y_b,)
+                    prem_node = self._search(
+                        prem_seq,
+                        depth=depth + 1,
+                        instantiated_universals=instantiated_universals,
+                        eq_subst_count=eq_subst_count,
+                        ind_depth=ind_depth,
+                        hyp_vars=prem_hyp_vars,
+                    )
                     if prem_node is not None:
-                        return LJTProofNode(sequent=seq, rule="L_Imp_Atom", premises=(prem_node,))
+                        t = prem_node.term if prem_node.term is not None else Unit()
+                        t = substitute_term(t, y_b, App(Var(h_imp), Var(h_atom)))
+                        return LJTProofNode(sequent=seq, rule="L_Imp_Atom", premises=(prem_node,), term=t)
                     return None
 
         # (L => 2): (C & D) => B on Left
@@ -738,10 +917,34 @@ class LJTProver:
                 b = a.right
                 decomp = Implies(left=c, right=Implies(left=d, right=b))
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_imp = hyp_vars[i]
+                g = f"g_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [decomp]), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (g,)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Imp_And", premises=(prem_node,))
+                    t = prem_node.term if prem_node.term is not None else Unit()
+                    c_var = f"c_{depth}"
+                    d_var = f"d_{depth}"
+                    rep = Abs(
+                        c_var,
+                        formula_to_type(c),
+                        Abs(
+                            d_var,
+                            formula_to_type(d),
+                            App(Var(h_imp), Pair(Var(c_var), Var(d_var)))
+                        )
+                    )
+                    t = substitute_term(t, g, rep)
+                    return LJTProofNode(sequent=seq, rule="L_Imp_And", premises=(prem_node,), term=t)
                 return None
 
         # (L => 3): (C | D) => B on Left
@@ -753,10 +956,28 @@ class LJTProver:
                 decomp1 = Implies(left=c, right=b)
                 decomp2 = Implies(left=d, right=b)
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_imp = hyp_vars[i]
+                g1 = f"g1_{depth}_{i}"
+                g2 = f"g2_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [decomp1, decomp2]), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (g1, g2)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Imp_Or", premises=(prem_node,))
+                    t = prem_node.term if prem_node.term is not None else Unit()
+                    c_var = f"c_{depth}"
+                    d_var = f"d_{depth}"
+                    rep1 = Abs(c_var, formula_to_type(c), App(Var(h_imp), Inl(Var(c_var), formula_to_type(a.left))))
+                    rep2 = Abs(d_var, formula_to_type(d), App(Var(h_imp), Inr(Var(d_var), formula_to_type(a.left))))
+                    t = substitute_term(substitute_term(t, g1, rep1), g2, rep2)
+                    return LJTProofNode(sequent=seq, rule="L_Imp_Or", premises=(prem_node,), term=t)
                 return None
 
         # (L => Exists): (exists x. A) => B on Left
@@ -764,29 +985,72 @@ class LJTProver:
             if isinstance(a, Implies) and isinstance(a.left, Exists):
                 decomp = Forall(variable=a.left.variable, body=Implies(left=a.left.body, right=a.right))
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_imp = hyp_vars[i]
+                g = f"g_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [decomp]), succedent=goal)
-                prem_node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (g,)
+                prem_node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if prem_node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Imp_Exists", premises=(prem_node,))
+                    t = prem_node.term if prem_node.term is not None else Unit()
+                    x_var = f"x_{depth}"
+                    a_var = f"a_{depth}"
+                    rep = Abs(
+                        x_var,
+                        None,
+                        Abs(
+                            a_var,
+                            formula_to_type(a.left.body),
+                            App(Var(h_imp), ExistsIntro(Var(x_var), Var(a_var), formula_to_type(a.left)))
+                        )
+                    )
+                    t = substitute_term(t, g, rep)
+                    return LJTProofNode(sequent=seq, rule="L_Imp_Exists", premises=(prem_node,), term=t)
                 return None
 
         # --- 4. NON-INVERTIBLE RULES (BACKTRACKING) ---
         # (R | 1, R | 2): Disjunction on Right
         if isinstance(goal, Or):
             seq1 = Sequent(antecedents=tuple(gamma), succedent=goal.left)
-            node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+            node1 = self._search(
+                seq1,
+                depth=depth + 1,
+                instantiated_universals=instantiated_universals,
+                eq_subst_count=eq_subst_count,
+                ind_depth=ind_depth,
+                hyp_vars=hyp_vars,
+            )
             if node1 is not None:
-                return LJTProofNode(sequent=seq, rule="R_Or1", premises=(node1,))
+                t1 = node1.term if node1.term is not None else Unit()
+                term = Inl(t1, formula_to_type(goal))
+                return LJTProofNode(sequent=seq, rule="R_Or1", premises=(node1,), term=term)
 
             seq2 = Sequent(antecedents=tuple(gamma), succedent=goal.right)
-            node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+            node2 = self._search(
+                seq2,
+                depth=depth + 1,
+                instantiated_universals=instantiated_universals,
+                eq_subst_count=eq_subst_count,
+                ind_depth=ind_depth,
+                hyp_vars=hyp_vars,
+            )
             if node2 is not None:
-                return LJTProofNode(sequent=seq, rule="R_Or2", premises=(node2,))
+                t2 = node2.term if node2.term is not None else Unit()
+                term = Inr(t2, formula_to_type(goal))
+                return LJTProofNode(sequent=seq, rule="R_Or2", premises=(node2,), term=term)
 
         # (L Eq Subst): Equality Substitution on Left oriented by KBO
         if eq_subst_count < self.eq_subst_max:
             for i, a in enumerate(gamma):
                 if isinstance(a, Equality) and a.left != a.right:
+                    h_eq = hyp_vars[i]
                     cmp_res = kbo_compare(a.left, a.right)
                     # Determine directed rewrite orientations
                     orientations: List[Tuple[Term, Term]] = []
@@ -803,9 +1067,18 @@ class LJTProver:
                         g_sub = _directed_rewrite_formula(goal, src, dst)
                         if g_sub != goal:
                             prem_seq = Sequent(antecedents=tuple(gamma), succedent=g_sub)
-                            node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count + 1, ind_depth=ind_depth)
+                            node = self._search(
+                                prem_seq,
+                                depth=depth + 1,
+                                instantiated_universals=instantiated_universals,
+                                eq_subst_count=eq_subst_count + 1,
+                                ind_depth=ind_depth,
+                                hyp_vars=hyp_vars,
+                            )
                             if node is not None:
-                                return LJTProofNode(sequent=seq, rule="L_Eq_Subst", premises=(node,))
+                                t = node.term if node.term is not None else Unit()
+                                term = Subst(Var(h_eq), t)
+                                return LJTProofNode(sequent=seq, rule="L_Eq_Subst", premises=(node,), term=term)
 
                         # Substitute in hypotheses
                         for j, hyp in enumerate(gamma):
@@ -813,10 +1086,21 @@ class LJTProver:
                                 h_sub = _directed_rewrite_formula(hyp, src, dst)
                                 if h_sub != hyp and h_sub not in gamma:
                                     new_gamma = list(gamma) + [h_sub]
+                                    sub_var = f"sub_{depth}_{j}"
+                                    new_hyp_vars = tuple(hyp_vars) + (sub_var,)
                                     prem_seq = Sequent(antecedents=tuple(new_gamma), succedent=goal)
-                                    node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count + 1, ind_depth=ind_depth)
+                                    node = self._search(
+                                        prem_seq,
+                                        depth=depth + 1,
+                                        instantiated_universals=instantiated_universals,
+                                        eq_subst_count=eq_subst_count + 1,
+                                        ind_depth=ind_depth,
+                                        hyp_vars=new_hyp_vars,
+                                    )
                                     if node is not None:
-                                        return LJTProofNode(sequent=seq, rule="L_Eq_Subst", premises=(node,))
+                                        t = node.term if node.term is not None else Unit()
+                                        t = substitute_term(t, sub_var, Subst(Var(h_eq), Var(hyp_vars[j])))
+                                        return LJTProofNode(sequent=seq, rule="L_Eq_Subst", premises=(node,), term=t)
 
         # (R Exists): Existential Quantifier on Right (Witness term search)
         if isinstance(goal, Exists):
@@ -824,12 +1108,20 @@ class LJTProver:
             for t in candidate_terms:
                 inst = normalize_formula(substitute_formula(goal.body, {goal.variable: t}))
                 prem_seq = Sequent(antecedents=tuple(gamma), succedent=inst)
-                node = self._search(prem_seq, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=hyp_vars,
+                )
                 if node is not None:
-                    return LJTProofNode(sequent=seq, rule="R_Exists", premises=(node,))
+                    p_term = node.term if node.term is not None else Unit()
+                    term = ExistsIntro(t, p_term, formula_to_type(goal))
+                    return LJTProofNode(sequent=seq, rule="R_Exists", premises=(node,), term=term)
 
         # (L Forall): Universal Quantifier on Left (Instantiation with ground terms)
-        # Prioritize universals by ascending instantiation count on this branch, then newest (highest index) first
         forall_indices = [
             (i, a) for i, a in enumerate(gamma)
             if isinstance(a, Forall)
@@ -849,10 +1141,25 @@ class LJTProver:
                     continue
                 next_inst = instantiated_universals | {sig}
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_all = hyp_vars[i]
+                y_inst = f"inst_{depth}_{i}"
                 prem_seq = Sequent(antecedents=tuple(rest + [a, inst]), succedent=goal)
-                node = self._search(prem_seq, depth=depth + 1, instantiated_universals=next_inst, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                prem_hyp_vars = rest_vars + (h_all, y_inst)
+                node = self._search(
+                    prem_seq,
+                    depth=depth + 1,
+                    instantiated_universals=next_inst,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=prem_hyp_vars,
+                )
                 if node is not None:
-                    return LJTProofNode(sequent=seq, rule="L_Forall", premises=(node,))
+                    p_term = node.term if node.term is not None else Unit()
+                    t_name = t.name if isinstance(t, Constant) else (t.to_string() if hasattr(t, "to_string") else str(t))
+                    t_var = Var(t_name)
+                    term = substitute_term(p_term, y_inst, App(Var(h_all), t_var))
+                    return LJTProofNode(sequent=seq, rule="L_Forall", premises=(node,), term=term)
 
         # (L => 4): (C => D) => B on Left
         for i, a in enumerate(gamma):
@@ -861,17 +1168,119 @@ class LJTProver:
                 d = a.left.right
                 b = a.right
                 rest = gamma[:i] + gamma[i + 1:]
+                rest_vars = hyp_vars[:i] + hyp_vars[i + 1:]
+                h_imp = hyp_vars[i]
 
                 d_imp_b = Implies(left=d, right=b)
+                g_db = f"gdb_{depth}_{i}"
+                x_c = f"xc_{depth}_{i}"
                 seq1 = Sequent(antecedents=tuple(rest + [d_imp_b, c]), succedent=d)
-                node1 = self._search(seq1, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                hyp_vars1 = rest_vars + (g_db, x_c)
+                node1 = self._search(
+                    seq1,
+                    depth=depth + 1,
+                    instantiated_universals=instantiated_universals,
+                    eq_subst_count=eq_subst_count,
+                    ind_depth=ind_depth,
+                    hyp_vars=hyp_vars1,
+                )
                 if node1 is not None:
+                    y_b = f"yb_{depth}_{i}"
                     seq2 = Sequent(antecedents=tuple(rest + [b]), succedent=goal)
-                    node2 = self._search(seq2, depth=depth + 1, instantiated_universals=instantiated_universals, eq_subst_count=eq_subst_count, ind_depth=ind_depth)
+                    hyp_vars2 = rest_vars + (y_b,)
+                    node2 = self._search(
+                        seq2,
+                        depth=depth + 1,
+                        instantiated_universals=instantiated_universals,
+                        eq_subst_count=eq_subst_count,
+                        ind_depth=ind_depth,
+                        hyp_vars=hyp_vars2,
+                    )
                     if node2 is not None:
-                        return LJTProofNode(sequent=seq, rule="L_Imp_Imp", premises=(node1, node2))
+                        t1 = node1.term if node1.term is not None else Unit()
+                        t2 = node2.term if node2.term is not None else Unit()
+                        d_tmp = f"d_tmp_{depth}"
+                        g_db_rep = Abs(d_tmp, formula_to_type(d), App(Var(h_imp), Abs(x_c, formula_to_type(c), Var(d_tmp))))
+                        t1_sub = substitute_term(t1, g_db, g_db_rep)
+                        f_cd = Abs(x_c, formula_to_type(c), t1_sub)
+                        b_proof = App(Var(h_imp), f_cd)
+                        term = substitute_term(t2, y_b, b_proof)
+                        return LJTProofNode(sequent=seq, rule="L_Imp_Imp", premises=(node1, node2), term=term)
 
         return None
+
+
+def extract_ljt_term(proof: LJTProofTree) -> ProofTerm:
+    """Extracts the Curry-Howard proof term from the root of an LJT proof tree.
+
+    Args:
+        proof (LJTProofTree): The completed LJT derivation tree.
+
+    Returns:
+        ProofTerm: The typed lambda calculus proof term corresponding to the derivation.
+
+    Raises:
+        ValueError: If the proof tree root does not carry an annotated proof term.
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp, Implies
+        >>> from logic_prover.constructive.ljt import prove_ljt, extract_ljt_term
+        >>> p = PredicateApp("P", 0, ())
+        >>> tree = prove_ljt(Implies(p, p))
+        >>> assert tree is not None
+        >>> term = extract_ljt_term(tree)
+        >>> term.to_string()
+        '(lambda x_0: P. x_0)'
+    """
+    if proof.root.term is None:
+        raise ValueError("Proof tree root node carries no annotated proof term.")
+    return proof.root.term
+
+
+def prove_ljt_checked(
+    target: Formula,
+    premises: Optional[List[Formula]] = None,
+    max_term_depth: int = 2,
+    eq_subst_max: int = 5,
+    max_ind_depth: int = 3,
+) -> Tuple[LJTProofTree, ProofTerm, ProofType]:
+    """Proves target using LJT, extracts its proof term, and verifies it with the type checker.
+
+    Args:
+        target (Formula): The theorem goal formula to prove.
+        premises (Optional[List[Formula]], default=None): Hypotheses used in the proof.
+        max_term_depth (int, default=2): Maximum term depth for quantifier instantiation.
+        eq_subst_max (int, default=5): Maximum number of equality substitution applications.
+        max_ind_depth (int, default=3): Maximum nested induction depth limit.
+
+    Returns:
+        Tuple[LJTProofTree, ProofTerm, ProofType]: Triplet of proof tree, proof term, and inferred type.
+
+    Raises:
+        SolverError: If the theorem cannot be proved intuitionistically.
+        TypeError: If the extracted term fails type checking against the goal.
+
+    Example:
+        >>> from logic_prover.core.ast import PredicateApp, Implies
+        >>> from logic_prover.constructive.ljt import prove_ljt_checked
+        >>> p = PredicateApp("P", 0, ())
+        >>> tree, term, typ = prove_ljt_checked(Implies(p, p))
+        >>> typ.to_string()
+        '(P -> P)'
+    """
+    prover = LJTProver(max_term_depth=max_term_depth, eq_subst_max=eq_subst_max, max_ind_depth=max_ind_depth)
+    proof = prover.prove(target=target, premises=premises)
+    if proof is None:
+        from logic_prover.core.exceptions import SolverError
+        raise SolverError(f"Target formula could not be proven intuitionistically with LJT: {to_string(target)}")
+
+    term = extract_ljt_term(proof)
+    ctx: Dict[str, ProofType] = {}
+    if premises:
+        for i, prem in enumerate(premises):
+            ctx[f"h{i}"] = formula_to_type(prem)
+    inferred = infer_type(term, ctx)
+    return proof, term, inferred
 
 
 def prove_ljt(
@@ -921,5 +1330,7 @@ __all__ = [
     "LJTProofTree",
     "LJTProver",
     "prove_ljt",
+    "extract_ljt_term",
+    "prove_ljt_checked",
 ]
 

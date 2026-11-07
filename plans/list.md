@@ -1,28 +1,12 @@
 Step 1: plans/heyting-arithmetic.md — Already Completed
 Status: Implemented in logic_prover.constructive.ha.
 Provides the arithmetic axioms, quantifier handling, and induction scheme needed to prove constructive theorems over numbers.
-Step 2: plans/proof-terms.md — Implement First (Core Prerequisite)
-
-You cannot generate Python code without an intermediate functional representation.
-
-Priority Phases to Implement:
-Phase 0 (Term AST & Normalizer): Define ProofTerm (Var, Abs, App, Pair, Fst, Snd, Inl, Inr, Case, NatRec, Abort) in logic_prover/constructive/terms.py along with infer_type() and beta_normalize().
-Phase 1 (LJT Extraction): Thread term annotations through LJTProver._search in logic_prover/constructive/ljt.py, so derivation rules produce lambda terms.
-Phase 3 (Witness Extraction): Implement extract_witness to extract computational values for 
-∃
-∃ and 
-∨
-∨.
-Step 3: plans/python-exporter.md — Implement Second (Delivers the Target Goal)
-
-Directly translates the lambda terms produced in Step 2 into runnable Python code.
-
-Phases to Implement:
-Phase 0 & 1: Implement PythonExporter in logic_prover/exporters/python_exporter.py mapping ProofTerm nodes to Python ast.AST nodes (ast.FunctionDef, ast.Match, ast.Call, ast.Tuple).
-Phase 2 & 3: Add normalization cleanup and the high-level export_function() / export_module() APIs using ast.unparse().
-Phase 4 & 5: Wire --term-format python into the CLI and add unit tests that execute the generated code with exec().
-
-Note on Critical Path: Steps 2 and 3 form the minimal viable path to generating Python code from logic proofs.
+Step 2: plans/proof-terms.md — Completed
+Status: Implemented in logic_prover.constructive.terms and logic_prover.constructive.ljt.
+Provides typed lambda term AST, bidirectional type checking, capture-avoiding beta normalization, LJT term extraction, BHK witness extraction, and Lean 4 export.
+Step 3: plans/python-exporter.md — Completed
+Status: Implemented in logic_prover.exporters.python_exporter and logic_prover.exporters.python_runtime.
+Directly translates extracted Curry-Howard lambda terms into executable, type-hinted Python functions and modules using standard library ast.AST and unparse. Supports Left/Right tagged unions, primitive recursion over Nat, and live code execution via exec().
 
 Step 4: plans/higher-order.md — Implement Last (Advanced / Research)
 Why last?: This plan introduces Martin-Löf Dependent Type Theory (

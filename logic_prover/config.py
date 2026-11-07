@@ -37,6 +37,7 @@ class SolverConfig:
     ik_max_modal_depth: int = 3
     ha_max_ind_depth: int = 3
     ha_max_induction_instances: int = 4
+    intuitionistic_extract_terms: bool = False
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> SolverConfig:

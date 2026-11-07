@@ -1,4 +1,4 @@
-﻿"""Lean 4 exporter for translating terms, formulas, and proof DAGs to formal Lean 4 code."""
+"""Lean 4 exporter for translating terms, formulas, and proof DAGs to formal Lean 4 code."""
 
 from __future__ import annotations
 import re
@@ -349,6 +349,48 @@ class LeanExporter:
 
         # Default fallback to LEAN automation tactics
         return "by aesop"
+
+    def export_proof_term(
+        self,
+        term: Any,
+        name: str,
+        typ: Optional[Any] = None
+    ) -> str:
+        """Exports an extracted Curry-Howard ProofTerm as a Lean 4 def declaration.
+
+        Args:
+            term (Any): The extracted constructive proof term.
+            name (str): Identifier name for the Lean 4 definition.
+            typ (Optional[Any], default=None): Optional type annotation for the definition.
+
+        Returns:
+            str: Lean 4 definition code snippet.
+
+        Example:
+            >>> from logic_prover.constructive.terms import Var, Abs, AtomType
+            >>> from logic_prover.exporters.lean_exporter import LeanExporter
+            >>> exp = LeanExporter()
+            >>> term = Abs("x", AtomType("P"), Var("x"))
+            >>> code = exp.export_proof_term(term, "id_p")
+            >>> "def id_p" in code
+            True
+        """
+        from logic_prover.constructive.terms import term_to_lean, type_to_lean, infer_type, ProofType
+        clean_name = self._sanitize_identifier(name)
+        type_str = ""
+        if typ is not None:
+            if isinstance(typ, ProofType):
+                type_str = f" : {type_to_lean(typ)}"
+            else:
+                type_str = f" : {typ}"
+        else:
+            try:
+                inf = infer_type(term)
+                type_str = f" : {type_to_lean(inf)}"
+            except Exception:
+                type_str = ""
+        body_str = term_to_lean(term)
+        return f"def {clean_name}{type_str} :=\n  {body_str}"
 
     def _sanitize_identifier(self, name: str) -> str:
         """Sanitizes theorem and variable names into valid LEAN 4 identifiers."""

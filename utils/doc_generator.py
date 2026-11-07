@@ -467,7 +467,7 @@ def render_markdown_module(module_doc: ModuleDoc) -> str:
 
 
 def _github_slug(heading: str) -> str:
-    """Converts a heading into the anchor slug used by GitHub and VitePress.
+    """Converts a heading into the anchor slug used by GitHub.
 
     Args:
         heading: The raw Markdown heading text.
@@ -629,7 +629,7 @@ def build_markdown_docs(
         results[str(group_file)] = final_text
         group_summaries.append((group, f"api/{group}.md", total_classes, total_functions))
 
-    # Generate docs/index.md with VitePress layout
+    # Generate docs/index.md
     index_lines: List[str] = [
         "---",
         "layout: home",

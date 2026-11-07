@@ -116,6 +116,18 @@ def build_parser() -> argparse.ArgumentParser:
     prove_int_parser.add_argument("--max-ind-depth", type=int, default=3, help="Maximum mathematical induction depth limit")
     prove_int_parser.add_argument("--timeout", type=float, default=10.0, help="Prover wall-clock timeout in seconds")
     prove_int_parser.add_argument("--max-steps", type=int, default=1000, help="Maximum search steps")
+    prove_int_parser.add_argument(
+        "--extract-term", action="store_true", help="Extract typed Curry-Howard lambda term from constructive proof"
+    )
+    prove_int_parser.add_argument(
+        "--term-format",
+        choices=["string", "lean", "latex", "python"],
+        default="string",
+        help="Format for printing extracted proof term (default: string)",
+    )
+    prove_int_parser.add_argument(
+        "--output", "-o", type=str, default=None, help="Output file path to save extracted term or synthesized code"
+    )
 
     # 4. analyze command
     analyze_parser = subparsers.add_parser(
@@ -352,6 +364,48 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         print(f"Premises: {', '.join(to_string(p) for p in premise_formulas)}")
     print(f"Method: {method}")
 
+    extract = getattr(args, "extract_term", False) or config.intuitionistic_extract_terms
+    term_format = getattr(args, "term_format", "string") or "string"
+
+    def _show_term(res: Any) -> None:
+        if not extract:
+            return
+        from logic_prover.constructive.terms import extract_term, extract_witness, term_to_string, term_to_lean, term_to_latex
+        term = extract_term(res, target=target_formula, premises=premise_formulas)
+        if term is not None:
+            print("\n--- Extracted Proof Term (Curry-Howard) ---")
+            output_path = getattr(args, "output", None)
+            out_str = ""
+            if term_format == "python":
+                from logic_prover.exporters.python_exporter import PythonExporter
+                from logic_prover.constructive.terms import formula_to_type
+                py_exp = PythonExporter()
+                out_str = py_exp.export_function(
+                    term,
+                    name="synthesized_program",
+                    formula_type=formula_to_type(target_formula),
+                    docstring=f"Proof of {to_string(target_formula)}"
+                )
+                print(out_str)
+            elif term_format == "lean":
+                out_str = term_to_lean(term)
+                print(out_str)
+            elif term_format == "latex":
+                out_str = term_to_latex(term)
+                print(out_str)
+            else:
+                out_str = term_to_string(term)
+                print(out_str)
+
+            if output_path and out_str:
+                Path(output_path).write_text(out_str, encoding="utf-8")
+                print(f"\nSaved output to {output_path}")
+
+            wit = extract_witness(term, target_formula)
+            if wit is not None:
+                print(f"\n--- Extracted BHK Witness ---")
+                print(wit.to_string())
+
     if method in ("ljt", "ha"):
         prover = LJTProver(max_term_depth=max_term_depth, max_ind_depth=max_ind_depth)
         proof = prover.prove(target=target_formula, premises=premise_formulas)
@@ -359,6 +413,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
             print("SUCCESS: Formula is intuitionistically VALID (proven via LJT / G4ip).")
             print("\n--- Derivation Tree ---")
             print(proof.to_ascii())
+            _show_term(proof)
             return 0
         else:
             print("FAILED: Formula could not be proven intuitionistically with LJT.")
@@ -370,6 +425,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
             print("SUCCESS: Formula is intuitionistically VALID (proven via Semantic Tableau).")
             print("\n--- Tableau Tree ---")
             print(result_tab.to_string())
+            _show_term(result_tab)
             return 0
         else:
             print("FAILED: Formula is intuitionistically UNPROVABLE.")
@@ -383,6 +439,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         if result_wal.is_valid:
             print("SUCCESS: Formula is intuitionistically VALID (proven via Wallen Matrix Method).")
             print(result_wal.to_string())
+            _show_term(result_wal)
             return 0
         else:
             print("FAILED: Formula could not be proven intuitionistically with Wallen matrix.")
@@ -395,6 +452,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         if result_trans is not None and result_trans.is_valid:
             print("SUCCESS: Formula is intuitionistically VALID (proven via Relational Translation Resolution).")
             print(result_trans.to_string())
+            _show_term(result_trans)
             return 0
         else:
             print("FAILED: Formula could not be proven intuitionistically via Translation Resolution.")
@@ -405,6 +463,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         if result_ik.is_valid:
             print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Sequent Calculus).")
             print(result_ik.to_string())
+            _show_term(result_ik)
             return 0
         else:
             print("FAILED: Formula is UNPROVABLE in Constructive Modal Logic IK.")
@@ -418,6 +477,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         if result_ik_tab.is_valid:
             print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Semantic Tableau).")
             print(result_ik_tab.to_string())
+            _show_term(result_ik_tab)
             return 0
         else:
             print("FAILED: Formula is UNPROVABLE in Constructive Modal Logic IK.")
@@ -433,6 +493,8 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
         if result_ik_trans is not None and result_ik_trans.is_valid:
             print("SUCCESS: Formula is VALID in Constructive Modal Logic IK (proven via Relational Translation Resolution).")
             print(result_ik_trans.to_string())
+            _show_term(result_ik_trans)
+            return 0
             return 0
         else:
             print("FAILED: Formula could not be proven in Constructive Modal Logic IK via Translation Resolution.")
