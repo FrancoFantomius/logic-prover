@@ -4,9 +4,10 @@ from __future__ import annotations
 from typing import List, Tuple, Optional, Set
 
 from logic_prover.core.ast import (
-    Formula, Term, Constant, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Formula, Term, Constant, FunctionApp, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
     Box, Diamond
 )
+from logic_prover.core.sorts import Nat
 from logic_prover.core.parser import to_string
 from logic_prover.core.substitutions import substitute_formula
 from logic_prover.core.equality import CongruenceClosure, equality_substitution
@@ -31,15 +32,21 @@ from logic_prover.constructive.tableau.branch import _BranchState
 
 
 class TableauProver:
-    """Automated Theorem Prover and Countermodel Builder for Intuitionistic First-Order Logic with Equality (iFOL=) and IK.
+    """Automated Theorem Prover and Countermodel Builder for Intuitionistic First-Order Logic with Equality (iFOL=), IK, and HA.
 
-    Implements labelled semantic tableaux with explicit Kripke frame semantics and equality reasoning.
+    Implements labelled semantic tableaux with explicit Kripke frame semantics, equality reasoning,
+    and first-order mathematical induction branching.
+
+    Caveat on non-standard models:
+    Mathematical induction is sound in standard Nat models, but not in all non-standard Kripke models.
+    Therefore, countermodels produced for unprovable goals are models of iFOL= without full induction.
 
     Args:
         max_depth (int, default=100): Maximum branch depth limit.
         max_worlds (int, default=50): Maximum number of Kripke worlds allowed.
         eq_subst_max (int, default=5): Maximum equality substitution branching depth.
         max_modal_depth (int, default=3): Maximum depth for modal transitions.
+        max_ind_depth (int, default=3): Maximum induction branching rule applications.
 
     Example:
         >>> from logic_prover.core.ast import PredicateApp, Implies
@@ -55,20 +62,29 @@ class TableauProver:
     max_worlds: int
     eq_subst_max: int
     max_modal_depth: int
+    max_ind_depth: int
     _node_counter: int
 
-    def __init__(self, max_depth: int = 100, max_worlds: int = 50, eq_subst_max: int = 5, max_modal_depth: int = 3) -> None:
-        """Initializes the tableau prover with depth, world bounds, equality substitution limits, and modal depth.
+    def __init__(
+        self,
+        max_depth: int = 100,
+        max_worlds: int = 50,
+        eq_subst_max: int = 5,
+        max_modal_depth: int = 3,
+        max_ind_depth: int = 3,
+    ) -> None:
+        """Initializes the tableau prover with depth, world bounds, equality substitution limits, and induction depth.
 
         Args:
             max_depth (int, default=100): Maximum search depth.
             max_worlds (int, default=50): Maximum number of generated worlds.
             eq_subst_max (int, default=5): Maximum equality substitution steps.
             max_modal_depth (int, default=3): Maximum depth of modal transitions.
+            max_ind_depth (int, default=3): Maximum induction branching applications.
 
         Example:
             >>> from logic_prover.constructive.tableau.prover import TableauProver
-            >>> prover = TableauProver(max_depth=50)
+            >>> prover = TableauProver(max_depth=50, max_ind_depth=3)
             >>> prover.max_depth
             50
         """
@@ -76,6 +92,7 @@ class TableauProver:
         self.max_worlds = max(1, max_worlds)
         self.eq_subst_max = max(0, eq_subst_max)
         self.max_modal_depth = max(1, max_modal_depth)
+        self.max_ind_depth = max(0, max_ind_depth)
         self._node_counter = 0
 
     def _next_node_id(self) -> int:
@@ -831,6 +848,59 @@ class TableauProver:
                             node.is_closed = is_closed
                             return is_closed, open_b
 
+        # 4h. F(Ind): Mathematical induction branching for F(forall x. A, w)
+        for w in list(state.worlds):
+            for f in list(state.f_formulas.get(w, set())):
+                if isinstance(f, Forall) and f.variable.sort == Nat:
+                    sig = ("F_Ind", f, w)
+                    ind_count = sum(1 for r in state.applied_rules if isinstance(r, tuple) and r[0] == "F_Ind")
+                    if sig not in state.applied_rules and ind_count < self.max_ind_depth:
+                        state.applied_rules.add(sig)
+
+                        zero = Constant("zero", sort=f.variable.sort)
+                        base_inst = substitute_formula(f.body, {f.variable: zero})
+
+                        all_forms = [form for w_f in state.worlds for form in (state.t_formulas.get(w_f, set()) | state.f_formulas.get(w_f, set()))]
+                        existing_consts, _ = _collect_constants_and_functions(all_forms)
+                        c_const = fresh_constant(prefix="c", existing_constants=existing_consts | state.domains.get(w, set()))
+                        succ_c = FunctionApp("succ", 1, (c_const,), return_sort=f.variable.sort)
+
+                        step_hyp = substitute_formula(f.body, {f.variable: c_const})
+                        step_goal = substitute_formula(f.body, {f.variable: succ_c})
+
+                        # Left branch: Base case fails -> F(A(zero), w)
+                        state_l = state.copy()
+                        state_l.add_f_formula(w, base_inst)
+                        child_l = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.FALSE, base_inst, w),
+                            rule="F_Ind_Base",
+                            world=w,
+                        )
+                        node.children.append(child_l)
+                        closed_l, open_l = self._expand_branch(state_l, child_l, depth + 1)
+
+                        if not closed_l:
+                            node.is_closed = False
+                            return False, open_l
+
+                        # Right branch: Step fails -> T(A(c), w) and F(A(S(c)), w)
+                        state_r = state.copy()
+                        state_r.add_domain_element(w, c_const)
+                        state_r.add_t_formula(w, step_hyp)
+                        state_r.add_f_formula(w, step_goal)
+                        child_r = TableauNode(
+                            id=self._next_node_id(),
+                            signed_formula=SignedFormula(Sign.FALSE, step_goal, w),
+                            rule=f"F_Ind_Step ({to_string(c_const)})",
+                            world=w,
+                        )
+                        node.children.append(child_r)
+                        closed_r, open_r = self._expand_branch(state_r, child_r, depth + 1)
+
+                        node.is_closed = closed_l and closed_r
+                        return node.is_closed, open_r if not closed_r else None
+
         # Step 5: Saturated branch with no further rules applicable and no clash
         node.is_closed = False
         return False, state
@@ -893,15 +963,17 @@ def prove_tableau(
     max_depth: int = 100,
     max_worlds: int = 50,
     eq_subst_max: int = 5,
+    max_ind_depth: int = 3,
 ) -> TableauProofResult:
-    """Proves an intuitionistic formula or extracts a Kripke countermodel via semantic tableaux with equality.
+    """Proves an intuitionistic formula or extracts a Kripke countermodel via semantic tableaux with equality and induction.
 
     Args:
         formula (Formula): Target formula AST to prove.
-        premises (Optional[List[Formula]], default=None): Optional list of hypothesis formulas.
+        premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
         max_depth (int, default=100): Maximum search depth bound.
         max_worlds (int, default=50): Maximum number of possible worlds to construct.
         eq_subst_max (int, default=5): Maximum number of equality substitution steps.
+        max_ind_depth (int, default=3): Maximum induction branching steps.
 
     Returns:
         TableauProofResult: Complete derivation result container with tree and countermodel.
@@ -914,7 +986,7 @@ def prove_tableau(
         >>> res.is_valid
         True
     """
-    prover = TableauProver(max_depth=max_depth, max_worlds=max_worlds, eq_subst_max=eq_subst_max)
+    prover = TableauProver(max_depth=max_depth, max_worlds=max_worlds, eq_subst_max=eq_subst_max, max_ind_depth=max_ind_depth)
     return prover.prove(target=formula, premises=premises)
 
 

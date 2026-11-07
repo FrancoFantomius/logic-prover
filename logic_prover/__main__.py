@@ -35,6 +35,8 @@ from logic_prover.constructive.tableau import TableauProver
 from logic_prover.constructive.wallen import WallenProver
 from logic_prover.constructive.resolution import TranslationResolutionProver, IKTranslationResolutionProver
 from logic_prover.constructive.ik import IKProver
+from logic_prover.constructive.ha import HAProver, prove_ha
+from logic_prover.axioms.heyting_arithmetic import get_ha_axioms
 
 logger = get_logger("cli")
 
@@ -105,11 +107,13 @@ def build_parser() -> argparse.ArgumentParser:
     prove_int_parser.add_argument("--premises", nargs="*", default=[], help="Space-separated premise formula strings")
     prove_int_parser.add_argument(
         "--method",
-        choices=["ljt", "tableau", "wallen", "translation", "ik-ljt", "ik-tableau", "ik-translation"],
+        choices=["ljt", "tableau", "wallen", "translation", "ik-ljt", "ik-tableau", "ik-translation", "ha"],
         default="ljt",
-        help="Intuitionistic/modal proof engine method",
+        help="Intuitionistic/modal/arithmetic proof engine method",
     )
+    prove_int_parser.add_argument("--theory", choices=["ha", "peano"], default=None, help="Formal theory context to include (e.g. ha for Heyting Arithmetic)")
     prove_int_parser.add_argument("--max-term-depth", type=int, default=2, help="Maximum term depth for quantifier instantiation")
+    prove_int_parser.add_argument("--max-ind-depth", type=int, default=3, help="Maximum mathematical induction depth limit")
     prove_int_parser.add_argument("--timeout", type=float, default=10.0, help="Prover wall-clock timeout in seconds")
     prove_int_parser.add_argument("--max-steps", type=int, default=1000, help="Maximum search steps")
 
@@ -334,16 +338,22 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
     target_formula = parse_formula(target_str, signature=signature)
     premise_formulas = [parse_formula(p, signature=signature) for p in args.premises]
 
+    theory = getattr(args, "theory", None)
+    if theory == "ha":
+        ha_ax_forms = [f for _, f in get_ha_axioms()]
+        premise_formulas = ha_ax_forms + premise_formulas
+
     method = getattr(args, "method", None) or config.constructive_method or "ljt"
     max_term_depth = getattr(args, "max_term_depth", None) or config.iqc_max_term_depth or 2
+    max_ind_depth = getattr(args, "max_ind_depth", None) or config.ha_max_ind_depth or 3
 
     print(f"Target formula: {to_string(target_formula)}")
     if premise_formulas:
         print(f"Premises: {', '.join(to_string(p) for p in premise_formulas)}")
     print(f"Method: {method}")
 
-    if method == "ljt":
-        prover = LJTProver(max_term_depth=max_term_depth)
+    if method in ("ljt", "ha"):
+        prover = LJTProver(max_term_depth=max_term_depth, max_ind_depth=max_ind_depth)
         proof = prover.prove(target=target_formula, premises=premise_formulas)
         if proof is not None and proof.is_valid():
             print("SUCCESS: Formula is intuitionistically VALID (proven via LJT / G4ip).")
@@ -354,7 +364,7 @@ def cmd_prove_intuitionistic(args: argparse.Namespace, config: SolverConfig) -> 
             print("FAILED: Formula could not be proven intuitionistically with LJT.")
             return 1
     elif method == "tableau":
-        prover_tab = TableauProver(max_depth=getattr(args, "max_steps", 100))
+        prover_tab = TableauProver(max_depth=getattr(args, "max_steps", 100), max_ind_depth=max_ind_depth)
         result_tab = prover_tab.prove(target=target_formula, premises=premise_formulas)
         if result_tab.is_valid:
             print("SUCCESS: Formula is intuitionistically VALID (proven via Semantic Tableau).")

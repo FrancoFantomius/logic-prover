@@ -234,6 +234,11 @@ def kbo_compare(t1: Term, t2: Term) -> str:
             if isinstance(left, Constant) and isinstance(right, Constant):
                 return left.name > right.name
             if isinstance(left, FunctionApp) and isinstance(right, FunctionApp):
+                prec_map = {"mul": 100, "mult": 100, "add": 90, "plus": 90, "succ": 50, "zero": 10}
+                p_left = prec_map.get(str(left.func), 50 + left.arity * 10)
+                p_right = prec_map.get(str(right.func), 50 + right.arity * 10)
+                if p_left != p_right:
+                    return p_left > p_right
                 if left.func != right.func:
                     return str(left.func) > str(right.func)
                 if left.arity != right.arity:

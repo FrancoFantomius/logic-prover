@@ -87,6 +87,16 @@ from logic_prover.constructive.resolution import (
     ConstructiveResolutionProver,
     prove_resolution,
 )
+from logic_prover.constructive.ha import (
+    HAProver,
+    prove_ha,
+)
+from logic_prover.axioms.heyting_arithmetic import (
+    get_ha_axioms,
+    get_ha_signature,
+    instantiate_ha_induction,
+    ha_theory,
+)
 
 __all__ = [
     # Common
@@ -164,5 +174,12 @@ __all__ = [
     "prove_ik_translation_resolution",
     "ConstructiveResolutionProver",
     "prove_resolution",
+    # HA
+    "HAProver",
+    "prove_ha",
+    "get_ha_axioms",
+    "get_ha_signature",
+    "instantiate_ha_induction",
+    "ha_theory",
 ]
 

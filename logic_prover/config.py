@@ -35,6 +35,8 @@ class SolverConfig:
     iqc_max_term_depth: int = 2
     iqc_eq_subst_max: int = 5
     ik_max_modal_depth: int = 3
+    ha_max_ind_depth: int = 3
+    ha_max_induction_instances: int = 4
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> SolverConfig:
