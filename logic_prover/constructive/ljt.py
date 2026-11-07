@@ -6,7 +6,7 @@ extended with first-order quantifier rules for Intuitionistic First-Order Logic 
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Any, Set, Iterable
+from typing import List, Tuple, Optional, Dict, Any, Set, Iterable, Sequence
 
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp, Equality,
@@ -551,13 +551,13 @@ class LJTProver:
     def prove(
         self,
         target: Formula,
-        premises: Optional[List[Formula]] = None
+        premises: Optional[Sequence[Formula]] = None
     ) -> Optional[LJTProofTree]:
         """Attempts to construct an intuitionistic LJT proof tree for target from premises.
 
         Args:
             target (Formula): The goal formula to be proved.
-            premises (Optional[List[Formula]], default=None): Optional list of hypothesis formulas.
+            premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis formulas.
 
         Returns:
             Optional[LJTProofTree]: Complete derivation tree if provable, or None if unprovable.
@@ -590,13 +590,13 @@ class LJTProver:
     def is_provable(
         self,
         target: Formula,
-        premises: Optional[List[Formula]] = None
+        premises: Optional[Sequence[Formula]] = None
     ) -> bool:
         """Checks whether a formula is intuitionistically valid in LJT calculus.
 
         Args:
             target (Formula): The goal formula to test.
-            premises (Optional[List[Formula]], default=None): Optional list of hypotheses.
+            premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypotheses.
 
         Returns:
             bool: True if provable intuitionistically, False otherwise.
@@ -1239,7 +1239,7 @@ def extract_ljt_term(proof: LJTProofTree) -> ProofTerm:
 
 def prove_ljt_checked(
     target: Formula,
-    premises: Optional[List[Formula]] = None,
+    premises: Optional[Sequence[Formula]] = None,
     max_term_depth: int = 2,
     eq_subst_max: int = 5,
     max_ind_depth: int = 3,
@@ -1248,7 +1248,7 @@ def prove_ljt_checked(
 
     Args:
         target (Formula): The theorem goal formula to prove.
-        premises (Optional[List[Formula]], default=None): Hypotheses used in the proof.
+        premises (Optional[Sequence[Formula]], default=None): Hypotheses used in the proof.
         max_term_depth (int, default=2): Maximum term depth for quantifier instantiation.
         eq_subst_max (int, default=5): Maximum number of equality substitution applications.
         max_ind_depth (int, default=3): Maximum nested induction depth limit.
@@ -1285,7 +1285,7 @@ def prove_ljt_checked(
 
 def prove_ljt(
     formula: Formula,
-    premises: Optional[List[Formula]] = None,
+    premises: Optional[Sequence[Formula]] = None,
     max_term_depth: int = 2,
     eq_subst_max: int = 5,
     max_ind_depth: int = 3,
@@ -1294,7 +1294,7 @@ def prove_ljt(
 
     Args:
         formula (Formula): The formula to prove.
-        premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
+        premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis premises.
         max_term_depth (int, default=2): Maximum term depth for quantifier instantiation.
         eq_subst_max (int, default=5): Maximum number of equality substitution applications.
         max_ind_depth (int, default=3): Maximum nested induction depth.

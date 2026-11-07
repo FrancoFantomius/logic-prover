@@ -8,7 +8,7 @@ existential witnesses, universal abstractions, and primitive recursion.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, Set, Tuple, List, Union
+from typing import Optional, Dict, Any, Set, Tuple, List, Union, Sequence
 
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp, PredicateApp,
@@ -1635,14 +1635,14 @@ def extract_witness(term: ProofTerm, formula: Formula) -> Optional[Witness]:
 def extract_program(
     proof_result: Any,
     target: Formula,
-    premises: Optional[List[Formula]] = None
+    premises: Optional[Sequence[Formula]] = None
 ) -> Tuple[ProofTerm, Optional[Witness]]:
     """Extracts the executable lambda proof term and its BHK witness from any constructive proof result.
 
     Args:
         proof_result (Any): Prover result object (e.g. LJTProofTree, TableauProofResult, WallenProofResult).
         target (Formula): Proved theorem goal formula.
-        premises (Optional[List[Formula]], default=None): Hypotheses used in proof.
+        premises (Optional[Sequence[Formula]], default=None): Hypotheses used in proof.
 
     Returns:
         Tuple[ProofTerm, Optional[Witness]]: Pair of extracted proof term and optional witness.
@@ -1671,7 +1671,7 @@ def extract_program(
 def extract_term(
     result: Any,
     target: Optional[Formula] = None,
-    premises: Optional[List[Formula]] = None
+    premises: Optional[Sequence[Formula]] = None
 ) -> Optional[ProofTerm]:
     """Universal dispatcher extracting a ProofTerm from any constructive prover result.
 
@@ -1682,7 +1682,7 @@ def extract_term(
     Args:
         result (Any): Proof derivation or proof result container.
         target (Optional[Formula], default=None): Target goal formula if re-proving is needed.
-        premises (Optional[List[Formula]], default=None): Hypothesis formulas if re-proving is needed.
+        premises (Optional[Sequence[Formula]], default=None): Hypothesis formulas if re-proving is needed.
 
     Returns:
         Optional[ProofTerm]: Extracted proof term, or None if unprovable.
@@ -1714,10 +1714,12 @@ def extract_term(
     if hyps is None and hasattr(result, "premises"):
         hyps = getattr(result, "premises")
 
+    hyps_list: Optional[List[Formula]] = list(hyps) if hyps is not None else None
+
     if goal is not None:
         from logic_prover.constructive.ljt import LJTProver
         prover = LJTProver()
-        ljt_proof = prover.prove(target=goal, premises=hyps)
+        ljt_proof = prover.prove(target=goal, premises=hyps_list)
         if ljt_proof is not None and ljt_proof.root.term is not None:
             return ljt_proof.root.term
 

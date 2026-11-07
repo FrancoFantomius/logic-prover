@@ -1,7 +1,7 @@
 """Semantic Tableaux theorem prover and Kripke countermodel builder for Intuitionistic Logic with Equality."""
 
 from __future__ import annotations
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple, Optional, Set, Sequence
 
 from logic_prover.core.ast import (
     Formula, Term, Constant, FunctionApp, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
@@ -189,13 +189,13 @@ class TableauProver:
     def prove(
         self,
         target: Formula,
-        premises: Optional[List[Formula]] = None,
+        premises: Optional[Sequence[Formula]] = None,
     ) -> TableauProofResult:
         """Attempts to prove an intuitionistic formula or find a Kripke countermodel.
 
         Args:
             target (Formula): The target formula to prove.
-            premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
+            premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis premises.
 
         Returns:
             TableauProofResult: Complete derivation result with validity status and tree.
@@ -959,7 +959,7 @@ class TableauProver:
 
 def prove_tableau(
     formula: Formula,
-    premises: Optional[List[Formula]] = None,
+    premises: Optional[Sequence[Formula]] = None,
     max_depth: int = 100,
     max_worlds: int = 50,
     eq_subst_max: int = 5,
@@ -969,7 +969,7 @@ def prove_tableau(
 
     Args:
         formula (Formula): Target formula AST to prove.
-        premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
+        premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis premises.
         max_depth (int, default=100): Maximum search depth bound.
         max_worlds (int, default=50): Maximum number of possible worlds to construct.
         eq_subst_max (int, default=5): Maximum number of equality substitution steps.
