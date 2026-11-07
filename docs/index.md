@@ -23,12 +23,15 @@ features:
   - title: Hypothesis Deducer
     details: Dependency analysis, minimal premise subsets, and equivalence class computation.
     link: /api/deducer
+  - title: Constructive Logic & Proof Extraction
+    details: Intuitionistic reasoning (LJT, Tableau, Wallen, IK modal, HA), Curry-Howard proof extraction, and Python code synthesis.
+    link: /api/constructive
   - title: Lean 4 & Graph Exporters
     details: Translate proven theorems directly into verified Lean 4 code or interactive HTML DAG visualizations.
     link: /api/exporters
   - title: Foundational Knowledge Bases
     details: Built-in axiom libraries spanning propositional logic, equality, Peano arithmetic, sets, and groups.
-    link: /api/kb
+    link: /api/axioms
   - title: Second-Order Logic (SOL)
     details: Extensions for second-order quantification, predicate variables, and higher-order schema instantiation.
     link: /api/sol
@@ -37,10 +40,11 @@ features:
 ## Architecture Overview
 
 - **`logic_prover.core`**: AST definitions, sort systems, signatures, parser, substitution, rewriting.
+- **`logic_prover.constructive`**: Intuitionistic logic provers (LJT, Tableau, Wallen, Prefixed Resolution, IK, HA) and Curry-Howard proof-term extraction.
 - **`logic_prover.prover`**: Resolution theorem prover engine, clause generation, proof DAG reconstruction.
 - **`logic_prover.explorer`**: Novel formula generation, heuristic ranking, and diversity filters.
 - **`logic_prover.deducer`**: Network dependency analysis and hypothesis minimal subset detection.
-- **`logic_prover.exporters`**: Translation to Lean 4 formal code and interactive HTML DAG graph rendering.
+- **`logic_prover.exporters`**: Translation to Lean 4 formal code, executable Python programs, and interactive HTML DAG graph rendering.
 - **`logic_prover.axioms`**: Axiomatic mathematical theories, signatures, and formal Theory definitions.
 - **`logic_prover.sol`**: Second-Order Logic (SOL) extensions.
 - **`utils`**: Developer utilities and automated documentation generator.
@@ -50,12 +54,16 @@ features:
 | Module Group | Documentation Link | Documented Classes | Documented Functions |
 | :--- | :--- | :--- | :--- |
 | `axioms` | [axioms →](api/axioms.md) | 1 | 36 |
+| `config` | [config →](api/config.md) | 1 | 0 |
 | `constructive` | [constructive →](api/constructive.md) | 31 | 14 |
 | `core` | [core →](api/core.md) | 12 | 20 |
 | `deducer` | [deducer →](api/deducer.md) | 0 | 4 |
 | `explorer` | [explorer →](api/explorer.md) | 1 | 0 |
+| `exporters` | [exporters →](api/exporters.md) | 3 | 0 |
 | `logging` | [logging →](api/logging.md) | 1 | 2 |
 | `prover` | [prover →](api/prover.md) | 0 | 2 |
+| `sol` | [sol →](api/sol.md) | 6 | 7 |
+| `utils` | [utils →](api/utils.md) | 2 | 2 |
 
 ## Examples
 
