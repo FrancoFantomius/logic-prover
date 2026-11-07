@@ -6,7 +6,7 @@ from typing import List, Set, Union, Optional
 from logic_prover.core.ast import (
     Term, Formula, Variable, Constant, FunctionApp,
     PredicateApp, Equality, Not, And, Or, Implies, Iff,
-    Forall, Exists, VariableKind
+    Forall, Exists, VariableKind, Box, Diamond
 )
 from logic_prover.core.sorts import Sort, Ind, is_compatible
 from logic_prover.core.signature import Signature
@@ -216,7 +216,7 @@ def validate_formula(
                 )
             )
 
-    elif isinstance(formula, Not):
+    elif isinstance(formula, (Not, Box, Diamond)):
         errors.extend(validate_formula(formula.operand, signature, scope))
 
     elif isinstance(formula, (And, Or, Implies, Iff)):

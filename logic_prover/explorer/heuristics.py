@@ -1,4 +1,4 @@
-﻿"""Diversity metrics and formula interestingness heuristic scoring."""
+"""Diversity metrics and formula interestingness heuristic scoring."""
 
 from __future__ import annotations
 import math
@@ -8,6 +8,7 @@ from typing import Dict, Set, Optional, Tuple, Any, List
 from logic_prover.core.ast import (
     Formula, Term, Variable, Constant, FunctionApp,
     PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond,
     free_variables, bound_variables, formula_size, formula_depth
 )
 from logic_prover.core.visitors import ASTVisitor
@@ -125,6 +126,30 @@ class SymbolCollectorVisitor(ASTVisitor[None]):
             Result of visiting this node.
         """
         self._record_symbol("Op_Not")
+        self.visit(node.operand)
+
+    def visit_box(self, node: Box) -> None:
+        """Handles visitation of a Box node.
+
+        Args:
+            node: The Box AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        self._record_symbol("Op_Box")
+        self.visit(node.operand)
+
+    def visit_diamond(self, node: Diamond) -> None:
+        """Handles visitation of a Diamond node.
+
+        Args:
+            node: The Diamond AST node being visited.
+
+        Returns:
+            Result of visiting this node.
+        """
+        self._record_symbol("Op_Diamond")
         self.visit(node.operand)
 
     def visit_and(self, node: And) -> None:

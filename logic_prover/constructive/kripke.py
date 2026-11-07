@@ -1,9 +1,10 @@
-"""Kripke frames, possible worlds, and semantic models for Intuitionistic Logic.
+"""Kripke frames, possible worlds, and semantic models for Intuitionistic First-Order Logic.
 
-This module provides Kripke semantics structures for intuitionistic propositional
-logic (Fitting 1969; Chagrov & Zakharyaschev 1997). In intuitionistic Kripke semantics,
-a model M = (W, <=, V) consists of a non-empty set of worlds W, a reflexive-transitive
-preorder <=, and a monotone valuation V where u <= v implies V(u) <= V(v).
+This module provides Kripke semantics structures for intuitionistic logic
+(Fitting 1969; Chagrov & Zakharyaschev 1997). In intuitionistic first-order Kripke semantics,
+a model M = (W, <=, D, V) consists of a non-empty set of worlds W, a reflexive-transitive
+preorder <=, expanding domain assignment D where u <= v implies D(u) <= D(v), and a monotone
+valuation V where u <= v implies V(u) <= V(v).
 """
 
 from __future__ import annotations
@@ -11,9 +12,12 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Set
 
 from logic_prover.core.ast import (
-    Formula, PredicateApp, Not, And, Or, Implies, Iff
+    Formula, Term, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.parser import to_string
+from logic_prover.core.substitutions import substitute_formula
+from logic_prover.core.equality import CongruenceClosure
 from logic_prover.constructive.common import (
     FALSUM,
     VERUM,
@@ -23,13 +27,13 @@ from logic_prover.constructive.common import (
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class World:
-    """Represents a possible world node in a Kripke frame.
+    """Represents a possible world node w_i in an intuitionistic Kripke frame (W, <=).
 
     Args:
-        id (int): Unique non-negative integer identifier of the world.
-        name (str): Human-readable name of the world (e.g., 'w0', 'w1').
+        id (int): Unique integer index of the world.
+        name (str): Identifier name for visualization (e.g. 'w0', 'w1').
 
     Example:
         >>> from logic_prover.constructive.kripke import World
@@ -41,16 +45,47 @@ class World:
     id: int
     name: str
 
-    def __str__(self) -> str:
-        """Returns the world name.
+    def __hash__(self) -> int:
+        """Returns the hash based on the world id.
 
         Returns:
-            str: Name of the world.
+            int: Hash integer.
 
         Example:
             >>> from logic_prover.constructive.kripke import World
-            >>> str(World(id=1, name="w1"))
-            'w1'
+            >>> hash(World(0, "w0")) == hash(0)
+            True
+        """
+        return hash(self.id)
+
+    def __eq__(self, other: Any) -> bool:
+        """Compares two worlds for equality by ID.
+
+        Args:
+            other (Any): Object to compare with.
+
+        Returns:
+            bool: True if other is a World with the same ID, False otherwise.
+
+        Example:
+            >>> from logic_prover.constructive.kripke import World
+            >>> World(0, "w0") == World(0, "w0_alias")
+            True
+        """
+        if not isinstance(other, World):
+            return False
+        return self.id == other.id
+
+    def __str__(self) -> str:
+        """Returns the human-readable world name.
+
+        Returns:
+            str: World name (e.g. 'w0').
+
+        Example:
+            >>> from logic_prover.constructive.kripke import World
+            >>> str(World(0, "w0"))
+            'w0'
         """
         return self.name
 
@@ -62,25 +97,33 @@ class World:
 
         Example:
             >>> from logic_prover.constructive.kripke import World
-            >>> repr(World(id=0, name="w0"))
+            >>> repr(World(0, "w0"))
             'World(id=0, name=w0)'
         """
         return f"World(id={self.id}, name={self.name})"
 
 
 class KripkeModel:
-    """A finite Kripke Model (W, <=, V) for Intuitionistic Propositional Logic.
+    """A finite Kripke Model (W, <=, R, D, V, E) for Intuitionistic Logic with Equality and Modality (IK).
 
-    In intuitionistic Kripke semantics:
+    In intuitionistic modal Kripke semantics:
     - W is a non-empty set of possible worlds.
     - <= is a preorder (reflexive, transitive accessibility relation).
+    - R is the modal accessibility relation.
+    - D maps each world w in W to a non-empty set of domain terms such that
+      if w <= w' then D(w) <= D(w') (expanding domain monotonicity).
     - V maps each world w in W to a set of true atomic propositions such that
       if w <= w' then V(w) <= V(w') (monotonicity / persistence / heredity).
+    - E maps each world w in W to a set of true Equalities such that
+      if w <= w' then E(w) <= E(w') (equality monotonicity).
 
     Args:
         worlds (Optional[List[World]], default=None): List of worlds in the model.
-        relations (Optional[Dict[World, Set[World]]], default=None): Accessibility map.
+        relations (Optional[Dict[World, Set[World]]], default=None): Accessibility map (<=).
+        modal_relations (Optional[Dict[World, Set[World]]], default=None): Modal accessibility map (R).
         valuations (Optional[Dict[World, Set[Formula]]], default=None): Atomic valuation map.
+        domains (Optional[Dict[World, Set[Term]]], default=None): Per-world domain elements map.
+        equalities (Optional[Dict[World, Set[Equality]]], default=None): Per-world equality assertions map.
 
     Example:
         >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -93,20 +136,30 @@ class KripkeModel:
 
     worlds: List[World]
     relations: Dict[World, Set[World]]
+    modal_relations: Dict[World, Set[World]]
     valuations: Dict[World, Set[Formula]]
+    domains: Dict[World, Set[Term]]
+    equalities: Dict[World, Set[Equality]]
+    _cc_cache: Dict[World, CongruenceClosure]
 
     def __init__(
         self,
         worlds: Optional[List[World]] = None,
         relations: Optional[Dict[World, Set[World]]] = None,
+        modal_relations: Optional[Dict[World, Set[World]]] = None,
         valuations: Optional[Dict[World, Set[Formula]]] = None,
+        domains: Optional[Dict[World, Set[Term]]] = None,
+        equalities: Optional[Dict[World, Set[Equality]]] = None,
     ) -> None:
-        """Initializes a Kripke model with worlds, relations, and valuations.
+        """Initializes a Kripke model with worlds, relations, modal relations, valuations, domains, and equalities.
 
         Args:
             worlds (Optional[List[World]], default=None): Initial list of worlds.
-            relations (Optional[Dict[World, Set[World]]], default=None): Initial accessibility edges.
+            relations (Optional[Dict[World, Set[World]]], default=None): Initial accessibility edges (<=).
+            modal_relations (Optional[Dict[World, Set[World]]], default=None): Initial modal accessibility edges (R).
             valuations (Optional[Dict[World, Set[Formula]]], default=None): Initial truth assignments.
+            domains (Optional[Dict[World, Set[Term]]], default=None): Initial domain elements per world.
+            equalities (Optional[Dict[World, Set[Equality]]], default=None): Initial equalities per world.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel
@@ -116,7 +169,29 @@ class KripkeModel:
         """
         self.worlds = list(worlds) if worlds is not None else []
         self.relations = {w: set(targets) for w, targets in relations.items()} if relations is not None else {}
+        self.modal_relations = {w: set(targets) for w, targets in modal_relations.items()} if modal_relations is not None else {}
         self.valuations = {w: set(atoms) for w, atoms in valuations.items()} if valuations is not None else {}
+        self.domains = {w: set(terms) for w, terms in domains.items()} if domains is not None else {}
+        self.equalities = {w: set(eqs) for w, eqs in equalities.items()} if equalities is not None else {}
+        self._cc_cache = {}
+
+    def _get_cc(self, world: World) -> CongruenceClosure:
+        """Retrieves or computes the CongruenceClosure cache for a world.
+
+        Args:
+            world (World): The world whose congruence closure is requested.
+
+        Returns:
+            CongruenceClosure: The active CongruenceClosure instance for the world.
+        """
+        if world in self._cc_cache:
+            return self._cc_cache[world]
+
+        cc = CongruenceClosure()
+        for eq in self.equalities.get(world, set()):
+            cc.merge(eq.left, eq.right)
+        self._cc_cache[world] = cc
+        return cc
 
     def add_world(self, world: World) -> None:
         """Adds a world to the model, ensuring reflexivity in the accessibility relation.
@@ -137,11 +212,17 @@ class KripkeModel:
             self.relations[world] = {world}
         else:
             self.relations[world].add(world)
+        if world not in self.modal_relations:
+            self.modal_relations[world] = set()
         if world not in self.valuations:
             self.valuations[world] = set()
+        if world not in self.domains:
+            self.domains[world] = set()
+        if world not in self.equalities:
+            self.equalities[world] = set()
 
     def add_relation(self, source: World, target: World) -> None:
-        """Adds an accessibility edge source <= target and maintains transitive closure.
+        """Adds an accessibility edge source <= target and maintains transitive closure, monotonicity, and commutation.
 
         Args:
             source (World): The starting world.
@@ -162,6 +243,59 @@ class KripkeModel:
         self.relations[source].add(target)
         self._compute_transitive_closure()
         self._enforce_monotonicity()
+        self._enforce_commutation()
+
+    def add_modal_relation(self, source: World, target: World) -> None:
+        """Adds a modal accessibility edge source R target and enforces IK commutation.
+
+        Args:
+            source (World): The starting world for the modal transition.
+            target (World): The target accessible world.
+
+        Example:
+            >>> from logic_prover.constructive.kripke import KripkeModel, World
+            >>> m = KripkeModel()
+            >>> w0, w1 = World(0, "w0"), World(1, "w1")
+            >>> m.add_modal_relation(w0, w1)
+            >>> w1 in m.modal_relations[w0]
+            True
+        """
+        self.add_world(source)
+        self.add_world(target)
+        self.modal_relations[source].add(target)
+        self._enforce_commutation()
+
+    def _enforce_commutation(self) -> None:
+        """Enforces the IK commutation conditions (F1 and F2):
+        - F1: if w <= w' and w R v, then there exists v' with w' R v' and v <= v'.
+        - F2: if w R v and v <= v', then there exists w' with w <= w' and w' R v'.
+        """
+        changed = True
+        while changed:
+            changed = False
+            # F1
+            for w in self.worlds:
+                for w_prime in self.relations.get(w, set()):
+                    for v in list(self.modal_relations.get(w, set())):
+                        has_comm = any(
+                            v_prime in self.relations.get(v, set())
+                            for v_prime in self.modal_relations.get(w_prime, set())
+                        )
+                        if not has_comm:
+                            self.modal_relations.setdefault(w_prime, set()).add(v)
+                            changed = True
+
+            # F2
+            for w in self.worlds:
+                for v in list(self.modal_relations.get(w, set())):
+                    for v_prime in list(self.relations.get(v, set())):
+                        has_comm2 = any(
+                            v_prime in self.modal_relations.get(w_prime, set())
+                            for w_prime in self.relations.get(w, set())
+                        )
+                        if not has_comm2:
+                            self.modal_relations.setdefault(w, set()).add(v_prime)
+                            changed = True
 
     def _compute_transitive_closure(self) -> None:
         """Recomputes reflexive-transitive closure across all world relations."""
@@ -179,16 +313,28 @@ class KripkeModel:
                             changed = True
 
     def _enforce_monotonicity(self) -> None:
-        """Enforces monotonicity: if u <= v then V(u) <= V(v)."""
+        """Enforces valuation, domain, and equality monotonicity: if u <= v then V(u) <= V(v), D(u) <= D(v), E(u) <= E(v)."""
         changed = True
         while changed:
             changed = False
             for u in self.worlds:
                 for v in self.relations.get(u, set()):
                     if u != v:
+                        # Valuation monotonicity
                         for atom in self.valuations.get(u, set()):
                             if atom not in self.valuations.get(v, set()):
                                 self.valuations.setdefault(v, set()).add(atom)
+                                changed = True
+                        # Domain monotonicity
+                        for term in self.domains.get(u, set()):
+                            if term not in self.domains.get(v, set()):
+                                self.domains.setdefault(v, set()).add(term)
+                                changed = True
+                        # Equality monotonicity
+                        for eq in self.equalities.get(u, set()):
+                            if eq not in self.equalities.get(v, set()):
+                                self.equalities.setdefault(v, set()).add(eq)
+                                self._cc_cache.pop(v, None)
                                 changed = True
 
     def add_valuation(self, world: World, formula: Formula) -> None:
@@ -212,6 +358,52 @@ class KripkeModel:
         self.valuations[world].add(formula)
         for succ in self.accessible_worlds(world):
             self.valuations.setdefault(succ, set()).add(formula)
+
+    def add_domain_element(self, world: World, term: Term) -> None:
+        """Adds a domain element term at world, propagating along accessible worlds.
+
+        Args:
+            world (World): World where domain element is added.
+            term (Term): Ground term element to add to D(world).
+
+        Example:
+            >>> from logic_prover.core.ast import Constant
+            >>> from logic_prover.constructive.kripke import KripkeModel, World
+            >>> m = KripkeModel()
+            >>> w0 = World(0, "w0")
+            >>> c = Constant("c0")
+            >>> m.add_domain_element(w0, c)
+            >>> c in m.domains[w0]
+            True
+        """
+        self.add_world(world)
+        self.domains[world].add(term)
+        for succ in self.accessible_worlds(world):
+            self.domains.setdefault(succ, set()).add(term)
+
+    def add_equality(self, world: World, eq: Equality) -> None:
+        """Adds a positive equality assertion at a world, propagating along accessible worlds.
+
+        Args:
+            world (World): World where equality holds.
+            eq (Equality): Ground Equality AST to add to E(world).
+
+        Example:
+            >>> from logic_prover.core.ast import Constant, Equality
+            >>> from logic_prover.constructive.kripke import KripkeModel, World
+            >>> m = KripkeModel()
+            >>> w0 = World(0, "w0")
+            >>> a, b = Constant("a"), Constant("b")
+            >>> m.add_equality(w0, Equality(a, b))
+            >>> m.evaluate(Equality(a, b), w0)
+            True
+        """
+        self.add_world(world)
+        self.equalities[world].add(eq)
+        self._cc_cache.pop(world, None)
+        for succ in self.accessible_worlds(world):
+            self.equalities.setdefault(succ, set()).add(eq)
+            self._cc_cache.pop(succ, None)
 
     def is_accessible(self, source: World, target: World) -> bool:
         """Tests whether target is reachable from source (source <= target).
@@ -253,7 +445,7 @@ class KripkeModel:
         return set(self.relations.get(world, {world}))
 
     def evaluate(self, formula: Formula, world: World) -> bool:
-        """Evaluates whether an intuitionistic formula is forced at a world: (M, world |= formula).
+        """Evaluates whether an intuitionistic first-order formula is forced at a world: (M, world |= formula).
 
         Args:
             formula (Formula): The formula AST to evaluate.
@@ -276,11 +468,28 @@ class KripkeModel:
         if _is_verum(formula):
             return True
 
+        if isinstance(formula, Equality):
+            cc = self._get_cc(world)
+            return cc.are_equal(formula.left, formula.right)
+
         if _is_atomic(formula):
             return formula in self.valuations.get(world, set())
 
         if isinstance(formula, Not):
             return all(not self.evaluate(formula.operand, succ) for succ in self.accessible_worlds(world))
+
+        if isinstance(formula, Box):
+            for succ in self.accessible_worlds(world):
+                for modal_succ in self.modal_relations.get(succ, set()):
+                    if not self.evaluate(formula.operand, modal_succ):
+                        return False
+            return True
+
+        if isinstance(formula, Diamond):
+            for modal_succ in self.modal_relations.get(world, set()):
+                if self.evaluate(formula.operand, modal_succ):
+                    return True
+            return False
 
         if isinstance(formula, And):
             return self.evaluate(formula.left, world) and self.evaluate(formula.right, world)
@@ -299,13 +508,30 @@ class KripkeModel:
             right_imp = Implies(left=formula.right, right=formula.left)
             return self.evaluate(left_imp, world) and self.evaluate(right_imp, world)
 
+        if isinstance(formula, Forall):
+            for succ in self.accessible_worlds(world):
+                domain_elems = self.domains.get(succ, set())
+                for t in domain_elems:
+                    sub_f = substitute_formula(formula.body, {formula.variable: t})
+                    if not self.evaluate(sub_f, succ):
+                        return False
+            return True
+
+        if isinstance(formula, Exists):
+            domain_elems = self.domains.get(world, set())
+            for t in domain_elems:
+                sub_f = substitute_formula(formula.body, {formula.variable: t})
+                if self.evaluate(sub_f, world):
+                    return True
+            return False
+
         return False
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the Kripke model structure to a dictionary.
 
         Returns:
-            Dict[str, Any]: Dictionary structure with worlds, relations, and valuations.
+            Dict[str, Any]: Dictionary structure with worlds, relations, modal relations, valuations, domains, and equalities.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -320,8 +546,20 @@ class KripkeModel:
                 w.name: sorted([succ.name for succ in self.relations.get(w, set())])
                 for w in self.worlds
             },
+            "modal_relations": {
+                w.name: sorted([succ.name for succ in self.modal_relations.get(w, set())])
+                for w in self.worlds
+            },
             "valuations": {
                 w.name: sorted([to_string(f) for f in self.valuations.get(w, set())])
+                for w in self.worlds
+            },
+            "domains": {
+                w.name: sorted([to_string(t) for t in self.domains.get(w, set())])
+                for w in self.worlds
+            },
+            "equalities": {
+                w.name: sorted([to_string(eq) for eq in self.equalities.get(w, set())])
                 for w in self.worlds
             },
         }
@@ -330,7 +568,7 @@ class KripkeModel:
         """Formats the Kripke model as a readable multi-line description.
 
         Returns:
-            str: Description of worlds, accessibility relation, and atomic valuations.
+            str: Description of worlds, accessibility relation, modal relations, atomic valuations, domains, and equalities.
 
         Example:
             >>> from logic_prover.constructive.kripke import KripkeModel, World
@@ -339,17 +577,31 @@ class KripkeModel:
             >>> "Kripke Model" in m.to_string()
             True
         """
-        lines: List[str] = ["Kripke Model (W, <=, V):"]
+        lines: List[str] = ["Kripke Model (W, <=, R, D, V, E):"]
         lines.append(f"  Worlds: {', '.join(w.name for w in self.worlds) if self.worlds else 'empty'}")
         lines.append("  Accessibility Relation (<=):")
         for w in self.worlds:
             succs = sorted([s.name for s in self.relations.get(w, set())])
             lines.append(f"    {w.name} <= {{{', '.join(succs)}}}")
+        lines.append("  Modal Accessibility Relation (R):")
+        for w in self.worlds:
+            succs = sorted([s.name for s in self.modal_relations.get(w, set())])
+            lines.append(f"    {w.name} R {{{', '.join(succs)}}}")
+        lines.append("  Domains D(w):")
+        for w in self.worlds:
+            terms = sorted([to_string(t) for t in self.domains.get(w, set())])
+            terms_str = ", ".join(terms) if terms else "empty"
+            lines.append(f"    D({w.name}) = {{{terms_str}}}")
         lines.append("  Valuations V(w):")
         for w in self.worlds:
             atoms = sorted([to_string(f) for f in self.valuations.get(w, set())])
             atoms_str = ", ".join(atoms) if atoms else "empty"
             lines.append(f"    V({w.name}) = {{{atoms_str}}}")
+        lines.append("  Equalities E(w):")
+        for w in self.worlds:
+            eqs = sorted([to_string(eq) for eq in self.equalities.get(w, set())])
+            eqs_str = ", ".join(eqs) if eqs else "empty"
+            lines.append(f"    E({w.name}) = {{{eqs_str}}}")
         return "\n".join(lines)
 
     def __str__(self) -> str:
@@ -361,3 +613,4 @@ __all__ = [
     "World",
     "KripkeModel",
 ]
+

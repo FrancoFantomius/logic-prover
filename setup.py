@@ -58,8 +58,13 @@ if USE_CYTHON:
         "logic_prover/constructive/matrix.py",
         "logic_prover/constructive/ljt.py",
         "logic_prover/constructive/wallen.py",
-        "logic_prover/constructive/tableau.py",
-        "logic_prover/constructive/resolution.py",
+        "logic_prover/constructive/tableau/ast.py",
+        "logic_prover/constructive/tableau/branch.py",
+        "logic_prover/constructive/tableau/prover.py",
+        "logic_prover/constructive/resolution/clauses.py",
+        "logic_prover/constructive/resolution/prefixed.py",
+        "logic_prover/constructive/resolution/translation.py",
+        "logic_prover/constructive/resolution/prover.py",
     ]
     # Filter files that exist
     valid_files = [f for f in hotspot_files if os.path.exists(f)]

@@ -9,16 +9,18 @@
 
 `logic-prover` is a formal logic theorem prover, explorer, deducer, and Lean 4 exporter in Python with optional Cython acceleration.
 
-📚 **Full Documentation & API Reference**: [https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)
+**Full Documentation & API Reference**: [https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)
 
 ---
 
 ## Features
 - **First-Order & Second-Order Logic AST**: Full support for parameterized sorts, canonical variable renaming, and substitutions.
 - **Resolution Prover with Equality**: Otter/Discount given-clause loop with superposition and natural deduction proof reconstruction.
+- **Constructive Logic & Intuitionistic Provers**: Intuitionistic first-order logic (iFOL), constructive modal logic (IK), and Heyting Arithmetic (HA) solvers via LJT sequent calculus, semantic tableaux, and matrix methods.
+- **Curry-Howard Proof Extraction & Program Synthesis**: Bidirectional lambda calculus type checking, BHK witness extraction, and automated synthesis of executable Python code and Lean 4 definitions from constructive proofs.
 - **Formula Explorer**: Diversity-guided formula generation and interestingness heuristic ranking.
 - **Deducer**: Network-level minimal hypothesis detection and equivalence classification.
-- **Lean 4 Export**: High-fidelity translation of formulas, statements, and tactic proofs into Lean 4 code.
+- **Lean 4 Export**: High-fidelity translation of formulas, statements, tactic proofs, and lambda proof terms into Lean 4 code.
 - **Interactive HTML Graphs**: Proof DAG and dependency graph visualizer.
 - **Optional Cython Acceleration**: Core AST, substitutions, resolution engine, and constructive logic solvers compiled to native C extensions for high performance.
 - **Automated Documentation & Logging**: Structured logging subsystem and Reflection/AST documentation generator.
@@ -130,7 +132,7 @@ for step in proof_dag.topological_order():
 
 Full interactive documentation, API reference, architecture deep dives, and tutorials are available at:
 
-🌐 **[https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)**
+**[https://francofantomius.com/logic-prover/](https://francofantomius.com/logic-prover/)**
 
 You can also build the documentation locally using MkDocs:
 
@@ -151,7 +153,7 @@ logic_prover/
 ├── explorer/     # Formula Generator, Diversity Metrics, Ranking Heuristics
 ├── deducer/      # Network Analysis, Minimal Hypotheses, Equivalence Classes
 ├── exporters/    # Lean 4 Exporter & HTML Interactive Graph Visualizers
-├── constructive/ # Intuitionistic & Constructive Provers (LJT calculus, Wallen's matrix method)
+├── constructive/ # Intuitionistic & Constructive Provers (LJT, Tableau, Wallen, IK modal, HA, Curry-Howard)
 └── sol/          # Second-Order Logic (SOL) Extension
 
 ```

@@ -12,8 +12,8 @@ This are the rules to follow when coding in this repository.
 What follows are the task to check when the user wants to publish a new version of the package. These should be checked in order and not skipped:
 
 1. Bump the version in pyproject.toml to x.y+1.z if this is a major release or x.y.z+1 if this is a minor release, where x.y.z is the current version of the package.
-2. The version of the package.json and pyproject.toml files should match and be 
-3. Update CHANGELOG.md with the changes made.
+2. Update CHANGELOG.md with the changes made.
+3. Make sure the documentation in docs/ is updated.
 4. Add a tag with the new version to git.
 5. Run all the tests and verify that they pass.
 6. Update the status badge in the README.md file and update anything accordingly.

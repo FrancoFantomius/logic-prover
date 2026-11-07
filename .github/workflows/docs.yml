@@ -1,80 +1,40 @@
-name: Build & Deploy Documentation
+name: Deploy Documentation
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "logic_prover/**"
-      - "utils/**"
-      - "docs/**"
-      - "package.json"
-      - ".github/workflows/docs.yml"
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy to GitHub Pages
-    runs-on: ubuntu-latest
+  deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - name: Checkout Project
+        uses: actions/checkout@v4
+
+      - name: Build Documentation
+        uses: FrancoFantomius/docs-gen@v1
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          docs-dir: 'docs'
+          output-dir: '_site'
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Regenerate Markdown Documentation
-        run: |
-          python utils/doc_generator.py --output-dir docs
-
-      - name: Commit and Push Documentation Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "docs: auto-regenerate API documentation [skip ci]"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-          file_pattern: "docs/**"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "npm"
-
-      - name: Install Node dependencies
-        run: |
-          npm install
-
-      - name: Build VitePress Site
-        run: |
-          npm run docs:build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages Artifact
+      - name: Upload GitHub Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/.vitepress/dist
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

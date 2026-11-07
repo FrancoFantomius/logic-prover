@@ -6,12 +6,12 @@ We provide security updates for the following versions of `logic-prover`:
 
 | Version | Supported              |
 | ------- | ---------------------- |
-| 0.2.x   | :white_check_mark:     |
-| 0.1.x   | :warning: (Deprecated) |
-| < 0.1.0 | :x:                    |
+| 0.3.x   | :white_check_mark:     |
+| 0.2.x   | :warning: (Deprecated) |
+| < 0.2.0 | :x:                    |
 
 > [!NOTE]
-> Version `0.1.x` is deprecated. Users are encouraged to upgrade to `0.2.x`. Critical security patches for `0.1.x` will be phased out.
+> Version `0.2.x` is deprecated. Users are encouraged to upgrade to `0.3.x`. Critical security patches for `0.2.x` will be phased out.
 
 ---
 

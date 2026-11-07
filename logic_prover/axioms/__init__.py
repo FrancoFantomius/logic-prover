@@ -15,6 +15,12 @@ from logic_prover.axioms.base import (
 from logic_prover.axioms.equality import get_equality_axioms, get_equality_signature, equality_theory
 from logic_prover.axioms.logic import get_fol_axioms, get_fol_signature, fol_theory
 from logic_prover.axioms.peano import get_peano_axioms, get_peano_signature, peano_theory
+from logic_prover.axioms.heyting_arithmetic import (
+    get_ha_axioms,
+    get_ha_signature,
+    instantiate_ha_induction,
+    ha_theory,
+)
 from logic_prover.axioms.group_theory import (
     get_group_axioms,
     get_group_signature,
@@ -205,6 +211,7 @@ __all__ = [
     "group_theory",
     "abelian_group_theory",
     "peano_theory",
+    "ha_theory",
     "zfc_theory",
     "analysis_theory",
     "linear_algebra_theory",
@@ -226,6 +233,9 @@ __all__ = [
     "get_abelian_group_axioms",
     "get_peano_axioms",
     "get_peano_signature",
+    "get_ha_axioms",
+    "get_ha_signature",
+    "instantiate_ha_induction",
     "get_zfc_axioms",
     "get_zfc_signature",
     "get_set_theory_axioms",

@@ -9,7 +9,7 @@ prefix unification.
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, Sequence
 
 from logic_prover.core.ast import Formula
 from logic_prover.core.parser import to_string
@@ -193,13 +193,13 @@ class WallenProver:
     def prove(
         self,
         target: Formula,
-        premises: Optional[List[Formula]] = None,
+        premises: Optional[Sequence[Formula]] = None,
     ) -> Optional[WallenProofResult]:
         """Attempts to prove a formula in Intuitionistic Propositional Logic using Wallen's method.
 
         Args:
             target (Formula): Formula AST to prove.
-            premises (Optional[List[Formula]], default=None): Optional list of hypothesis formulas.
+            premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis formulas.
 
         Returns:
             Optional[WallenProofResult]: Proof result if valid, None if not provable within bounds.
@@ -301,14 +301,14 @@ class WallenProver:
 
 def prove_wallen(
     formula: Formula,
-    premises: Optional[List[Formula]] = None,
+    premises: Optional[Sequence[Formula]] = None,
     max_multiplicity: int = 3,
 ) -> Optional[WallenProofResult]:
     """Proves an intuitionistic propositional formula using Wallen's matrix method.
 
     Args:
         formula (Formula): The formula to prove.
-        premises (Optional[List[Formula]], default=None): Optional list of hypothesis premises.
+        premises (Optional[Sequence[Formula]], default=None): Optional sequence of hypothesis premises.
         max_multiplicity (int, default=3): Maximum multiplicity for phi-node duplications.
 
     Returns:

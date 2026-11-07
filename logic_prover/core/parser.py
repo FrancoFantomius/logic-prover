@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple, Dict, Union
 from logic_prover.core.exceptions import ParseError
 from logic_prover.core.ast import (
     Term, Variable, Constant, FunctionApp, VariableKind,
-    Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists
+    Formula, PredicateApp, Equality, Not, And, Or, Implies, Iff, Forall, Exists,
+    Box, Diamond
 )
 from logic_prover.core.sorts import Sort, PrimitiveSort, ParameterizedSort, FunctionSort, Ind, Nat, Bool
 from logic_prover.core.signature import Signature
@@ -37,6 +38,8 @@ class TokenType(Enum):
     LPAREN = auto()       # (
     RPAREN = auto()       # )
     NOT = auto()          # ~, not, ¬
+    BOX = auto()          # [], box, □
+    DIAMOND = auto()      # <>, diamond, ◇
     AND = auto()          # &, and, ∧
     OR = auto()           # |, or, ∨
     IMPLIES = auto()      # =>, implies, →
@@ -66,6 +69,8 @@ TOKEN_PATTERNS = [
     (r"<=>|\biff\b|↔", TokenType.IFF),
     (r"=>|\bimplies\b|→", TokenType.IMPLIES),
     (r"~|\bnot\b|¬", TokenType.NOT),
+    (r"\[\]|\bbox\b|□", TokenType.BOX),
+    (r"<>|\bdiamond\b|◇", TokenType.DIAMOND),
     (r"&|\band\b|∧", TokenType.AND),
     (r"\||\bor\b|∨", TokenType.OR),
     (r"=", TokenType.EQUAL),
@@ -207,11 +212,19 @@ class _Parser:
         if tok.type == TokenType.QUANTIFIER:
             return self._parse_quantifier()
 
-        # Prefix operator: NOT
+        # Prefix operator: NOT, BOX, DIAMOND
         if tok.type == TokenType.NOT:
             self.consume(TokenType.NOT)
             operand = self.parse_formula(min_prec=50)
             lhs: Formula = Not(operand=operand)
+        elif tok.type == TokenType.BOX:
+            self.consume(TokenType.BOX)
+            operand = self.parse_formula(min_prec=50)
+            lhs = Box(operand=operand)
+        elif tok.type == TokenType.DIAMOND:
+            self.consume(TokenType.DIAMOND)
+            operand = self.parse_formula(min_prec=50)
+            lhs = Diamond(operand=operand)
         elif tok.type == TokenType.LPAREN:
             lhs = self._parse_parenthesized_or_prefix_formula()
         else:
@@ -249,7 +262,7 @@ class _Parser:
     def _parse_parenthesized_or_prefix_formula(self) -> Formula:
         """Parses a parenthesized subformula or prefix expression.
 
-        Handles parenthesized quantifiers, prefix operators like Not, And, Or,
+        Handles parenthesized quantifiers, prefix operators like Not, Box, Diamond, And, Or,
         Implies, Iff, Equality, and parenthesized predicate applications.
 
         Returns:
@@ -270,6 +283,18 @@ class _Parser:
             operand = self.parse_formula(0)
             self.consume(TokenType.RPAREN)
             return Not(operand=operand)
+        elif t1.type == TokenType.BOX:
+            self.consume(TokenType.LPAREN)
+            self.consume(TokenType.BOX)
+            operand = self.parse_formula(0)
+            self.consume(TokenType.RPAREN)
+            return Box(operand=operand)
+        elif t1.type == TokenType.DIAMOND:
+            self.consume(TokenType.LPAREN)
+            self.consume(TokenType.DIAMOND)
+            operand = self.parse_formula(0)
+            self.consume(TokenType.RPAREN)
+            return Diamond(operand=operand)
         elif t1.type == TokenType.AND:
             self.consume(TokenType.LPAREN)
             self.consume(TokenType.AND)
@@ -307,9 +332,12 @@ class _Parser:
             return Equality(left=t1_term, right=t2_term)
         elif t1.type == TokenType.IDENTIFIER:
             t2 = self.peek(2)
-            if t2.type != TokenType.LPAREN:
+            if t2.type != TokenType.LPAREN and t2.type not in (
+                TokenType.AND, TokenType.OR, TokenType.IMPLIES, TokenType.IFF, TokenType.EQUAL,
+                TokenType.BOX, TokenType.DIAMOND
+            ):
                 pred_decl = self.signature.lookup_predicate(t1.value)
-                if pred_decl is not None:
+                if pred_decl is not None and (pred_decl.arity > 0 or t2.type == TokenType.RPAREN):
                     self.consume(TokenType.LPAREN)
                     pred_tok = self.consume(TokenType.IDENTIFIER)
                     args = []

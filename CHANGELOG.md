@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2026-11-07
+
+### Added
+- **Proof-Term Extraction (Curry-Howard Correspondence)**: Added typed lambda calculus intermediate representation and proof-term AST in `logic_prover.constructive.terms` (`Var`, `Abs`, `App`, `Pair`, `Fst`, `Snd`, `Inl`, `Inr`, `Case`, `Unit`, `Abort`, `Refl`, `Subst`, `ExistsIntro`, `ExistsElim`, `NatRec`) with corresponding `ProofType` representations (`AtomType`, `ArrowType`, `ProdType`, `SumType`, `UnitType`, `VoidType`, `ForallType`, `ExistsType`, `EqType`).
+- **Bidirectional Type Checker & Beta-Normalizer**: Added `infer_type` for type-checking lambda proof terms, capture-avoiding `substitute_term`, and `beta_normalize` evaluating function applications, projections, case analyses, and existential unpacks.
+- **LJT Sequent Term Construction**: Integrated term annotations into `LJTProofNode` and threaded Curry-Howard term construction through all deduction rules in `LJTProver._search`, plus added convenience functions `extract_ljt_term` and `prove_ljt_checked`.
+- **BHK Witness Extraction**: Added `Witness`, `extract_witness`, and `extract_program` to extract constructive witnesses for existential ($\exists$) and disjunctive ($\lor$) theorems under the BHK interpretation.
+- **Multi-Prover Dispatcher**: Added `extract_term` to extract constructive proof terms from any constructive prover result (LJT, Semantic Tableau, Wallen Matrix, Prefixed Resolution, IK).
+- **Lean 4 Proof Term Exporter**: Added `LeanExporter.export_proof_term` translating typed lambda terms into valid Lean 4 `def` declarations.
+- **CLI Extraction Options**: Added `--extract-term`, `--term-format {string,lean,latex,python}`, and `--output` to the `prove-intuitionistic` subcommand and added `intuitionistic_extract_terms` to `SolverConfig`.
+- **Python Code Generation Pipeline (Program Synthesis)**: Added `PythonExporter` (`logic_prover.exporters.python_exporter`) converting extracted Curry-Howard proof terms into executable Python functions and modules via Python standard library `ast.AST` and `ast.unparse()`. Includes tagged union runtime wrappers `Left` and `Right`, natural number recursion helper `nat_rec`, and type annotation translator `type_to_python_annotation` in `logic_prover.exporters.python_runtime`.
+- **Heyting Arithmetic (HA)**: Added formal constructive arithmetic theory in `logic_prover.axioms.heyting_arithmetic` (`get_ha_axioms`, `ha_signature`, `ha_theory`), `HAProver` in `logic_prover.constructive.ha` supporting LJT, Tableau, and Translation methods, induction schema instantiation with candidate extraction, and CLI flags `--theory ha` and `--max-ind-depth`.
+- **Intuitionistic Modal Logic (IK)**: Added modal operators Box (`[]`) and Diamond (`<>`) in `logic_prover.core.ast`, `IKProver` in `logic_prover.constructive.ik`, Kripke relational accessibility semantics with world persistence in `logic_prover.constructive.kripke`, modal tableau expansion, and translation resolution (`IKTranslationResolutionProver`).
+- **Constructive Equality & Congruence**: Supported intuitionistic predicate equality (`=`) and term substitutions across LJT, Semantic Tableaux, and Prefixed Resolution.
+- **Intuitionistic First-Order Logic (iFOL / IQC)**: Added first-order quantifiers (`forall`, `exists`) across constructive reasoning engines (LJT, Semantic Tableau, Wallen Matrix, Translation Resolution) and the `prove-intuitionistic` CLI subcommand.
+
+### Changed
+- Modularized constructive resolution (`logic_prover.constructive.resolution`) and semantic tableau (`logic_prover.constructive.tableau`) into dedicated packages.
+- Expanded `SolverConfig` with configuration options for intuitionistic first-order quantifier depth, induction depth, and term extraction.
+
+---
+
+
 ## [0.2.0] - 2026-08-18
 
 ### Added
@@ -90,7 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Otter/Discount resolution theorem prover with equality superposition.
 - Core CLI interface for theorem proving and database initialization.
 
-[Unreleased]: https://github.com/FrancoFantomius/logic-prover/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FrancoFantomius/logic-prover/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/FrancoFantomius/logic-prover/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/FrancoFantomius/logic-prover/compare/v0.1.2...v0.1.3
